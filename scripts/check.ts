@@ -7,7 +7,7 @@ import { GENERATORS, generate } from "../lib/generators";
 import { buildMock } from "../lib/mock";
 import { TOPICS } from "../lib/topics";
 import { GATE_PLAN } from "../lib/gatePlan";
-import { EMPTY_PACK, parsePack, packPrompt, packTemplateJson, packToJson } from "../lib/packs";
+import { EMPTY_PACK, parsePack, packPrompt, packTemplateJson, packToJson, mergePack } from "../lib/packs";
 import { gatePackJson, gatePlanJson } from "./export-gate";
 import { aiPrompt, parsePlan, templateJson } from "../lib/customPlan";
 
@@ -150,6 +150,22 @@ for (const [label, input, needle] of badPacks) {
 }
 const ok = parsePack({ ...base, questions: [{ topic: "a", type: "nat", marks: 1, text: "q", answer: 4 }, { topic: "a", type: "mcq", marks: 1, text: "q2", options: ["x", "y"], answer: 1 }] });
 if (ok.pack?.questions.map((q) => q.id).join() !== "a-1,a-2") err("auto ids should be topic-n");
+{
+  const mk = (extra: object) => parsePack({ name: "P", subjects: { m: "Maths" }, topics: [{ id: "alg", subject: "m", name: "Algebra" }], questions: [], ...extra });
+  const q = (id: string, text: string) => ({ id, topic: "alg", type: "nat", marks: 1, text, answer: 1, explanation: "e" });
+  const a = mk({ questions: [q("alg-1", "one"), q("alg-2", "two")] }).pack!;
+  const b = mk({ topics: [{ id: "alg", subject: "m", name: "Algebra" }, { id: "geo", subject: "m", name: "Geometry" }], questions: [q("alg-1", "one"), q("alg-2", "brand new"), q("geo-1", "g")] }).pack!;
+  const r = mergePack(a, b);
+  if (r.report.duplicates !== 1 || r.report.newQuestions !== 2 || r.report.renamed !== 1 || r.report.newTopics !== 1) err("merge report wrong " + JSON.stringify(r.report));
+  const ids = r.pack.questions.map((x) => x.id);
+  if (new Set(ids).size !== ids.length || r.pack.questions.length !== 4) err("merge ids not unique " + ids);
+  const again = mergePack(r.pack, b);
+  if (again.report.newQuestions !== 0 || again.pack.questions.length !== 4) err("merging twice should add nothing");
+  if (a.questions.length !== 2) err("merge must not change the original");
+  if (!packPrompt(a).includes("alg [m]")) err("adding prompt should list topic ids");
+  if (!parsePack(packToJson(r.pack)).pack) err("merged pack should round trip");
+  console.log("merge: ok");
+}
 console.log(bad ? `${bad} PROBLEMS` : "ALL OK");
 
 // ---- statistics ----

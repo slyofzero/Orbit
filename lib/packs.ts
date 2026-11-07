@@ -175,6 +175,61 @@ export function packToJson(pack: PackData) {
   };
 }
 
+// ---------- adding to a pack you already have ----------
+export interface MergeReport {
+  newQuestions: number; duplicates: number; renamed: number;
+  newTopics: number; newSubjects: number; newMocks: number; renamedMocks: number;
+  warnings: string[];
+}
+const qKey = (q: Question) => `${q.type}|${q.text.trim()}|${(q.options ?? []).join("\u00a6")}`;
+
+/**
+ * Appends `add` to `base`: new subjects, topics, questions and mock recipes are added; what you already have is never changed.
+ * A question you already have (same text and options) is skipped, so uploading a file twice is harmless.
+ * A new question whose id is taken by a different question gets a fresh id. Your practice history keeps matching.
+ */
+export function mergePack(base: PackData, add: PackData): { pack: PackData; report: MergeReport } {
+  const report: MergeReport = { newQuestions: 0, duplicates: 0, renamed: 0, newTopics: 0, newSubjects: 0, newMocks: 0, renamedMocks: 0, warnings: [] };
+  const subjects = { ...base.subjects };
+  for (const [id, name] of Object.entries(add.subjects)) if (!(id in subjects)) { subjects[id] = name; report.newSubjects++; }
+
+  const topics = [...base.topics];
+  const topicById = new Map(topics.map((t) => [t.id, t]));
+  for (const t of add.topics) {
+    const have = topicById.get(t.id);
+    if (!have) { topics.push(t); topicById.set(t.id, t); report.newTopics++; if (!(t.subject in subjects)) { subjects[t.subject] = t.subject; report.newSubjects++; } }
+    else if (have.subject !== t.subject) report.warnings.push(`Topic "${t.id}" is in subject "${have.subject}" in your pack but "${t.subject}" in the new file. Your pack wins, and its new questions join "${have.subject}".`);
+  }
+
+  const questions = [...base.questions];
+  const ids = new Set(questions.map((q) => q.id));
+  const keys = new Set(questions.map(qKey));
+  for (const raw of add.questions) {
+    const k = qKey(raw);
+    if (keys.has(k)) { report.duplicates++; continue; }
+    const topic = topicById.get(raw.topic);
+    let q: Question = { ...raw, subject: topic?.subject ?? raw.subject };
+    if (ids.has(q.id)) {
+      const auto = new RegExp(`^${raw.topic.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}-\\d+$`).test(q.id);
+      let n = questions.filter((x) => x.topic === raw.topic).length + 1, id = auto ? `${raw.topic}-${n}` : `${q.id}-2`;
+      while (ids.has(id)) { n++; id = auto ? `${raw.topic}-${n}` : `${q.id}-${n}`; }
+      q = { ...q, id };
+      report.renamed++;
+    }
+    ids.add(q.id); keys.add(k); questions.push(q); report.newQuestions++;
+  }
+
+  const mocks = [...base.mocks];
+  const mockIds = new Set(mocks.map((m) => m.id));
+  for (const m of add.mocks) {
+    if (JSON.stringify({ ...m, id: "" , name: ""}) === JSON.stringify({ ...(mocks.find((x) => x.id === m.id) ?? {}), id: "", name: "" }) && mockIds.has(m.id)) continue; // identical recipe already there
+    let id = m.id, name = m.name;
+    if (mockIds.has(id)) { let n = 2; while (mockIds.has(`${m.id}-${n}`)) n++; id = `${m.id}-${n}`; name = `${m.name} (new)`; report.renamedMocks++; } else report.newMocks++;
+    mockIds.add(id); mocks.push({ ...m, id, name });
+  }
+  return { pack: { ...base, subjects, topics, questions, mocks, useBuiltinGenerators: base.useBuiltinGenerators || add.useBuiltinGenerators }, report };
+}
+
 // ---------- help for people writing a pack ----------
 export const packTemplateJson = (): string => JSON.stringify({
   name: "My question pack",
@@ -195,7 +250,13 @@ export const packTemplateJson = (): string => JSON.stringify({
 }, null, 2);
 
 const FENCE = "```";
-export const packPrompt = (): string => String.raw`Write a question pack for me and reply with ONLY one JSON object (no explanation, no markdown fence).
+const addingNote = (p: PackData) => `
+
+I already have a pack called "${p.name}" and I am ADDING to it. Reuse these ids exactly so the new questions join the right places, and add new subjects or topics only when truly needed:
+- Subjects: ${Object.entries(p.subjects).map(([id, n]) => `${id} (${n})`).join(", ") || "none"}
+- Topics: ${p.topics.map((t) => `${t.id} [${t.subject}]`).join(", ") || "none"}
+Write only NEW questions. Do not repeat the ones I already have, and leave out "mocks" unless I ask for new recipes.`;
+export const packPrompt = (existing?: PackData): string => String.raw`Write a question pack for me and reply with ONLY one JSON object (no explanation, no markdown fence).${existing ? addingNote(existing) : ""}
 
 About me (fill this in before sending):
 - Subject / exam: 

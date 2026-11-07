@@ -1,6 +1,6 @@
 "use client";
 import { useMemo, useRef, useState } from "react";
-import { packPrompt, packTemplateJson, packToJson, parsePack } from "@/lib/packs";
+import { mergePack, packPrompt, packTemplateJson, packToJson, parsePack } from "@/lib/packs";
 import { downloadJson, fileSafe } from "@/lib/download";
 import ExportFirstModal from "./ExportFirstModal";
 import { usePack } from "@/lib/store";
@@ -17,6 +17,7 @@ export default function PackImport({ onDone }: { onDone?: () => void }) {
   const { pack, custom, install, remove } = usePack();
   const [text, setText] = useState("");
   const [keep, setKeep] = useState(false);
+  const [mode, setMode] = useState<"add" | "replace">("add"); // when you already have a pack, adding is the default
   const [ask, setAsk] = useState<null | "replace" | "remove">(null);
   const [note, setNote] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -26,7 +27,10 @@ export default function PackImport({ onDone }: { onDone?: () => void }) {
     try { return parsePack(JSON.parse(text)); } catch (e) { return { pack: null, errors: [`This is not valid JSON: ${(e as Error).message}`], warnings: [] }; }
   }, [text]);
   const p = result?.pack ?? null;
+  const merged = useMemo(() => (p && custom ? mergePack(pack, p) : null), [p, custom, pack]);
+  const adding = custom && mode === "add";
 
+  const addIt = () => { if (!merged) return; install(merged.pack, true); setText(""); const r = merged.report; setNote(`Added ${r.newQuestions} question${r.newQuestions === 1 ? "" : "s"} to "${pack.name}". It now has ${merged.pack.questions.length}.`); onDone?.(); };
   const useIt = () => { if (!p) return; install(p, keep); setText(""); setAsk(null); setNote(`"${p.name}" is now your pack.`); onDone?.(); };
 
   const copy = async (what: string, value: string) => {
@@ -57,6 +61,7 @@ export default function PackImport({ onDone }: { onDone?: () => void }) {
           <button className="btn soft" onClick={() => save("my-question-pack-template.json", packTemplateJson())}>Download template</button>
           <button className="btn soft" onClick={() => copy("Template", packTemplateJson())}>Copy template</button>
           <button className="btn primary" onClick={() => copy("AI prompt", packPrompt())}>Copy AI prompt</button>
+          {custom && <button className="btn soft" onClick={() => copy("AI prompt for adding", packPrompt(pack))} title="Includes your current subject and topic ids, so the AI writes new questions that fit">Copy AI prompt for adding</button>}
         </div>
         <p className="small muted" style={{ marginBottom: 0 }}>Copy AI prompt: paste it into any AI chat, fill in your subject and topics, and paste the JSON it gives back in step 2.</p>
       </section>
@@ -79,9 +84,28 @@ export default function PackImport({ onDone }: { onDone?: () => void }) {
           <div className="pi-ok">
             <b>✓ Looks good: {p.name}</b>
             <p className="small" style={{ margin: "4px 0" }}>{p.topics.length} topics in {Object.keys(p.subjects).length} subject{Object.keys(p.subjects).length === 1 ? "" : "s"} · {p.questions.length} questions ({count("mcq")} MCQ, {count("msq")} MSQ, {count("nat")} NAT) · {p.mocks.length} mock recipe{p.mocks.length === 1 ? "" : "s"}{p.mocks.length ? `: ${p.mocks.map((m) => m.name).join(", ")}` : ""}</p>
-            <div className="callout">🔴 CAUTION: Using this pack replaces your current one. Your mock results are kept.</div>
-            <label className="small pi-keep"><input type="checkbox" checked={keep} onChange={(e) => setKeep(e.target.checked)} /> Keep my practice history (only if the question ids match the old pack)</label>
-            <button className="btn primary" onClick={() => (custom ? setAsk("replace") : useIt())}>Use this pack</button>
+            {custom && (
+              <div className="pi-mode" role="radiogroup" aria-label="What to do with this file">
+                <button role="radio" aria-checked={mode === "add"} className={mode === "add" ? "on" : ""} onClick={() => setMode("add")}><b>Add to my pack</b><span>Keeps everything you have and appends the new questions.</span></button>
+                <button role="radio" aria-checked={mode === "replace"} className={mode === "replace" ? "on" : ""} onClick={() => setMode("replace")}><b>Replace my pack</b><span>Swaps your whole pack for this file.</span></button>
+              </div>
+            )}
+            {adding && merged && (
+              <div className="pi-merge">
+                <b>After adding: {merged.pack.questions.length} questions ({merged.pack.topics.length} topics, {Object.keys(merged.pack.subjects).length} subjects)</b>
+                <ul>
+                  <li>+{merged.report.newQuestions} new question{merged.report.newQuestions === 1 ? "" : "s"}{merged.report.newTopics ? `, +${merged.report.newTopics} new topic${merged.report.newTopics === 1 ? "" : "s"}` : ""}{merged.report.newSubjects ? `, +${merged.report.newSubjects} new subject${merged.report.newSubjects === 1 ? "" : "s"}` : ""}{merged.report.newMocks ? `, +${merged.report.newMocks} mock recipe${merged.report.newMocks === 1 ? "" : "s"}` : ""}</li>
+                  {merged.report.duplicates > 0 && <li>{merged.report.duplicates} already in your pack, skipped</li>}
+                  {merged.report.renamed > 0 && <li>{merged.report.renamed} got a new id because that id was taken by a different question</li>}
+                  {merged.report.renamedMocks > 0 && <li>{merged.report.renamedMocks} mock recipe{merged.report.renamedMocks === 1 ? " has" : "s have"} the same id as one you have, so it is added as a separate recipe</li>}
+                  {merged.report.warnings.map((w, i) => <li key={i} className="warn">{w}</li>)}
+                </ul>
+                <p className="small muted" style={{ margin: "4px 0 0" }}>Your practice history and mock results are kept.</p>
+              </div>
+            )}
+            {!adding && custom && <div className="callout">🔴 CAUTION: Replacing swaps your whole pack for this file. Your mock results are kept.</div>}
+            {!adding && <label className="small pi-keep"><input type="checkbox" checked={keep} onChange={(e) => setKeep(e.target.checked)} /> Keep my practice history (only if the question ids match the old pack)</label>}
+            <button className="btn primary" disabled={adding && merged?.report.newQuestions === 0 && merged.report.newMocks === 0 && merged.report.newTopics === 0} onClick={() => (adding ? addIt() : custom ? setAsk("replace") : useIt())}>{adding ? "Add to my pack" : custom ? "Replace my pack" : "Use this pack"}</button>
           </div>
         )}
       </section>
