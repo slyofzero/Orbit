@@ -13,7 +13,7 @@ import { aiPrompt, parsePlan, templateJson } from "../lib/customPlan";
 import { hashData as hashDataCheck } from "../lib/images";
 import { checkQuestion, deleteSection, freeId, moveQuestion, moveSection, removeQuestion, renameSection, searchIds, upsertQuestion } from "../lib/packEdit";
 import type { Attempt } from "../lib/types";
-import { segments, texProblems, parseFence } from "../lib/tex";
+import { segments, texProblems, parseFence, mergeTickLines } from "../lib/tex";
 import { highlightCode, languageOf } from "../lib/highlight";
 import { linkPrompt, parseLinks, liveQuestionIds, readAnswer } from "../lib/links";
 
@@ -318,6 +318,10 @@ if (ok.pack?.questions.map((q) => q.id).join() !== "a-1,a-2") err("auto ids shou
   if (!h || !h.includes("hljs-keyword") || !h.includes("&lt;")) err("python code must be coloured and escaped: " + h);
   if (highlightCode("<b>x</b>", "") !== null) err("no language means no colouring");
   if (!packPrompt().includes("single backticks")) err("the pack prompt must explain code");
+  const lines = segments("Program:\n`Count(x, y) {`\n`    if (y != 1) {`\n`    }`\n`}`\nend");
+  if (lines.some((x) => x.kind === "icode") || lines.filter((x) => x.kind === "code").length !== 1) err("backtick lines must become one plain block: " + JSON.stringify(lines));
+  if (parseFence(lines.find((x) => x.kind === "code")!.value).code !== "Count(x, y) {\n    if (y != 1) {\n    }\n}") err("indentation inside the merged block must be kept");
+  if (mergeTickLines("a `x` b\n`y`") !== "a `x` b\n`y`") err("one lone inline line must stay inline");
   console.log("code: ok");
 }
 console.log(bad ? `${bad} PROBLEMS` : "ALL OK");

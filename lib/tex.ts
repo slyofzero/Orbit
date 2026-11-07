@@ -15,10 +15,26 @@ const ICODE = /(`[^`\n]+`)/g; // `inline code`: shown as typed, never read as ma
 const DOLLAR = ""; // stands in for an escaped \$ while we look for math
 const MATH = /(\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|\$[^$\n]+?\$)/g;
 
+const TICK_LINE = /^(\s*)`([^`]+)`\s*$/;
+/** Program text written as one `backtick` line after another is a code block that lost its fence: join it into one plain block (no colours, no boxes per line). */
+export function mergeTickLines(text: string): string {
+  const lines = text.split("\n");
+  const out: string[] = [];
+  for (let i = 0; i < lines.length; ) {
+    let j = i;
+    while (j < lines.length && TICK_LINE.test(lines[j])) j++;
+    if (j - i >= 2) {
+      out.push("```", ...lines.slice(i, j).map((l) => { const m = TICK_LINE.exec(l)!; return m[1] + m[2]; }), "```");
+      i = j;
+    } else { out.push(lines[i]); i++; }
+  }
+  return out.join("\n");
+}
+
 /** Splits text into plain text, $inline$, $$display$$ and ```code``` pieces. A literal dollar sign is written \$. */
 export function segments(text: string, keepEscapes = false): Seg[] {
   const out: Seg[] = [];
-  for (const chunk of text.replace(/\\\$/g, DOLLAR).split(/(```[\s\S]*?```)/g)) {
+  for (const chunk of mergeTickLines(text).replace(/\\\$/g, DOLLAR).split(/(```[\s\S]*?```)/g)) {
     if (!chunk) continue;
     if (chunk.startsWith("```")) { out.push({ kind: "code", value: chunk.replaceAll(DOLLAR, "$") }); continue; }
     for (const piece of chunk.split(ICODE)) {

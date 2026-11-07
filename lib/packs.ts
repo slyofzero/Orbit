@@ -433,7 +433,7 @@ HOW TO WRITE MATHS (LaTeX). The app draws every question, option and explanation
 7. CODE: the app colours code by language. Never put code or program text between dollar signs.
    - A piece of code inside a sentence goes between single backticks: "What does ${TICK}len(xs)${TICK} return?" It is shown exactly as typed, so $ and _ inside it need no LaTeX.
    - A block of code goes between triple backticks, with the language right after the opening ones: "Output of:\n${FENCE}python\nprint(2 + 3)\n${FENCE}". Supported languages: python, sql, c, cpp, java, javascript, typescript, bash, json, r, html. Use "python" for pseudocode. Without a language the block is shown uncoloured.
-   - Code works in "text", in every option and in "explanation". Put a block on its own lines with \n before and after it.
+   - Code works in "text", in every option and in "explanation". Put a block on its own lines with \n before and after it. Never wrap each line of a program in its own single backticks: a whole program is ONE block between triple backticks.
    - JSON RULE for code: inside the JSON string a new line in code is \n, a double quote is \", and a backslash is \\ (for example the C text printf("a\n") is written printf(\"a\\n\")). Never use a real tab: use spaces.
 8. Keep each formula short enough to read on a phone. Break long derivations into several $ $ pieces or an aligned block.
 
