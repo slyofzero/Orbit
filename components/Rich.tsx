@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
-import { renderMath, segments } from "@/lib/tex";
+import { renderMath, parseFence, segments } from "@/lib/tex";
+import { highlightCode } from "@/lib/highlight";
 import { splitImages } from "@/lib/images";
 import Img from "./Img";
 
@@ -10,9 +11,13 @@ export default function Rich({ text, className }: { text: string; className?: st
     <span className={className}>
       {segments(text).map((s, i) => {
         if (s.kind === "code") {
-          const code = s.value.replace(/^```\w*\n?/, "").replace(/```$/, "").replace(/\n$/, "");
-          return <pre key={i} className="code"><code>{code}</code></pre>;
+          const { lang, code } = parseFence(s.value);
+          const html = highlightCode(code, lang);
+          return html !== null
+            ? <pre key={i} className="code" data-lang={lang}><code className="hljs" dangerouslySetInnerHTML={{ __html: html }} /></pre>
+            : <pre key={i} className="code" data-lang={lang || undefined}><code>{code}</code></pre>;
         }
+        if (s.kind === "icode") return <code key={i} className="icode">{s.value}</code>;
         if (s.kind === "display") return <span key={i} className="math-block" dangerouslySetInnerHTML={{ __html: renderMath(s.value, true) }} />;
         if (s.kind === "inline") return <span key={i} dangerouslySetInnerHTML={{ __html: renderMath(s.value, false) }} />;
         return (

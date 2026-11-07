@@ -919,3 +919,18 @@ button.tg { cursor: pointer; font-family: inherit; } button.tg:hover { border-co
 @keyframes ipmFlow { to { background-position: -200% 0; } }
 @media (prefers-reduced-motion: reduce) { .ipm-btn { animation: none; } }
 .ipm-copy { margin-top: 10px; }
+
+/* Code in questions: `inline` and ```blocks``` with colours */
+code.icode { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 0.88em; padding: 1px 6px; border-radius: 6px; background: var(--sheet-2); border: 1px solid var(--line); color: var(--ink); white-space: pre-wrap; }
+pre.code { position: relative; font-family: ui-monospace, "Cascadia Code", Consolas, monospace; line-height: 1.5; tab-size: 4; }
+pre.code[data-lang]::after { content: attr(data-lang); position: absolute; top: 6px; right: 10px; font: 700 0.68rem var(--font-body); letter-spacing: 0.04em; opacity: 0.55; pointer-events: none; }
+pre.code code.hljs { background: none; padding: 0; color: inherit; }
+.hljs-keyword, .hljs-selector-tag, .hljs-built_in, .hljs-doctag { color: #ff7b9c; }
+.hljs-string, .hljs-regexp, .hljs-addition, .hljs-meta .hljs-string { color: #9be28f; }
+.hljs-number, .hljs-literal, .hljs-symbol, .hljs-bullet { color: #ffc474; }
+.hljs-title, .hljs-title.function_, .hljs-section { color: #7cc4ff; }
+.hljs-title.class_, .hljs-type, .hljs-class .hljs-title { color: #5eead4; }
+.hljs-comment, .hljs-quote, .hljs-deletion { color: #8b9bb4; font-style: italic; }
+.hljs-attr, .hljs-attribute, .hljs-variable, .hljs-template-variable, .hljs-params { color: #d9b3ff; }
+.hljs-meta, .hljs-operator { color: #b4c0d4; }
+.hljs-emphasis { font-style: italic; } .hljs-strong { font-weight: 700; }

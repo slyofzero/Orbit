@@ -2,7 +2,15 @@
 // Shared by the renderer and by the pack checker, so what passes upload is exactly what renders.
 import katex from "katex";
 
-export type Seg = { kind: "text" | "inline" | "display" | "code"; value: string };
+export type Seg = { kind: "text" | "inline" | "display" | "code" | "icode"; value: string };
+
+/** Splits a ```fenced block into its language label and its code. */
+export function parseFence(value: string): { lang: string; code: string } {
+  const m = /^```([^\n`]*)\n?([\s\S]*?)\n?```$/.exec(value);
+  return m ? { lang: m[1].trim(), code: m[2] } : { lang: "", code: value.replace(/^```|```$/g, "") };
+}
+
+const ICODE = /(`[^`\n]+`)/g; // `inline code`: shown as typed, never read as maths
 
 const DOLLAR = ""; // stands in for an escaped \$ while we look for math
 const MATH = /(\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\)|\$[^$\n]+?\$)/g;
@@ -13,13 +21,17 @@ export function segments(text: string, keepEscapes = false): Seg[] {
   for (const chunk of text.replace(/\\\$/g, DOLLAR).split(/(```[\s\S]*?```)/g)) {
     if (!chunk) continue;
     if (chunk.startsWith("```")) { out.push({ kind: "code", value: chunk.replaceAll(DOLLAR, "$") }); continue; }
-    for (const p of chunk.split(MATH)) {
+    for (const piece of chunk.split(ICODE)) {
+      if (!piece) continue;
+      if (piece.length > 2 && piece.startsWith("`") && piece.endsWith("`")) { out.push({ kind: "icode", value: piece.slice(1, -1).replaceAll(DOLLAR, "$") }); continue; }
+    for (const p of piece.split(MATH)) {
       if (!p) continue;
       if (p.startsWith("$$")) out.push({ kind: "display", value: p.slice(2, -2).replaceAll(DOLLAR, "\\$") });
       else if (p.startsWith("\\[")) out.push({ kind: "display", value: p.slice(2, -2).replaceAll(DOLLAR, "\\$") });
       else if (p.startsWith("\\(")) out.push({ kind: "inline", value: p.slice(2, -2).replaceAll(DOLLAR, "\\$") });
       else if (p.startsWith("$")) out.push({ kind: "inline", value: p.slice(1, -1).replaceAll(DOLLAR, "\\$") });
       else out.push({ kind: "text", value: keepEscapes ? p : p.replaceAll(DOLLAR, "$") });
+    }
     }
   }
   return out;
@@ -42,6 +54,7 @@ const HINT = "In JSON every LaTeX backslash must be written twice, e.g. \"$\\\\f
 /** Plain-language problems with the maths in one piece of text (empty list = fine). */
 export function texProblems(text: string): string[] {
   const bad: string[] = [];
+  if ((text.match(/```/g) ?? []).length % 2 === 1) bad.push("has a code block that is never closed. A block starts with ``` and ends with ``` (three backticks each).");
   for (const s of segments(text, true)) {
     if (s.kind === "text" && s.value.includes("$")) { bad.push(`has a "$" without a partner. Maths goes between two dollar signs; write a real dollar sign as \\$. ${HINT}`); break; }
     if (s.kind === "inline" || s.kind === "display") {

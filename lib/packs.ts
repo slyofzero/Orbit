@@ -391,6 +391,7 @@ export const packTemplateJson = (): string => JSON.stringify({
 }, null, 2);
 
 const FENCE = "```";
+const TICK = "`";
 const addingNote = (p: PackData) => `
 
 I already have a pack called "${p.name}" and I am ADDING to it. Reuse these ids exactly so the new questions join the right places, and add new subjects or topics only when truly needed:
@@ -429,7 +430,11 @@ HOW TO WRITE MATHS (LaTeX). The app draws every question, option and explanation
 4. A new line in the text is written \n (one backslash, a real JSON new line), not \\n. Use it between paragraphs or steps.
 5. A real dollar sign (money) is written \\$, for example "costs \\$5". Never leave a lone $ in the text.
 6. Do not use \( \) or \[ \], and do not use packages, \begin{align} or \begin{equation}. Use $$ ... $$ and, for several lines, \begin{aligned} ... \end{aligned} inside $$.
-7. Code goes in a fenced block inside the text: "Output of:\n${FENCE}python\nprint(2 + 3)\n${FENCE}"
+7. CODE: the app colours code by language. Never put code or program text between dollar signs.
+   - A piece of code inside a sentence goes between single backticks: "What does ${TICK}len(xs)${TICK} return?" It is shown exactly as typed, so $ and _ inside it need no LaTeX.
+   - A block of code goes between triple backticks, with the language right after the opening ones: "Output of:\n${FENCE}python\nprint(2 + 3)\n${FENCE}". Supported languages: python, sql, c, cpp, java, javascript, typescript, bash, json, r, html. Use "python" for pseudocode. Without a language the block is shown uncoloured.
+   - Code works in "text", in every option and in "explanation". Put a block on its own lines with \n before and after it.
+   - JSON RULE for code: inside the JSON string a new line in code is \n, a double quote is \", and a backslash is \\ (for example the C text printf("a\n") is written printf(\"a\\n\")). Never use a real tab: use spaces.
 8. Keep each formula short enough to read on a phone. Break long derivations into several $ $ pieces or an aligned block.
 
 Common LaTeX (write each backslash twice in the JSON):

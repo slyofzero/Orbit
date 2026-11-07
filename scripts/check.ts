@@ -13,6 +13,8 @@ import { aiPrompt, parsePlan, templateJson } from "../lib/customPlan";
 import { hashData as hashDataCheck } from "../lib/images";
 import { checkQuestion, deleteSection, freeId, moveQuestion, moveSection, removeQuestion, renameSection, searchIds, upsertQuestion } from "../lib/packEdit";
 import type { Attempt } from "../lib/types";
+import { segments, texProblems, parseFence } from "../lib/tex";
+import { highlightCode, languageOf } from "../lib/highlight";
 import { linkPrompt, parseLinks, liveQuestionIds, readAnswer } from "../lib/links";
 
 let bad = 0;
@@ -302,6 +304,21 @@ if (ok.pack?.questions.map((q) => q.id).join() !== "a-1,a-2") err("auto ids shou
     }
     console.log("plan links: ok");
   }
+}
+{
+  const sg = segments("Use `x = $5` here, then $a+b$ and\n```python\nprint(\"$\")\n```");
+  if (sg.find((x) => x.kind === "icode")?.value !== "x = $5") err("inline code must keep its text as typed");
+  if (sg.filter((x) => x.kind === "inline").length !== 1) err("maths next to inline code must still be maths");
+  const f = parseFence(sg.find((x) => x.kind === "code")!.value);
+  if (f.lang !== "python" || f.code !== 'print("$")') err("fence parse wrong: " + JSON.stringify(f));
+  if (texProblems("Use `$` and `\\frac` in code").length) err("dollar signs inside inline code are not maths problems");
+  if (!texProblems("```python\nx=1").length) err("an unclosed code block must be reported");
+  if (languageOf("py") !== "python" || languageOf("C++") !== "cpp" || languageOf("klingon") !== null) err("language names/aliases");
+  const h = highlightCode("def f(x):\n  return x < 2", "python");
+  if (!h || !h.includes("hljs-keyword") || !h.includes("&lt;")) err("python code must be coloured and escaped: " + h);
+  if (highlightCode("<b>x</b>", "") !== null) err("no language means no colouring");
+  if (!packPrompt().includes("single backticks")) err("the pack prompt must explain code");
+  console.log("code: ok");
 }
 console.log(bad ? `${bad} PROBLEMS` : "ALL OK");
 
