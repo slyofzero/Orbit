@@ -1,19 +1,20 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
-import { DAYS, KIND_LABEL, PHASE_NAMES, WEEKDAY_NAMES, addDays, daysBetween, fmtDate, fmtLong, todayIST, weekday } from "@/lib/plan";
-import { KEYS, usePersisted } from "@/lib/store";
+import { useEffect, useState } from "react";
+import PlanImport from "@/components/PlanImport";
+import { KIND_LABEL, WEEKDAY_NAMES, addDays, daysBetween, fmtDate, fmtLong, todayIST, weekday } from "@/lib/plan";
+import { KEYS, usePack, usePersisted, usePlan } from "@/lib/store";
 import { burst } from "@/lib/fx";
 import { PracticeRec } from "@/lib/types";
-import { TOPIC_BY_ID } from "@/lib/topics";
 import { Day } from "@/lib/types";
 
-type View = "next" | "all" | "missed";
+type View = "next" | "all" | "missed" | "plan";
 type Done = Record<string, boolean>;
 
 const istDay = (at: number) => new Date(at).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
 
 function DayBody({ d, done, setDone, qs }: { d: Day; done: Done; setDone: (u: (p: Done) => Done) => void; qs: number }) {
+  const { topicById: TOPIC_BY_ID } = usePack();
   const complete = d.tasks.every((_, i) => done[`${d.date}:${i}`]);
   const tick = (i: number, checked: boolean, el: HTMLInputElement) => {
     setDone((p) => ({ ...p, [`${d.date}:${i}`]: checked }));
@@ -37,7 +38,7 @@ function DayBody({ d, done, setDone, qs }: { d: Day; done: Done; setDone: (u: (p
         </div>
       )}
       <div className="row pl-links">
-        {d.topics.slice(0, 4).map((t) => (
+        {d.topics.filter((t) => TOPIC_BY_ID[t]).slice(0, 4).map((t) => (
           <Link key={t} href={`/practice/${t}`} className={`pill ${TOPIC_BY_ID[t]?.status}`}>{TOPIC_BY_ID[t]?.name.split("(")[0].trim()}</Link>
         ))}
         {d.kind === "mock" && <Link className="btn primary" href="/mocks">Start the mock</Link>}
@@ -50,14 +51,31 @@ function DayBody({ d, done, setDone, qs }: { d: Day; done: Done; setDone: (u: (p
 }
 
 export default function Planner() {
+  const { plan, ready: planReady } = usePlan();
+  const DAYS = plan.days;
+  const PHASE_NAMES = plan.phaseNames;
   const [done, setDone, ready] = usePersisted<Done>(KEYS.done, {});
   const [practice] = usePersisted<Record<string, PracticeRec>>(KEYS.practice, {});
   const [view, setView] = useState<View>("next");
   const [openDay, setOpenDay] = useState<Record<string, boolean>>({});
   const [openPhase, setOpenPhase] = useState<Record<string, boolean> | null>(null);
   const today = todayIST();
+  useEffect(() => { if (new URLSearchParams(window.location.search).get("tab") === "plan") setView("plan"); }, []);
 
-  if (!ready) return <p className="muted">Loading…</p>;
+  if (!ready || !planReady) return <p className="muted">Loading…</p>;
+
+  if (!plan.days.length) {
+    return (
+      <>
+        <h1>Planner</h1>
+        <div className="panel" style={{ marginBottom: 18 }}>
+          <h2 style={{ marginTop: 0 }}>No plan yet</h2>
+          <p className="muted" style={{ margin: 0 }}>Upload a plan and this page fills with what to do each day, with your milestones and phases. Nothing is built in.</p>
+        </div>
+        <PlanImport onDone={() => setView("next")} />
+      </>
+    );
+  }
 
   const recs = Object.values(practice);
   const answeredOn = (date: string) => recs.filter((r) => istDay(r.at) === date).length;
@@ -69,11 +87,11 @@ export default function Planner() {
   const three = [0, 1, 2].map((i) => addDays(today, i));
   const labelFor = (date: string) => (date === today ? "Today" : date === addDays(today, 1) ? "Tomorrow" : WEEKDAY_NAMES[weekday(date)] === "Sun" ? "Sunday" : fmtLong(date).split(" ")[0]);
 
-  const phases = ["A", "B", "C", "D"].map((ph) => {
+  const phases = Object.keys(PHASE_NAMES).map((ph, pi) => {
     const ds = DAYS.filter((d) => d.phase === ph);
     const total = ds.reduce((s, d) => s + d.tasks.length, 0);
     const got = ds.reduce((s, d) => s + nDone(d), 0);
-    return { ph, ds, total, got, current: ds.some((d) => d.date === today) || (today < ds[0].date && ph === "A") };
+    return { ph, ds, total, got, current: ds.some((d) => d.date === today) || (today < ds[0].date && pi === 0) };
   });
   const phaseOpen = (ph: string, current: boolean) => (openPhase ? !!openPhase[ph] : current);
 
@@ -124,12 +142,18 @@ export default function Planner() {
 
   return (
     <>
-      <h1>Planner</h1>
-      <div className="tabs">
+      <div className="row" style={{ alignItems: "baseline" }}>
+        <h1>Planner</h1>
+        <button className="btn soft right" onClick={() => setView((v) => (v === "plan" ? "next" : "plan"))}>{view === "plan" ? "Back to planner" : "Upload plan"}</button>
+      </div>
+      <p className="muted small" style={{ marginTop: -6 }}>{plan.name}</p>
+      {view !== "plan" && <div className="tabs">
         <button className={view === "next" ? "on" : ""} onClick={() => setView("next")}>Next 3 days</button>
         <button className={view === "all" ? "on" : ""} onClick={() => setView("all")}>Full plan</button>
         <button className={view === "missed" ? "on" : ""} onClick={() => setView("missed")}>Missed{missed.length ? ` (${missed.length})` : ""}</button>
-      </div>
+      </div>}
+
+      {view === "plan" && <PlanImport onDone={() => setView("next")} />}
 
       {view === "next" && (
         <div className="pl-focus">

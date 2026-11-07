@@ -1,16 +1,16 @@
 "use client";
-import { useState } from "react";
-import { DAYS, MONTH_NAMES, Milestone, addDays, weekday } from "@/lib/plan";
+import { useMemo, useState } from "react";
+import { MONTH_NAMES, Milestone, addDays, weekday } from "@/lib/plan";
 import { Day } from "@/lib/types";
 
-const BY_DATE = new Map<string, Day>(DAYS.map((d) => [d.date, d]));
 const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export default function Calendar({
-  today, selected, onSelect, milestones, isComplete,
+  today, selected, onSelect, milestones, isComplete, days,
 }: {
-  today: string; selected: string; onSelect: (d: string) => void; milestones: Milestone[]; isComplete: (date: string) => boolean;
+  days: Day[]; today: string; selected: string; onSelect: (d: string) => void; milestones: Milestone[]; isComplete: (date: string) => boolean;
 }) {
+  const BY_DATE = useMemo(() => new Map<string, Day>(days.map((d) => [d.date, d])), [days]);
   const [month, setMonth] = useState(selected.slice(0, 7)); // YYYY-MM
   const [y, m] = month.split("-").map(Number);
   const first = `${month}-01`;
@@ -51,8 +51,8 @@ export default function Calendar({
       </div>
       <div className="legend-line">
         <span><i style={{ background: "var(--blue)" }} />study</span>
-        <span><i style={{ background: "var(--amber)" }} />1-hour day</span>
-        <span><i style={{ background: "var(--green)" }} />light (TA night)</span>
+        <span><i style={{ background: "var(--amber)" }} />short day</span>
+        <span><i style={{ background: "var(--green)" }} />light</span>
         <span><i style={{ background: "var(--accent)" }} />mock</span>
         <span><i style={{ background: "var(--red)" }} />exam</span>
       </div>

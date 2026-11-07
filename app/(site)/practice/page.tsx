@@ -1,15 +1,20 @@
 "use client";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { SUBJECTS, TOPICS } from "@/lib/topics";
-import { BANK, hasGenerator } from "@/lib/bank";
-import { DAYS, fmtDate, todayIST } from "@/lib/plan";
-import { KEYS, usePersisted } from "@/lib/store";
+import { hasGenerator } from "@/lib/bank";
+import PackImport from "@/components/PackImport";
+import { fmtDate, todayIST } from "@/lib/plan";
+import { KEYS, usePack, usePersisted, usePlan } from "@/lib/store";
 import { PracticeRec, TopicStatus } from "@/lib/types";
 
 const STATUS_LABEL: Record<TopicStatus, string> = { noidea: "No idea", shaky: "Shaky", know: "Know" };
 
 export default function PracticeHome() {
+  const { days: DAYS, ready: planReady } = usePlan();
+  const { pack, custom: hasPack, ready: packReady } = usePack();
+  const SUBJECTS = pack.subjects;
+  const TOPICS = pack.topics;
+  const [managing, setManaging] = useState(false);
   const [practice, , ready] = usePersisted<Record<string, PracticeRec>>(KEYS.practice, {});
   const [only, setOnly] = useState<"all" | TopicStatus>("all");
   const [q, setQ] = useState("");
@@ -29,7 +34,7 @@ export default function PracticeHome() {
     return m;
   }, [practice]);
 
-  if (!ready) return <p className="muted">Loading…</p>;
+  if (!ready || !planReady || !packReady) return <p className="muted">Loading…</p>;
 
   const searching = q.trim().length > 0 || only !== "all";
   const firstSubject = nextTopics[0]?.subject;
@@ -41,7 +46,22 @@ export default function PracticeHome() {
 
   return (
     <>
-      <h1>Practice</h1>
+      <div className="row" style={{ alignItems: "baseline" }}>
+        <h1>Practice</h1>
+        {hasPack && <button className="btn soft right" onClick={() => setManaging((m) => !m)}>{managing ? "Back to topics" : "Question pack"}</button>}
+      </div>
+
+      {!hasPack && (
+        <>
+          <div className="panel" style={{ marginBottom: 18 }}>
+            <h2 style={{ marginTop: 0 }}>No questions yet</h2>
+            <p className="muted" style={{ margin: 0 }}>Practice and Mocks are powered by a question pack: your topics, your questions and your mock-test recipes. Upload one below to get started.</p>
+          </div>
+          <PackImport />
+        </>
+      )}
+      {hasPack && managing && <PackImport onDone={() => setManaging(false)} />}
+      {hasPack && !managing && <>
 
       {nextDay && nextTopics.length > 0 && (
         <section className="pr-next">
@@ -87,12 +107,12 @@ export default function PracticeHome() {
                 <div className="pr-rows">
                   {ts.map((t) => {
                     const s = stats[t.id];
-                    const n = BANK.filter((x) => x.topic === t.id).length;
+                    const n = pack.questions.filter((x) => x.topic === t.id).length;
                     return (
                       <Link key={t.id} href={`/practice/${t.id}`} className="pr-row">
                         <i className={`dot ${t.status}`} title={STATUS_LABEL[t.status]} />
                         <span className="nm">{t.name}</span>
-                        <span className="muted small">{s ? `${s.c}/${s.n} right` : `${n}${hasGenerator(t.id) ? "+" : ""} q`}</span>
+                        <span className="muted small">{s ? `${s.c}/${s.n} right` : `${n}${hasGenerator(pack, t.id) ? "+" : ""} q`}</span>
                       </Link>
                     );
                   })}
@@ -104,6 +124,7 @@ export default function PracticeHome() {
         {searching && !TOPICS.some((t) => match(t.name, t.status)) && <p className="muted">No topic matches. Clear the search or pick another filter.</p>}
       </div>
       <p className="small muted">Dot colour is your own rating: red is new to you, amber is shaky, green is solid. A plus after the count means more generated questions.</p>
+      </>}
     </>
   );
 }

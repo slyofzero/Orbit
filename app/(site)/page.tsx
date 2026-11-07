@@ -6,10 +6,9 @@ import Runway from "@/components/Runway";
 import Milestones from "@/components/Milestones";
 import QuoteCard from "@/components/QuoteCard";
 import { burst } from "@/lib/fx";
-import { DAYS, KIND_LABEL, Milestone, PLAN_START, WEEKDAY_NAMES, addDays, daysBetween, fmtDate, fmtLong, todayIST, weekday } from "@/lib/plan";
-import { DEFAULT_SETTINGS, KEYS, exportAll, importAll, useMilestones, usePersisted } from "@/lib/store";
+import { KIND_LABEL, Milestone, WEEKDAY_NAMES, addDays, daysBetween, fmtDate, fmtLong, todayIST, weekday } from "@/lib/plan";
+import { DEFAULT_SETTINGS, KEYS, clearAll, exportAll, importAll, useMilestones, usePack, usePersisted, usePlan } from "@/lib/store";
 import { Attempt, PracticeRec, Settings } from "@/lib/types";
-import { TOPICS } from "@/lib/topics";
 import { marksFor } from "@/lib/scoring";
 
 const inDays = (n: number) => (n === 0 ? "today" : n === 1 ? "tomorrow" : `in ${n} days`);
@@ -21,8 +20,14 @@ export default function Dashboard() {
   const [attempts] = usePersisted<Attempt[]>(KEYS.attempts, []);
   const today = todayIST();
   const [selected, setSelected] = useState(today);
+  const [wipe, setWipe] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const ms = useMilestones();
+  const { plan, custom, ready: planReady } = usePlan();
+  const { pack, custom: hasPack, ready: packReady } = usePack();
+  const TOPICS = pack.topics;
+  const DAYS = plan.days;
+  const PLAN_START = DAYS[0]?.date ?? today;
   const [toast, setToast] = useState<{ text: string; undo: Milestone[] } | null>(null);
   useEffect(() => {
     if (!toast) return;
@@ -30,7 +35,7 @@ export default function Dashboard() {
     return () => clearTimeout(t);
   }, [toast]);
 
-  if (!ready || !ms.ready) return <p className="muted">Loading…</p>;
+  if (!ready || !ms.ready || !planReady || !packReady) return <p className="muted">Loading…</p>;
 
   const milestones = ms.milestones;
   const isComplete = (date: string) => {
@@ -55,7 +60,7 @@ export default function Dashboard() {
   const accuracy = recs.length ? Math.round((recs.filter((r) => r.correct).length / recs.length) * 100) : 0;
   const answeredOn = (date: string) => recs.filter((r) => new Date(r.at).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }) === date).length;
 
-  const finished = attempts.filter((a) => a.submittedAt).sort((a, b) => (b.submittedAt ?? 0) - (a.submittedAt ?? 0));
+  const finished = attempts.filter((a) => a.submittedAt && !a.failed).sort((a, b) => (b.submittedAt ?? 0) - (a.submittedAt ?? 0));
   const scoreOf = (a: Attempt) => a.questions.reduce((s, q, i) => s + marksFor(q, a.responses[i]?.ans), 0);
   const maxOf = (a: Attempt) => a.questions.reduce((s, q) => s + q.marks, 0);
 
@@ -70,8 +75,10 @@ export default function Dashboard() {
   // runway framing
   const planIdx = DAYS.findIndex((d) => d.date === today);
   const planNote =
-    today < PLAN_START
-      ? `Your plan starts ${inDays(daysBetween(today, PLAN_START))}: ${DAYS[0].title.replace("First pass: ", "first pass of ")}.`
+    !DAYS.length
+      ? "Load a plan to see your daily targets here."
+      : today < PLAN_START
+      ? `Your plan starts ${inDays(daysBetween(today, PLAN_START))}: ${DAYS[0].title}.`
       : planIdx >= 0
         ? `Day ${planIdx + 1} of ${DAYS.length}. ${DAYS[planIdx].tasks.filter((_, i) => !done[`${today}:${i}`]).length} tasks left today.`
         : "The plan is finished. Keep revising your mistake log.";
@@ -131,11 +138,24 @@ export default function Dashboard() {
   return (
     <>
       <div className="greet">
-        <h2 style={{ margin: 0 }}>{hello}, <span>{settings.name}</span></h2>
+        <h2 style={{ margin: 0 }}>{hello}{settings.name.trim() && <>, <span>{settings.name}</span></>}</h2>
         <span className="date">{fmtLong(today)}</span>
       </div>
 
       <QuoteCard />
+
+      {(!custom || !hasPack) && (
+        <section className="panel welcome">
+          <div>
+            <h2 style={{ margin: "0 0 4px" }}>Set up your study space</h2>
+            <p className="muted" style={{ margin: 0 }}>Nothing is loaded yet, so the calendar, planner, practice and mocks are empty. Upload a plan for your daily targets and a question pack for practice and mock tests.</p>
+          </div>
+          <div className="row">
+            {!custom && <Link className="btn primary" href="/planner?tab=plan">Load a plan</Link>}
+            {!hasPack && <Link className="btn primary" href="/practice">Load a question pack</Link>}
+          </div>
+        </section>
+      )}
 
       <div className="dash">
       <div className="d-hero" style={stag()}>
@@ -144,7 +164,7 @@ export default function Dashboard() {
 
       <div className="d-main">
       <div className="panel d-cal" style={stag()}>
-        <Calendar today={today} selected={selected} onSelect={setSelected} milestones={milestones} isComplete={isComplete} />
+        <Calendar days={DAYS} today={today} selected={selected} onSelect={setSelected} milestones={milestones} isComplete={isComplete} />
       </div>
 
         <section className="agenda d-agenda" aria-live="polite" style={stag()}>
@@ -175,7 +195,7 @@ export default function Dashboard() {
                 </div>
               )}
               <div className="foot row">
-                {day.topics.slice(0, 3).map((t) => (
+                {day.topics.filter((t) => TOPICS.some((x) => x.id === t)).slice(0, 3).map((t) => (
                   <Link key={t} className="btn soft" href={`/practice/${t}`}>Practise {TOPICS.find((x) => x.id === t)?.name.split("(")[0].trim()}</Link>
                 ))}
                 {day.kind === "mock" && <Link className="btn primary" href="/mocks">Start the mock</Link>}
@@ -267,10 +287,10 @@ export default function Dashboard() {
             <div className="chip c2"><b>{recs.length}</b><span>questions{recs.length ? `, ${accuracy}% right` : ""}</span></div>
             <div className="chip c3"><b>{finished.length}</b><span>mock{finished.length === 1 ? "" : "s"} taken</span></div>
           </div>
-          <div className="bar good" style={{ margin: "14px 0 8px" }}><div style={{ width: `${(doneTasks / totalTasks) * 100}%` }} /></div>
+          <div className="bar good" style={{ margin: "14px 0 8px" }}><div style={{ width: `${totalTasks ? (doneTasks / totalTasks) * 100 : 0}%` }} /></div>
           <p className="small muted" style={{ margin: 0 }}>
-            {today < PLAN_START ? "Nothing is due yet." : open > 0 ? `${open} due so far ${open === 1 ? "is" : "are"} still open.` : "Everything due so far is done."}{" "}
-            Of {TOPICS.length} topics, {TOPICS.filter((t) => t.status === "noidea").length} are new to you and {TOPICS.filter((t) => t.status === "shaky").length} are shaky.
+            {!DAYS.length ? "No plan loaded yet." : today < PLAN_START ? "Nothing is due yet." : open > 0 ? `${open} due so far ${open === 1 ? "is" : "are"} still open.` : "Everything due so far is done."}{" "}
+            {TOPICS.length > 0 && <>Of {TOPICS.length} topics, {TOPICS.filter((t) => t.status === "noidea").length} are new to you and {TOPICS.filter((t) => t.status === "shaky").length} are shaky.</>}
           </p>
         </section>
       </div>
@@ -287,8 +307,16 @@ export default function Dashboard() {
       <details className="card flat">
         <summary>Settings and backup</summary>
         <div className="row" style={{ marginTop: 14 }}>
-          <label>Name <input type="text" value={settings.name} onChange={(e) => setSettings({ ...settings, name: e.target.value })} /></label>
-          <button className="btn soft" onClick={() => ms.reset()}>Reset milestones to defaults</button>
+          <label>Your name <input type="text" placeholder="Optional" value={settings.name} onChange={(e) => setSettings({ ...settings, name: e.target.value })} /></label>
+          <button className="btn soft" onClick={() => ms.reset()}>Reset milestones to the plan's own</button>
+          <Link className="btn soft" href="/planner?tab=plan">Change plan</Link>
+          {!wipe ? <button className="btn soft" onClick={() => setWipe(true)}>Start fresh</button> : (
+            <>
+              <span className="small">Deletes your plan, pack, ticks, practice, mocks and milestones.</span>
+              <button className="btn primary" onClick={() => clearAll()}>Yes, delete everything</button>
+              <button className="btn soft" onClick={() => setWipe(false)}>Cancel</button>
+            </>
+          )}
           <button className="btn soft" onClick={() => {
             const blob = new Blob([exportAll()], { type: "application/json" });
             const a = document.createElement("a");
@@ -303,7 +331,6 @@ export default function Dashboard() {
           }} />
         </div>
         <div className="callout">🔴 CAUTION: Your progress lives in this browser only. Do NOT clear site data without exporting first.</div>
-        <p className="small muted">GATE is set to Feb 7, which is not confirmed: the official frame is 6, 7, 13, 14, 20 and 21 Feb and the DA slot was not published yet. Use the pencil on the GATE milestone once it is, and the countdown follows. The day-by-day plan itself ends on Feb 7.</p>
       </details>
     </>
   );

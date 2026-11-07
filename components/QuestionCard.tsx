@@ -1,9 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { Answer, Question } from "@/lib/types";
 import { formatAnswer, isAttempted, isCorrect, negLabel } from "@/lib/scoring";
-import { TOPIC_BY_ID } from "@/lib/topics";
+import { logPractice, usePack } from "@/lib/store";
+import { announce } from "@/lib/outcome";
 import Rich from "./Rich";
 
 const TYPE_LABEL = { mcq: "MCQ", msq: "MSQ", nat: "NAT" } as const;
@@ -11,12 +12,22 @@ const TYPE_LABEL = { mcq: "MCQ", msq: "MSQ", nat: "NAT" } as const;
 export default function QuestionCard({
   q, index, onResult, showTopic,
 }: { q: Question; index?: number; onResult?: (correct: boolean) => void; showTopic?: boolean }) {
+  const { topicById: TOPIC_BY_ID, subjects: SUBJECTS } = usePack();
+  const subjectName = (x: Question) => { const id = x.subject ?? TOPIC_BY_ID[x.topic]?.subject ?? ""; return SUBJECTS[id] ?? id; };
   const [sel, setSel] = useState<Answer | undefined>(undefined);
   const [checked, setChecked] = useState(false);
+  const [skipped, setSkipped] = useState(false);
   const ok = checked && isCorrect(q, sel);
+  const shownAt = useRef(Date.now()); // when this question started waiting for an answer
+  // every answer or skip is logged with its subject, topic and tags, so statistics can count each encounter
+  const log = (out: "right" | "wrong" | "skip") =>
+    logPractice({
+      q: q.id, topic: q.topic, subject: q.subject ?? TOPIC_BY_ID[q.topic]?.subject ?? "other", tags: q.tags, type: q.type, marks: q.marks,
+      out, at: Date.now(), ms: Math.min(Date.now() - shownAt.current, 600_000),
+    });
 
   const toggle = (i: number) => {
-    if (checked) return;
+    if (checked || skipped) return;
     if (q.type === "mcq") setSel(i);
     else {
       const cur = (sel as number[] | undefined) ?? [];
@@ -27,10 +38,14 @@ export default function QuestionCard({
   const check = () => {
     if (!isAttempted(sel)) return;
     setChecked(true);
-    onResult?.(isCorrect(q, sel));
+    const right = isCorrect(q, sel);
+    onResult?.(right);
+    log(right ? "right" : "wrong");
+    announce(right ? "right" : "wrong");
   };
 
-  const reset = () => { setSel(undefined); setChecked(false); };
+  const skip = () => { setSkipped(true); log("skip"); announce("skip"); };
+  const reset = () => { setSel(undefined); setChecked(false); setSkipped(false); shownAt.current = Date.now(); };
 
   return (
     <div className="qcard">
@@ -44,6 +59,13 @@ export default function QuestionCard({
         )}
       </div>
       <div className="qtext"><Rich text={q.text} /></div>
+      {(TOPIC_BY_ID[q.topic] || q.tags?.length) && (
+        <div className="qtags">
+          {(q.subject ?? TOPIC_BY_ID[q.topic]?.subject) && <span className="tg subj">{subjectName(q)}</span>}
+          {TOPIC_BY_ID[q.topic] && <span className="tg tp">{TOPIC_BY_ID[q.topic].name}</span>}
+          {q.tags?.map((t) => <span key={t} className="tg">#{t}</span>)}
+        </div>
+      )}
 
       {q.type !== "nat" &&
         q.options!.map((o, i) => {
@@ -68,12 +90,23 @@ export default function QuestionCard({
       )}
 
       <div className="row" style={{ marginTop: 10 }}>
-        {!checked ? (
-          <button className="btn primary" onClick={check} disabled={!isAttempted(sel)}>Check answer</button>
+        {!checked && !skipped ? (
+          <>
+            <button className="btn primary" onClick={check} disabled={!isAttempted(sel)}>Check answer</button>
+            <button className="btn" onClick={skip}>Skip</button>
+          </>
         ) : (
           <button className="btn" onClick={reset}>Try again</button>
         )}
       </div>
+
+      {skipped && (
+        <div className="verdict no">
+          <b>Skipped</b>
+          <div>Correct answer: <b>{formatAnswer(q)}</b></div>
+          <div style={{ marginTop: 6 }}><Rich text={q.explanation} /></div>
+        </div>
+      )}
 
       {checked && (
         <div className={`verdict ${ok ? "ok" : "no"}`}>

@@ -58,3 +58,14 @@ Random numeric generators live in `lib/generators.ts`.
 ## Sanity check
 
 `bun run check` validates every question and generator, and builds sample mocks.
+
+
+## Tags and statistics
+
+Every question carries two mandatory tags, its **subject** and its **topic**, and optional extra tags (skill, difficulty, idea). Write them in the question pack:
+
+```json
+{ "subject": "maths", "topic": "algebra", "tags": ["factorising", "hard"], "type": "mcq", "marks": 1, "text": "…", "options": ["…"], "answer": 0, "explanation": "…" }
+```
+
+The **Stats** page (sidebar) turns every answer, skip and mock into numbers cut along those tags: strongest and weakest subject and topic, most and least encountered questions, accuracy per tag, streaks, speed, coverage and more. **Explore** is an interactive treemap (click a subject, then a topic, then a question). **Export to Excel** saves everything as an .xlsx file. Mistakes live in the Stats page too.

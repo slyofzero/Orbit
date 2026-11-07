@@ -4,15 +4,15 @@ import { useParams } from "next/navigation";
 import { useState } from "react";
 import Rich from "@/components/Rich";
 import { formatAnswer, formatGiven, isAttempted, isCorrect, marksFor } from "@/lib/scoring";
-import { KEYS, usePersisted } from "@/lib/store";
+import { KEYS, usePack, usePersisted } from "@/lib/store";
 import { Attempt } from "@/lib/types";
-import { SUBJECTS, TOPIC_BY_ID } from "@/lib/topics";
 
 type Filter = "all" | "wrong" | "skipped" | "right";
 
 export default function Results() {
   const { id } = useParams<{ id: string }>();
   const [attempts, , ready] = usePersisted<Attempt[]>(KEYS.attempts, []);
+  const { topicById: TOPIC_BY_ID, subjects: SUBJECTS } = usePack();
   const [filter, setFilter] = useState<Filter>("all");
   const a = attempts.find((x) => x.id === id);
 
@@ -36,7 +36,7 @@ export default function Results() {
 
   const bySubject: Record<string, { n: number; c: number; w: number; s: number; marks: number; max: number }> = {};
   for (const r of rows) {
-    const s = TOPIC_BY_ID[r.q.topic]?.subject ?? "ga";
+    const s = TOPIC_BY_ID[r.q.topic]?.subject ?? "other";
     const b = (bySubject[s] ??= { n: 0, c: 0, w: 0, s: 0, marks: 0, max: 0 });
     b.n++; b.max += r.q.marks; b.marks += r.marks;
     if (r.correct) b.c++; else if (r.attempted) b.w++; else b.s++;
@@ -48,6 +48,11 @@ export default function Results() {
     <>
       <p className="small"><Link href="/mocks">← Mock tests</Link></p>
       <h1>{a.title}</h1>
+      {a.failed && (
+        <div className="callout warn">
+          🔴 <b>FAILED. This test was ended and not scored.</b> {a.failed} Full-screen mode is required for the whole test. The answer key is below for review only.
+        </div>
+      )}
       <div className="scoreband">
         <div><div className="stat">{score.toFixed(2)}<span className="muted" style={{ fontSize: "1.1rem" }}> / {max}</span></div><div className="stat-label">Score</div></div>
         <div><div className="stat" style={{ color: "var(--green)" }}>{nCorrect}</div><div className="stat-label">Correct</div></div>
@@ -62,13 +67,13 @@ export default function Results() {
           <tbody>
             {Object.entries(bySubject).map(([s, b]) => (
               <tr key={s}>
-                <td>{SUBJECTS[s]}</td><td>{b.n}</td><td>{b.c}</td><td>{b.w}</td><td>{b.s}</td>
+                <td>{SUBJECTS[s] ?? "Other"}</td><td>{b.n}</td><td>{b.c}</td><td>{b.w}</td><td>{b.s}</td>
                 <td><b>{b.marks.toFixed(2)}</b> / {b.max}</td>
               </tr>
             ))}
           </tbody>
         </table>
-        <div className="small muted" style={{ marginTop: 8 }}>Every wrong or skipped question has been added to your <Link href="/mistakes">Mistake log</Link> automatically.</div>
+        <div className="small muted" style={{ marginTop: 8 }}>Every wrong or skipped question has been added to your <Link href="/stats?tab=mistakes">Mistakes list</Link> automatically.</div>
       </div>
 
       <h2>Question review</h2>
@@ -89,6 +94,11 @@ export default function Results() {
             {TOPIC_BY_ID[r.q.topic] && <Link className="small right" href={`/practice/${r.q.topic}`}>{TOPIC_BY_ID[r.q.topic].name}</Link>}
           </div>
           <div className="qtext"><Rich text={r.q.text} /></div>
+          <div className="qtags">
+            <span className="tg subj">{SUBJECTS[TOPIC_BY_ID[r.q.topic]?.subject ?? ""] ?? "Other"}</span>
+            {TOPIC_BY_ID[r.q.topic] && <span className="tg tp">{TOPIC_BY_ID[r.q.topic].name}</span>}
+            {r.q.tags?.map((t) => <span key={t} className="tg">#{t}</span>)}
+          </div>
           {r.q.options && (
             <div className="small" style={{ marginBottom: 6 }}>
               {r.q.options.map((o, k) => <div key={k}>({String.fromCharCode(65 + k)}) <Rich text={o} /></div>)}

@@ -1,26 +1,45 @@
 "use client";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { announce } from "@/lib/outcome";
 import QuestionCard from "@/components/QuestionCard";
-import { TOPIC_BY_ID } from "@/lib/topics";
 import { hasGenerator, newGenerated, staticForTopic } from "@/lib/bank";
-import { KEYS, usePersisted } from "@/lib/store";
+import { KEYS, usePack, usePersisted } from "@/lib/store";
 import { PracticeRec, Question } from "@/lib/types";
 
 export default function TopicPractice() {
   const { topic } = useParams<{ topic: string }>();
-  const t = TOPIC_BY_ID[topic];
+  const { pack, topicById, ready: packReady } = usePack();
+  const t = topicById[topic];
   const [practice, setPractice, ready] = usePersisted<Record<string, PracticeRec>>(KEYS.practice, {});
   const [extra, setExtra] = usePersisted<Record<string, number[]>>(KEYS.extra, {});
   const [, setFixed] = usePersisted<Record<string, boolean>>(KEYS.fixed, {});
 
   const questions: Question[] = useMemo(() => {
     if (!t) return [];
-    const gen = (extra[topic] ?? []).map((s) => newGenerated(topic, s)).filter(Boolean) as Question[];
-    return [...staticForTopic(topic), ...gen];
-  }, [t, topic, extra]);
+    const gen = (extra[topic] ?? []).map((s) => newGenerated(pack, topic, s)).filter(Boolean) as Question[];
+    return [...staticForTopic(pack, topic), ...gen];
+  }, [t, topic, extra, pack]);
 
+  // leaving with unsolved questions gets a reaction
+  const latest = useRef({ questions, practice });
+  latest.current = { questions, practice };
+  const alive = useRef(false);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+      // the short wait skips the fake unmount React does in development
+      setTimeout(() => {
+        if (alive.current) return;
+        const { questions: qs, practice: pr } = latest.current;
+        if (qs.some((x) => !pr[x.id])) announce("quit");
+      }, 60);
+    };
+  }, []);
+
+  if (!packReady) return <p className="muted">Loading…</p>;
   if (!t) return <p>Unknown topic. <Link href="/practice">Back to topics</Link></p>;
   if (!ready) return <p className="muted">Loading…</p>;
 
@@ -41,7 +60,7 @@ export default function TopicPractice() {
       </div>
       <p className="muted">{mine.length ? `${correct} correct out of ${mine.length} answered so far.` : "Not started yet."}</p>
 
-      {questions.length === 0 && <div className="card muted">No questions for this topic yet. Ask Claude to add some to <code>lib/questions</code>.</div>}
+      {questions.length === 0 && <div className="card muted">No questions for this topic yet. Add some to your question pack and upload it again.</div>}
 
       {questions.map((q, i) => (
         <QuestionCard
@@ -55,7 +74,7 @@ export default function TopicPractice() {
         />
       ))}
 
-      {hasGenerator(topic) && (
+      {hasGenerator(pack, topic) && (
         <div className="row">
           <button className="btn primary" onClick={() => addMore(3)}>+ 3 fresh random questions</button>
           <button className="btn" onClick={() => addMore(1)}>+ 1</button>

@@ -4,9 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "bun --bun next dev",
-    "build": "bun --bun next build",
-    "start": "bun --bun next start",
-    "check": "bun run scripts/check.ts"
+    "build": "next build",
+    "start": "next start",
+    "check": "bun run scripts/check.ts",
+    "export": "bun run scripts/export-gate.ts"
   },
   "dependencies": {
     "@fontsource-variable/bricolage-grotesque": "^5.3.0",

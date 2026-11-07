@@ -1,10 +1,11 @@
 "use client";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Answer, Attempt, Resp, Settings } from "@/lib/types";
 import { DEFAULT_SETTINGS, KEYS, usePersisted } from "@/lib/store";
 import { isAttempted, negLabel } from "@/lib/scoring";
+import { announce } from "@/lib/outcome";
 import Rich from "./Rich";
 import Calculator from "./Calculator";
 
@@ -22,6 +23,7 @@ export default function Exam({ id }: { id: string }) {
   const [attempts, setAttempts, ready] = usePersisted<Attempt[]>(KEYS.attempts, []);
   const [settings] = usePersisted<Settings>(KEYS.settings, DEFAULT_SETTINGS);
   const attempt = attempts.find((a) => a.id === id);
+  const attemptRef = useRef(attempt); attemptRef.current = attempt;
 
   const [cur, setCur] = useState(0);
   const [draft, setDraft] = useState<Answer | undefined>(undefined);
@@ -29,6 +31,9 @@ export default function Exam({ id }: { id: string }) {
   const [modal, setModal] = useState<null | "paper" | "instr" | "submit">(null);
   const [calc, setCalc] = useState(false);
   const [agree, setAgree] = useState(false);
+  const [fsError, setFsError] = useState("");
+  const startedHere = useRef(false); // true only for a test begun in this page load
+  const ending = useRef(false);      // true once submit/fail is under way, so exiting full screen is not a violation
 
   const patchAttempt = useCallback(
     (fn: (a: Attempt) => Attempt) => setAttempts((p) => p.map((a) => (a.id === id ? fn(a) : a))),
@@ -44,9 +49,29 @@ export default function Exam({ id }: { id: string }) {
     [patchAttempt]
   );
 
+  const leaveFullscreen = () => { if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {}); };
+
   const submit = useCallback(() => {
+    ending.current = true;
     patchAttempt((a) => (a.submittedAt ? a : { ...a, submittedAt: Date.now() }));
+    // handing in a mock with almost nothing answered counts as giving up
+    const at = attemptRef.current;
+    if (at?.startedAt) {
+      const answered = at.questions.filter((_, i) => isAttempted(at.responses[i]?.ans)).length;
+      const timeUp = Date.now() >= at.startedAt + at.durationSec * 1000;
+      if (!timeUp && answered < at.questions.length * 0.25) announce("giveup", true);
+    }
+    leaveFullscreen();
     router.push(`/results/${id}`);
+  }, [patchAttempt, router, id]);
+
+  const fail = useCallback((reason: string) => {
+    if (ending.current) return;
+    ending.current = true;
+    announce("giveup", true);
+    patchAttempt((a) => (a.submittedAt ? a : { ...a, submittedAt: Date.now(), failed: reason }));
+    leaveFullscreen();
+    router.replace(`/results/${id}`);
   }, [patchAttempt, router, id]);
 
   // wall-clock timer
@@ -60,6 +85,28 @@ export default function Exam({ id }: { id: string }) {
   useEffect(() => {
     if (running && remaining <= 0) submit();
   }, [running, remaining, submit]);
+
+  // proctoring: the test must stay full screen, in focus, in this tab
+  useEffect(() => {
+    if (!running) return;
+    if (!startedHere.current) {
+      // opened an unfinished test again (reload, closed tab, new window): that already counts as leaving
+      if (remaining > 0) fail("The exam page was reloaded or reopened after the test had started.");
+      return;
+    }
+    const onVis = () => { if (document.hidden) fail("You switched to another tab or window."); };
+    const onBlur = () => fail("The exam window lost focus (another tab, window or app was opened).");
+    const onFs = () => { if (!document.fullscreenElement) fail("You exited full screen."); };
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("blur", onBlur);
+    document.addEventListener("fullscreenchange", onFs);
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("blur", onBlur);
+      document.removeEventListener("fullscreenchange", onFs);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [running, fail]);
 
   useEffect(() => {
     if (attempt?.submittedAt) router.replace(`/results/${id}`);
@@ -108,7 +155,12 @@ export default function Exam({ id }: { id: string }) {
   const markNext = () => { setResp(cur, { ans: normalized(draft), marked: true }); go(Math.min(cur + 1, total - 1)); };
   const clear = () => { setDraft(undefined); setResp(cur, { ans: undefined }); };
 
-  const begin = () => {
+  const begin = async () => {
+    setFsError("");
+    const el = document.documentElement;
+    if (!el.requestFullscreen) { setFsError("This browser cannot run the test in full screen. Use Chrome, Edge or Firefox on a laptop or desktop."); return; }
+    try { await el.requestFullscreen(); } catch { setFsError("Full screen was blocked. Allow it for this site and press the button again."); return; }
+    startedHere.current = true;
     patchAttempt((a) => ({ ...a, startedAt: Date.now(), responses: { 0: { visited: true, marked: false } } }));
     setNow(Date.now());
     setCur(0);
@@ -135,7 +187,7 @@ export default function Exam({ id }: { id: string }) {
   if (!attempt.startedAt) {
     return (
       <div className="arena">
-        <div className="ex-top"><span className="title">{attempt.title}</span><span className="spacer" /><span>Candidate: {settings.name}</span></div>
+        <div className="ex-top"><span className="title">{attempt.title}</span><span className="spacer" /><span>Candidate: {settings.name || "You"}</span></div>
         <div className="instr">
           <h2>General Instructions</h2>
           <ol>
@@ -156,10 +208,11 @@ export default function Exam({ id }: { id: string }) {
           {attempt.warnings.length > 0 && (
             <div className="callout warn">Note: this mock is shorter than the real paper because the question bank ran short. {attempt.warnings.join(" ")}</div>
           )}
-          <div className="callout">🔴 CAUTION: Do NOT refresh or close this tab expecting the clock to pause. The timer keeps running once you press Start.</div>
+          <div className="callout">🔴 CAUTION: The test runs in FULL SCREEN. Do NOT switch tabs, open another window or app, press Esc, or refresh the page. Any of these ENDS the test at once and marks it as FAILED. There is no second chance, and the timer never pauses.</div>
+          {fsError && <div className="callout warn">{fsError}</div>}
           <label className="row"><input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} /> I have read and understood the instructions.</label>
           <div className="row" style={{ marginTop: 14 }}>
-            <button className="xb blue" disabled={!agree} onClick={begin}>I am ready to begin</button>
+            <button className="xb blue" disabled={!agree} onClick={begin}>I am ready to begin (enters full screen)</button>
             <Link href="/mocks">Cancel</Link>
           </div>
         </div>
@@ -177,7 +230,6 @@ export default function Exam({ id }: { id: string }) {
         <button onClick={() => setCalc((c) => !c)}>🖩 Calculator</button>
         <button onClick={() => setModal("paper")}>Question Paper</button>
         <button onClick={() => setModal("instr")}>Instructions</button>
-        <button onClick={() => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.())}>Full screen</button>
       </div>
       <div className="ex-sub">
         {attempt.sections.map((s, i) => (
@@ -233,7 +285,7 @@ export default function Exam({ id }: { id: string }) {
         </div>
 
         <div className="ex-right">
-          <div className="ex-cand"><div className="avatar">👤</div><div><b>{settings.name}</b><div className="small muted">Candidate</div></div></div>
+          <div className="ex-cand"><div className="avatar">👤</div><div><b>{settings.name || "You"}</b><div className="small muted">Candidate</div></div></div>
           <div className="legend">
             {LEGEND.map(([s, l]) => (
               <div key={s} style={s === "ma" ? { gridColumn: "span 2" } : undefined}>
