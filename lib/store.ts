@@ -96,6 +96,8 @@ export async function exportAll(): Promise<string> {
     const s = localStorage.getItem(scope(k));
     if (s) out[k] = JSON.parse(s);
   }
+  try { const t = localStorage.getItem("gate.theme"); if (t) out.theme = t; } catch { /* no theme saved */ }
+  out._backup = { app: "orbit", version: 2, exportedAt: new Date().toISOString() };
   const names = [...new Set([...JSON.stringify(out).matchAll(/img:(h[0-9a-z]+-[0-9a-z]+)/g)].map((m) => m[1]))];
   const images = names.length ? await loadImages(names) : {};
   if (Object.keys(images).length) out.images = images;
@@ -109,10 +111,26 @@ export function clearAll() {
   window.location.reload();
 }
 
+/** Reads a backup file's text and says what is in it, without changing anything. */
+export function inspectBackup(json: string): { ok: true; keys: number; when?: string } | { ok: false; error: string } {
+  try {
+    const d = JSON.parse(json);
+    if (typeof d !== "object" || d === null || Array.isArray(d)) return { ok: false, error: "This is not a progress backup. It must be a file made by Export progress." };
+    const keys = Object.values(KEYS).filter((k) => k in d).length;
+    if (keys === 0) return { ok: false, error: "This file has none of the things a backup holds (plan, pack, practice, mocks). It is not a progress backup." };
+    return { ok: true, keys, when: typeof d._backup?.exportedAt === "string" ? d._backup.exportedAt : undefined };
+  } catch (e) { return { ok: false, error: `This is not valid JSON: ${(e as Error).message}` }; }
+}
+
+// Restores a backup so the profile looks exactly as it did when exported: what the backup lacks is cleared, not kept.
 export async function importAll(json: string) {
   const data = JSON.parse(json) as Record<string, unknown>;
   if (data.images && typeof data.images === "object") await saveImages(data.images as Record<string, string>);
-  for (const k of Object.values(KEYS)) if (k in data) localStorage.setItem(scope(k), JSON.stringify(data[k]));
+  for (const k of Object.values(KEYS)) {
+    if (k in data) localStorage.setItem(scope(k), JSON.stringify(data[k]));
+    else localStorage.removeItem(scope(k));
+  }
+  if (typeof data.theme === "string") { try { localStorage.setItem("gate.theme", data.theme); } catch { /* ignore */ } }
   window.location.reload();
 }
 

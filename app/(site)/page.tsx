@@ -7,7 +7,7 @@ import Milestones from "@/components/Milestones";
 import QuoteCard from "@/components/QuoteCard";
 import { burst } from "@/lib/fx";
 import { KIND_LABEL, Milestone, WEEKDAY_NAMES, addDays, daysBetween, fmtDate, fmtLong, todayIST, weekday } from "@/lib/plan";
-import { DEFAULT_SETTINGS, KEYS, clearAll, exportAll, importAll, useMilestones, usePack, usePersisted, usePlan } from "@/lib/store";
+import { DEFAULT_SETTINGS, KEYS, clearAll, exportAll, importAll, inspectBackup, useMilestones, usePack, usePersisted, usePlan } from "@/lib/store";
 import { Attempt, PracticeRec, Settings } from "@/lib/types";
 import { marksFor } from "@/lib/scoring";
 
@@ -21,6 +21,7 @@ export default function Dashboard() {
   const today = todayIST();
   const [selected, setSelected] = useState(today);
   const [wipe, setWipe] = useState(false);
+  const [restore, setRestore] = useState<null | { text: string; when?: string } | { error: string }>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const ms = useMilestones();
   const { plan, custom, ready: planReady } = usePlan();
@@ -327,8 +328,23 @@ export default function Dashboard() {
           <button className="btn soft" onClick={() => fileRef.current?.click()}>Import progress</button>
           <input ref={fileRef} type="file" accept="application/json" hidden onChange={async (e) => {
             const f = e.target.files?.[0];
-            if (f) importAll(await f.text());
+            e.target.value = "";
+            if (!f) return;
+            const text = await f.text();
+            const r = inspectBackup(text);
+            setRestore(r.ok ? { text, when: r.when } : { error: r.error });
           }} />
+          {restore && ("error" in restore ? (
+            <div className="pi-err" role="alert" style={{ flexBasis: "100%" }}><b>🔴 Fix this first:</b><ul><li>{restore.error}</li></ul><button className="btn soft" onClick={() => setRestore(null)}>Close</button></div>
+          ) : (
+            <div className="callout" style={{ flexBasis: "100%" }}>
+              🔴 CAUTION: Restoring replaces everything on this profile (plan, questions, links, ticks, practice, mocks, settings) with the backup{restore.when ? ` made on ${new Date(restore.when).toLocaleString()}` : ""}. Anything newer is lost.
+              <div className="row" style={{ marginTop: 8 }}>
+                <button className="btn primary" onClick={() => importAll(restore.text)}>Yes, restore this backup</button>
+                <button className="btn soft" onClick={() => setRestore(null)}>Cancel</button>
+              </div>
+            </div>
+          ))}
         </div>
         <div className="callout">🔴 CAUTION: Your progress lives in this browser only. Do NOT clear site data without exporting first.</div>
       </details>
