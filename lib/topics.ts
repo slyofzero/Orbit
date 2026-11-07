@@ -1,0 +1,96 @@
+import { Topic, TopicStatus } from "./types";
+
+export const SUBJECTS: Record<string, string> = {
+  ps: "Probability & Statistics",
+  la: "Linear Algebra",
+  calc: "Calculus & Optimization",
+  dsa: "Programming, DSA",
+  dbms: "DBMS & Warehousing",
+  ml: "Machine Learning",
+  ai: "Artificial Intelligence",
+  ga: "General Aptitude",
+};
+
+// Status reflects what you told me on 7 Nov 2026. Edit freely.
+const NOIDEA = new Set(["tchi", "ci", "htest", "index", "transform", "dw", "lda", "svm", "bncond", "ve", "sampling"]);
+const SHAKY = new Set(["dt", "kmeans", "knn", "logreg", "lu", "svd", "hashing", "trees", "sql", "uninformed", "informed"]);
+
+const raw: [string, string, string][] = [
+  ["ps", "counting", "Counting (permutations, combinations)"],
+  ["ps", "bayes", "Conditional probability, Bayes, total probability"],
+  ["ps", "indep", "Independence vs mutual exclusivity"],
+  ["ps", "moments", "Expectation, variance, covariance, correlation"],
+  ["ps", "condexp", "Conditional expectation and variance"],
+  ["ps", "discrete", "Discrete: Bernoulli, Binomial, Poisson"],
+  ["ps", "continuous", "Continuous: Uniform, Exponential, Normal"],
+  ["ps", "joint", "Joint, marginal PDF/CDF"],
+  ["ps", "clt", "Central Limit Theorem"],
+  ["ps", "tchi", "t and chi-squared distributions"],
+  ["ps", "ci", "Confidence intervals"],
+  ["ps", "htest", "Hypothesis tests (z, t, chi-squared)"],
+  ["la", "rank", "Rank, nullity, rank-nullity theorem"],
+  ["la", "axb", "Ax = b: unique / infinite / no solution"],
+  ["la", "basis", "Independence, basis, dimension, subspaces"],
+  ["la", "det", "Determinant and its properties"],
+  ["la", "eigen", "Eigenvalues, eigenvectors, diagonalization"],
+  ["la", "proj", "Orthogonality, projections, projection matrix"],
+  ["la", "quad", "Quadratic forms, positive definiteness"],
+  ["la", "lu", "LU decomposition"],
+  ["la", "svd", "SVD"],
+  ["calc", "limits", "Limits, continuity, differentiability"],
+  ["calc", "maxmin", "Maxima / minima (derivative tests)"],
+  ["calc", "taylor", "Taylor series"],
+  ["calc", "opt1", "Single-variable optimization"],
+  ["dsa", "python", "Python output prediction"],
+  ["dsa", "stackq", "Stacks, queues, linked lists"],
+  ["dsa", "trees", "Trees: BST, traversals, height"],
+  ["dsa", "hashing", "Hashing and collisions"],
+  ["dsa", "search", "Linear and binary search"],
+  ["dsa", "sortbasic", "Selection / bubble / insertion sort"],
+  ["dsa", "sortdc", "Merge sort, quicksort, recurrences"],
+  ["dsa", "asymp", "Asymptotic analysis (Big-O)"],
+  ["dsa", "graphs", "Graphs: BFS, DFS"],
+  ["dsa", "sp", "Shortest paths"],
+  ["dbms", "er", "ER model to relational model"],
+  ["dbms", "ra", "Relational algebra"],
+  ["dbms", "trc", "Tuple relational calculus"],
+  ["dbms", "sql", "SQL queries"],
+  ["dbms", "keys", "Keys, integrity constraints"],
+  ["dbms", "fd", "Functional dependencies, normal forms"],
+  ["dbms", "index", "File organization, indexing (B/B+ trees)"],
+  ["dbms", "transform", "Data transformation"],
+  ["dbms", "dw", "Warehouse modelling"],
+  ["ml", "linreg", "Linear regression"],
+  ["ml", "ridge", "Ridge regression / regularization"],
+  ["ml", "logreg", "Logistic regression"],
+  ["ml", "knn", "k-NN"],
+  ["ml", "nb", "Naive Bayes"],
+  ["ml", "lda", "LDA"],
+  ["ml", "svm", "SVM"],
+  ["ml", "dt", "Decision trees"],
+  ["ml", "biasvar", "Bias-variance trade-off"],
+  ["ml", "cv", "Cross-validation"],
+  ["ml", "mlp", "MLP / feed-forward networks"],
+  ["ml", "kmeans", "k-means / k-medoids"],
+  ["ml", "hier", "Hierarchical clustering"],
+  ["ml", "pca", "PCA"],
+  ["ai", "uninformed", "Uninformed search (BFS, DFS, UCS)"],
+  ["ai", "informed", "Informed search (A*)"],
+  ["ai", "adversarial", "Adversarial search"],
+  ["ai", "proplogic", "Propositional logic"],
+  ["ai", "fol", "Predicate logic"],
+  ["ai", "bncond", "Conditional independence in Bayesian networks"],
+  ["ai", "ve", "Exact inference: variable elimination"],
+  ["ai", "sampling", "Approximate inference: sampling"],
+  ["ga", "verbal", "Verbal ability"],
+  ["ga", "quant", "Quantitative aptitude"],
+  ["ga", "di", "Data interpretation / series"],
+  ["ga", "reasoning", "Logical reasoning"],
+];
+
+export const TOPICS: Topic[] = raw.map(([subject, id, name]) => {
+  const status: TopicStatus = NOIDEA.has(id) ? "noidea" : SHAKY.has(id) ? "shaky" : "know";
+  return { id, name, subject, status };
+});
+
+export const TOPIC_BY_ID: Record<string, Topic> = Object.fromEntries(TOPICS.map((t) => [t.id, t]));

@@ -1,0 +1,60 @@
+# Orbit: study planner and mock tests
+
+A personal study site: day-by-day planner (Nov 8, 2026 to Feb 7, 2027 (GATE day)), topic-wise practice, a mistake log, and a mock-test arena that copies the real GATE exam screen.
+
+## Run it (Windows, macOS or Linux)
+
+Needs Bun (https://bun.sh).
+
+```
+bun install
+bun run dev
+```
+
+Open http://localhost:3000
+
+For a faster, production-style run: `bun run build` then `bun run start`.
+
+## What is where
+
+| Page | What it does |
+|---|---|
+| Dashboard | Today's tasks, countdown, progress, weakest topics, settings, export/import |
+| Day Planner | All 104 days with tasks, daily practice targets, "missed" tracking |
+| Practice | 70 topics. Instant feedback. Topics marked ∞ also generate fresh random numeric questions |
+| Mock Tests | Full 3-hour mock (65 Qs, 100 marks), 1-hour sectional, subject test, weak-topics test |
+| Mistakes | Every wrong or skipped question (practice and mocks) until you solve it again |
+
+## Exam arena rules (same as GATE)
+
+- Palette click, Back and Next do NOT save an answer. Use **Save & Next** or **Mark for Review & Next**.
+- MCQ negative marking: 1/3 for 1-mark, 2/3 for 2-mark. MSQ and NAT: no negative marking, no partial credit.
+- Section tabs: General Aptitude (Q1-10), Data Science and AI (Q11-65). Virtual calculator and NAT keypad included.
+- The timer uses the wall clock, so refreshing the page does not pause it.
+
+## Your data
+
+Everything is saved in your browser's localStorage. **Export progress from the Dashboard once a week**; clearing site data deletes it.
+
+## Adding questions
+
+Questions live in `lib/questions/*.ts`, one file per subject. Each one is a single line using a helper:
+
+```ts
+mcq("svm", 1, "Question text with $math$", ["A", "B", "C", "D"], 2, "Explanation")   // 2 = index of correct option
+msq("svm", 1, "Select all that apply", ["A", "B", "C"], [0, 2], "Explanation")      // [0, 2] = correct options
+nat("svm", 2, "Numerical answer?", 0.5, 0.01, "Explanation")                        // value, tolerance
+```
+
+The first argument is the topic id from `lib/topics.ts`; the second is marks (1 or 2). Always add new questions at the END of a file so existing ids stay stable. Math uses KaTeX (`$...$`); code blocks use triple backticks.
+
+Random numeric generators live in `lib/generators.ts`.
+
+## Changing your plan or gap list
+
+- Plan days: `lib/plan.ts`
+- Topic status (know / shaky / no idea): top of `lib/topics.ts`
+
+## Sanity check
+
+`bun run check` validates every question and generator, and builds sample mocks.
