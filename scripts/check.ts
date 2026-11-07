@@ -323,6 +323,17 @@ if (ok.pack?.questions.map((q) => q.id).join() !== "a-1,a-2") err("auto ids shou
   if (parseFence(lines.find((x) => x.kind === "code")!.value).code !== "Count(x, y) {\n    if (y != 1) {\n    }\n}") err("indentation inside the merged block must be kept");
   if (mergeTickLines("a `x` b\n`y`") !== "a `x` b\n`y`") err("one lone inline line must stay inline");
   console.log("code: ok");
+  {
+    const mq = (id: string, t: string) => ({ subject: "s", topic: t, type: "mcq", marks: 1, text: `Q ${id}`, options: ["a", "b"], answer: 0, explanation: "e" });
+    const tp = parsePack({ name: "T", subjects: { s: "S" }, topics: [{ id: "a", name: "Topic A", subject: "s", status: "shaky" }, { id: "b", name: "Topic B", subject: "s", status: "know" }], questions: [mq("1", "a"), mq("2", "a"), mq("3", "b"), mq("4", "b")] });
+    if (!tp.pack) err("topic fixture: " + tp.errors.join("; "));
+    else {
+      const m = buildMock(tp.pack, { kind: "topic", topic: "a", seed: 1, seenIds: new Set() });
+      if (m.questions.length !== 2 || m.questions.some((q) => q.topic !== "a")) err("a topic test must hold only that topic's questions: " + JSON.stringify(m.questions.map((q) => q.topic)));
+      if (!m.title.includes("Topic A")) err("topic test title");
+    }
+    console.log("topic test: ok");
+  }
 }
 console.log(bad ? `${bad} PROBLEMS` : "ALL OK");
 

@@ -934,3 +934,6 @@ pre.code code.hljs { background: none; padding: 0; color: inherit; }
 .hljs-attr, .hljs-attribute, .hljs-variable, .hljs-template-variable, .hljs-params { color: #d9b3ff; }
 .hljs-meta, .hljs-operator { color: #b4c0d4; }
 .hljs-emphasis { font-style: italic; } .hljs-strong { font-weight: 700; }
+.mk-sec { margin: 22px 0 8px; }
+.mk-h { margin: 0 0 2px; font-size: 1.3rem; letter-spacing: -0.01em; }
+.mk-sub { margin: 0 0 12px; }

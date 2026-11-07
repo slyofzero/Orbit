@@ -22,6 +22,8 @@ export default function Mocks() {
   const subjectIds = Object.keys(pack.subjects);
   const [subject, setSubject] = useState("");
   const chosen = subject && pack.subjects[subject] ? subject : subjectIds[0] ?? "";
+  const [topicSel, setTopic] = useState("");
+  const chosenTopic = pack.topics.some((t) => t.id === topicSel) ? topicSel : pack.topics[0]?.id ?? "";
   const [msg, setMsg] = useState("");
 
   const start = (opts: Omit<MockOptions, "seed" | "seenIds">, fixed?: FixedMock) => {
@@ -65,53 +67,78 @@ export default function Mocks() {
             🔴 CAUTION: Do NOT leave the page, refresh to "reset", or open the solutions during a mock. The timer runs from the wall clock and keeps going. Treat it like the real exam.
           </div>
 
-          <div className="mock-grid">
-            {pack.mockTests.map((t, i) => {
-              const tries = attempts.filter((a) => a.title === t.name && a.submittedAt && !a.failed);
-              const best = tries.length ? Math.max(...tries.map((a) => scoreOf(a))) : null;
-              return (
-                <div key={t.id} className={`mock-card ${i === 0 ? "big" : ""}`}>
-                  {i === 0 && <span className="num">{t.minutes >= 60 && t.minutes % 60 === 0 ? `${t.minutes / 60} hour${t.minutes === 60 ? "" : "s"}` : `${t.minutes} min`}</span>}
-                  <h2 style={i === 0 ? { margin: 0 } : undefined}>{t.name}</h2>
-                  <p className="small muted">{fixedQs(t)} questions, {fixedMarks(t)} marks, {t.minutes} minutes. Its questions belong to this mock only.{t.note ? ` ${t.note}` : ""}{best !== null ? ` Best score ${best.toFixed(2)} (${tries.length} attempt${tries.length === 1 ? "" : "s"}).` : ""}</p>
-                  <div><button className={i === 0 ? "btn" : "btn primary"} onClick={() => start({ kind: "template" }, t)}>{tries.length ? "Start again" : "Start"}</button></div>
-                </div>
-              );
-            })}
-            {pack.mocks.map((t, i) => (
-              <div key={t.id} className={`mock-card ${i === 0 && !pack.mockTests.length ? "big" : ""}`}>
-                {i === 0 && <span className="num">{t.minutes >= 60 && t.minutes % 60 === 0 ? `${t.minutes / 60} hour${t.minutes === 60 ? "" : "s"}` : `${t.minutes} min`}</span>}
-                <h2 style={i === 0 ? { margin: 0 } : undefined}>{t.name}</h2>
-                <p className="small muted">{countQs(t)} questions, {countMarks(t)} marks, {t.minutes} minutes.{t.note ? ` ${t.note}` : ""}</p>
-                <div><button className={i === 0 ? "btn" : "btn primary"} onClick={() => start({ kind: "template", template: t })}>Start</button></div>
-              </div>
-            ))}
-            {pack.mocks.length === 0 && pack.mockTests.length === 0 && (
-              <div className="mock-card big">
-                <span className="num">Quick</span>
-                <h2 style={{ margin: 0 }}>Quick mixed test</h2>
-                <p className="small muted">About 15 questions drawn from every subject in your pack.</p>
-                <div><button className="btn" onClick={() => start({ kind: "quick" })}>Start quick test</button></div>
+          <section className="mk-sec">
+            <h2 className="mk-h">Full-length mocks and PYQs</h2>
+            <p className="muted small mk-sub">Complete papers with their own fixed questions, sections and timer.</p>
+            {pack.mockTests.length === 0 && pack.mocks.length === 0 ? (
+              <div className="panel muted">No full-length mocks yet. Add "mockTests" to your question pack (see the pack prompt in Practice, Question pack) and they will appear here.</div>
+            ) : (
+              <div className="mock-grid">
+                {pack.mockTests.map((t, i) => {
+                  const tries = attempts.filter((a) => a.title === t.name && a.submittedAt && !a.failed);
+                  const best = tries.length ? Math.max(...tries.map((a) => scoreOf(a))) : null;
+                  return (
+                    <div key={t.id} className={`mock-card ${i === 0 ? "big" : ""}`}>
+                      {i === 0 && <span className="num">{t.minutes >= 60 && t.minutes % 60 === 0 ? `${t.minutes / 60} hour${t.minutes === 60 ? "" : "s"}` : `${t.minutes} min`}</span>}
+                      <h2 style={i === 0 ? { margin: 0 } : undefined}>{t.name}</h2>
+                      <p className="small muted">{fixedQs(t)} questions, {fixedMarks(t)} marks, {t.minutes} minutes. Its questions belong to this mock only.{t.note ? ` ${t.note}` : ""}{best !== null ? ` Best score ${best.toFixed(2)} (${tries.length} attempt${tries.length === 1 ? "" : "s"}).` : ""}</p>
+                      <div><button className={i === 0 ? "btn" : "btn primary"} onClick={() => start({ kind: "template" }, t)}>{tries.length ? "Start again" : "Start"}</button></div>
+                    </div>
+                  );
+                })}
+                {pack.mocks.map((t, i) => (
+                  <div key={t.id} className={`mock-card ${i === 0 && !pack.mockTests.length ? "big" : ""}`}>
+                    {i === 0 && !pack.mockTests.length && <span className="num">{t.minutes >= 60 && t.minutes % 60 === 0 ? `${t.minutes / 60} hour${t.minutes === 60 ? "" : "s"}` : `${t.minutes} min`}</span>}
+                    <h2 style={i === 0 && !pack.mockTests.length ? { margin: 0 } : undefined}>{t.name}</h2>
+                    <p className="small muted">{countQs(t)} questions, {countMarks(t)} marks, {t.minutes} minutes.{t.note ? ` ${t.note}` : ""}</p>
+                    <div><button className={i === 0 && !pack.mockTests.length ? "btn" : "btn primary"} onClick={() => start({ kind: "template", template: t })}>Start</button></div>
+                  </div>
+                ))}
               </div>
             )}
-            <div className="mock-card">
-              <h2>Subject test</h2>
-              <p className="small muted">Up to 12 one-mark and 8 two-mark questions from one subject.</p>
-              <div className="row">
-                <select value={chosen} onChange={(e) => setSubject(e.target.value)}>
-                  {Object.entries(pack.subjects).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                </select>
-                <button className="btn primary" onClick={() => start({ kind: "subject", subject: chosen })}>Start</button>
+          </section>
+
+          <section className="mk-sec">
+            <h2 className="mk-h">Subject and topic tests</h2>
+            <p className="muted small mk-sub">Short tests built from your practice questions. Unseen questions come first.</p>
+            <div className="mock-grid">
+              <div className="mock-card">
+                <h2>Subject test</h2>
+                <p className="small muted">Up to 12 one-mark and 8 two-mark questions from one subject.</p>
+                <div className="row">
+                  <select value={chosen} onChange={(e) => setSubject(e.target.value)} aria-label="Subject">
+                    {Object.entries(pack.subjects).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                  </select>
+                  <button className="btn primary" onClick={() => start({ kind: "subject", subject: chosen })}>Start</button>
+                </div>
+              </div>
+              <div className="mock-card">
+                <h2>Topic test</h2>
+                <p className="small muted">Up to 12 one-mark and 8 two-mark questions from one topic.</p>
+                <div className="row">
+                  <select value={chosenTopic} onChange={(e) => setTopic(e.target.value)} aria-label="Topic">
+                    {Object.entries(pack.subjects).map(([sid, name]) => {
+                      const ts = pack.topics.filter((t) => t.subject === sid);
+                      return ts.length ? <optgroup key={sid} label={name}>{ts.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</optgroup> : null;
+                    })}
+                  </select>
+                  <button className="btn primary" onClick={() => start({ kind: "topic", topic: chosenTopic })}>Start</button>
+                </div>
+              </div>
+              {weakN > 0 && (
+                <div className="mock-card">
+                  <h2>Weak-topics test</h2>
+                  <p className="small muted">Only your "no idea" and "shaky" topics ({weakN} topic{weakN === 1 ? "" : "s"}).</p>
+                  <button className="btn primary" onClick={() => start({ kind: "weak" })}>Start weak-topics test</button>
+                </div>
+              )}
+              <div className="mock-card">
+                <h2>Quick mixed test</h2>
+                <p className="small muted">About 15 questions drawn from every subject in your pack.</p>
+                <button className="btn primary" onClick={() => start({ kind: "quick" })}>Start quick test</button>
               </div>
             </div>
-            {weakN > 0 && (
-              <div className="mock-card">
-                <h2>Weak-topics test</h2>
-                <p className="small muted">Only your "no idea" and "shaky" topics ({weakN} topic{weakN === 1 ? "" : "s"}).</p>
-                <button className="btn primary" onClick={() => start({ kind: "weak" })}>Start weak-topics test</button>
-              </div>
-            )}
-          </div>
+          </section>
           {msg && <div className="callout">{msg}</div>}
 
           <div className="small muted" style={{ margin: "6px 0 18px" }}>

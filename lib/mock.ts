@@ -4,9 +4,10 @@ import { FixedMock, MockPick, MockTemplate, PackData } from "./packs";
 import { makeRng, shuffle } from "./rng";
 
 export interface MockOptions {
-  kind: "template" | "subject" | "weak" | "quick";
+  kind: "template" | "subject" | "topic" | "weak" | "quick";
   template?: MockTemplate; // for kind=template
   subject?: string; // for kind=subject
+  topic?: string; // for kind=topic
   seed: number;
   seenIds: Set<string>;
 }
@@ -75,6 +76,12 @@ export function buildMock(pack: PackData, opts: MockOptions): BuiltMock {
     groups.push({ name: pack.subjects[opts.subject] ?? opts.subject, qs });
     title = `Subject test: ${pack.subjects[opts.subject] ?? opts.subject}`;
     minutes = minutesFor(qs, 20);
+  } else if (opts.kind === "topic" && opts.topic) {
+    const t = pack.topics.find((x) => x.id === opts.topic);
+    const qs = t ? drawPicks([{ subject: t.subject, one: 12, two: 8, topics: [t.id] }]) : [];
+    groups.push({ name: t?.name ?? opts.topic, qs });
+    title = `Topic test: ${t?.name ?? opts.topic}`;
+    minutes = minutesFor(qs, 15);
   } else if (opts.kind === "weak") {
     const weak = pack.topics.filter((t) => t.status !== "know");
     const subjects = [...new Set(weak.map((t) => t.subject))];
