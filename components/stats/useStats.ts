@@ -16,4 +16,4 @@ export function useStats() {
 }
 
 /** Plain text for a tile or row: maths and code markers stripped, shortened. */
-export const plain = (s: string, n = 90) => { const t = s.replace(/```[\s\S]*?```/g, " [code] ").replace(/\$+/g, "").replace(/\\[a-zA-Z]+/g, "").replace(/[{}]/g, "").replace(/\s+/g, " ").trim(); return t.length > n ? t.slice(0, n - 1) + "…" : t; };
+export const plain = (s: string, n = 90) => { const t = s.replace(/!\[([^\]\n]*)\]\([^)\s]+\)/g, " [picture] ").replace(/```[\s\S]*?```/g, " [code] ").replace(/\$+/g, "").replace(/\\[a-zA-Z]+/g, "").replace(/[{}]/g, "").replace(/\s+/g, " ").trim(); return t.length > n ? t.slice(0, n - 1) + "…" : t; };

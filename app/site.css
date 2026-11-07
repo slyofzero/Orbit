@@ -823,3 +823,8 @@ button.tg { cursor: pointer; font-family: inherit; } button.tg:hover { border-co
 .pi-mode button.on { border-color: var(--accent); background: var(--accent-soft); } .pi-mode button.on b { color: var(--accent); }
 .pi-merge { margin: 10px 0; padding: 10px 14px; border-radius: 14px; background: var(--sheet-2); } .pi-merge ul { margin: 6px 0 0; padding-left: 20px; display: grid; gap: 3px; font-size: 0.9rem; } .pi-merge .warn { color: var(--amber); }
 @media (max-width: 640px) { .pi-mode { grid-template-columns: 1fr; } }
+
+/* pictures inside questions */
+.q-img { display: inline-block; vertical-align: middle; max-width: 100%; max-height: 360px; width: auto; height: auto; margin: 6px 0; border-radius: 10px; background: #fff; }
+.opt .q-img, .ex-opt .q-img { max-height: 110px; margin: 2px 0; }
+.q-img.ph { padding: 10px 14px; background: var(--sheet-2); color: var(--gray); font-size: 0.85rem; }

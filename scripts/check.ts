@@ -10,6 +10,7 @@ import { GATE_PLAN } from "../lib/gatePlan";
 import { EMPTY_PACK, parsePack, packPrompt, packTemplateJson, packToJson, mergePack } from "../lib/packs";
 import { gatePackJson, gatePlanJson } from "./export-gate";
 import { aiPrompt, parsePlan, templateJson } from "../lib/customPlan";
+import { hashData as hashDataCheck } from "../lib/images";
 import type { Attempt } from "../lib/types";
 
 let bad = 0;
@@ -203,6 +204,29 @@ if (ok.pack?.questions.map((q) => q.id).join() !== "a-1,a-2") err("auto ids shou
   if (bdm.subjects.find((x) => x.id === "m")?.m.total !== 3 || bdm.topics.find((x) => x.id === "alg")?.m.total !== 3) err("totals should count practice and mock questions");
   const trap = tagStats(evm, sp2, 10_000).find((t) => t.tag === "trap");
   if (!trap || trap.m.total !== 2 || trap.m.n !== 2) err("tag stats should include mock questions");
+  // pictures
+  const png = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+  const png2 = png.replace("iVBOR", "iVBOS");
+  const withImg = (text: string, images: unknown = { a: png, b: png }) => parsePack({ ...base, questions: [{ ...mq("i1", text), explanation: "![x](img:b) done" }], images });
+  const pi = withImg("see ![fig](img:a)");
+  if (!pi.pack) err("pictures should parse: " + pi.errors.join("; "));
+  else {
+    const hs = Object.keys(pi.images);
+    if (hs.length !== 1 || !/^h[0-9a-z]+-[0-9a-z]+$/.test(hs[0])) err("identical pictures should share one content name: " + hs);
+    if (!pi.pack.questions[0].text.includes(`img:${hs[0]}`) || !pi.pack.questions[0].explanation.includes(`img:${hs[0]}`)) err("references should use content names");
+    const again = parsePack({ ...packToJson(pi.pack), images: pi.images });
+    if (!again.pack || again.pack.questions[0].text !== pi.pack.questions[0].text) err("a pack with pictures must round trip: " + again.errors.join("; "));
+    if (hashDataCheck(png) === hashDataCheck(png2)) err("different pictures need different names");
+  }
+  if (withImg("see ![fig](img:nope)").pack) err("a missing picture must be refused");
+  if (withImg("see ![fig](data:image/png;base64,AAAA)").pack) err("inline data pictures must be refused");
+  if (withImg("see ![fig](http://example.com/a.png)").pack) err("plain http pictures must be refused");
+  if (!withImg("see ![fig](https://example.com/a.png)", { b: png }).pack) err("https pictures should be allowed");
+  if (withImg("x ![f](img:a)", { a: "not a picture", b: png }).pack) err("bad picture data must be refused");
+  if (!withImg("x ![f](img:a)", { a: png, b: png, c: png2 }).warnings.some((w) => w.includes("no question uses"))) err("unused pictures should warn");
+  const mixed = mergePack(pi.pack!, parsePack({ ...base, questions: [{ ...mq("i2", "other ![fig](img:a)"), explanation: "e" }], images: { a: png } }).pack!);
+  if (mixed.pack.questions.length !== 2) err("merge with pictures");
+  console.log("pictures: ok");
   console.log("mock tests: ok");
 }
 console.log(bad ? `${bad} PROBLEMS` : "ALL OK");

@@ -1,4 +1,5 @@
 "use client";
+import { loadImages, saveImages } from "./imageStore";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LogEntry, Settings } from "./types";
 import { useMemo } from "react";
@@ -87,23 +88,29 @@ export function usePersisted<T>(rawKey: string, initial: T): [T, (u: T | ((p: T)
   return [val, set, ready];
 }
 
-export function exportAll(): string {
+// The backup holds everything this profile keeps, including the pictures that its pack and its mock attempts use.
+export async function exportAll(): Promise<string> {
   const out: Record<string, unknown> = {};
   for (const k of Object.values(KEYS)) {
     const s = localStorage.getItem(scope(k));
     if (s) out[k] = JSON.parse(s);
   }
+  const names = [...new Set([...JSON.stringify(out).matchAll(/img:(h[0-9a-z]+-[0-9a-z]+)/g)].map((m) => m[1]))];
+  const images = names.length ? await loadImages(names) : {};
+  if (Object.keys(images).length) out.images = images;
   return JSON.stringify(out, null, 2);
 }
 
 // Wipes everything the current profile keeps in the browser (plan, pack, ticks, practice, mocks, milestones, name) and reloads.
 export function clearAll() {
   for (const k of Object.values(KEYS)) localStorage.removeItem(scope(k));
+  try { indexedDB.deleteDatabase(scope("images")); } catch { /* no pictures to remove */ }
   window.location.reload();
 }
 
-export function importAll(json: string) {
+export async function importAll(json: string) {
   const data = JSON.parse(json) as Record<string, unknown>;
+  if (data.images && typeof data.images === "object") await saveImages(data.images as Record<string, string>);
   for (const k of Object.values(KEYS)) if (k in data) localStorage.setItem(scope(k), JSON.stringify(data[k]));
   window.location.reload();
 }
@@ -169,7 +176,7 @@ export function usePack() {
     subjects: pack.subjects,
     custom: stored !== null,
     ready,
-    install: (next: PackData, keepHistory: boolean) => { setStored(next); if (!keepHistory) clearHistory(); },
+    install: async (next: PackData, keepHistory: boolean, images?: Record<string, string>) => { if (images) await saveImages(images); setStored(next); if (!keepHistory) clearHistory(); },
     remove: () => { setStored(null); clearHistory(); },
   };
 }

@@ -1,6 +1,7 @@
 "use client";
 import { useMemo, useRef, useState } from "react";
-import { mergePack, packPrompt, packTemplateJson, packToJson, parsePack, type PackData } from "@/lib/packs";
+import { mergePack, packPrompt, packTemplateJson, parsePack, type PackData } from "@/lib/packs";
+import { exportPack } from "@/lib/imageStore";
 import { downloadJson, fileSafe } from "@/lib/download";
 import ExportFirstModal from "./ExportFirstModal";
 import { usePack } from "@/lib/store";
@@ -26,14 +27,14 @@ export default function PackImport({ onDone }: { onDone?: () => void }) {
 
   const result = useMemo(() => {
     if (!text.trim()) return null;
-    try { return parsePack(JSON.parse(text)); } catch (e) { return { pack: null, errors: [`This is not valid JSON: ${(e as Error).message}`], warnings: [] }; }
+    try { return parsePack(JSON.parse(text)); } catch (e) { return { pack: null, errors: [`This is not valid JSON: ${(e as Error).message}`], warnings: [], images: {} as Record<string, string> }; }
   }, [text]);
   const p = result?.pack ?? null;
   const merged = useMemo(() => (p && custom ? mergePack(pack, p) : null), [p, custom, pack]);
   const adding = custom && mode === "add";
 
-  const addIt = () => { if (!merged) return; install(merged.pack, true); setText(""); const r = merged.report; setNote(`Added ${r.newQuestions} practice question${r.newQuestions === 1 ? "" : "s"}${r.newMockQuestions ? ` and ${r.newMockQuestions} mock question${r.newMockQuestions === 1 ? "" : "s"}` : ""} to "${pack.name}". It now has ${merged.pack.questions.length}.`); onDone?.(); };
-  const useIt = () => { if (!p) return; install(p, keep); setText(""); setAsk(null); setNote(`"${p.name}" is now your pack.`); onDone?.(); };
+  const addIt = async () => { if (!merged || !result) return; await install(merged.pack, true, result.images); setText(""); const r = merged.report; setNote(`Added ${r.newQuestions} practice question${r.newQuestions === 1 ? "" : "s"}${r.newMockQuestions ? ` and ${r.newMockQuestions} mock question${r.newMockQuestions === 1 ? "" : "s"}` : ""} to "${pack.name}". It now has ${merged.pack.questions.length}.`); onDone?.(); };
+  const useIt = async () => { if (!p || !result) return; await install(p, keep, result.images); setText(""); setAsk(null); setNote(`"${p.name}" is now your pack.`); onDone?.(); };
 
   const copy = async (what: string, value: string) => {
     try { await navigator.clipboard.writeText(value); setNote(`${what} copied.`); } catch { setNote("Copy was blocked by the browser. Use Download instead."); }
@@ -51,7 +52,7 @@ export default function PackImport({ onDone }: { onDone?: () => void }) {
         {custom && (
           <div className="row" style={{ marginTop: 12 }}>
             <button className="btn soft" onClick={() => setAsk("remove")}>Remove this pack</button>
-            <button className="btn soft" onClick={() => downloadJson(`${fileSafe(pack.name)}.json`, packToJson(pack))}>Export this pack</button>
+            <button className="btn soft" onClick={async () => downloadJson(`${fileSafe(pack.name)}.json`, await exportPack(pack))}>Export this pack</button>
           </div>
         )}
       </section>
@@ -75,7 +76,7 @@ export default function PackImport({ onDone }: { onDone?: () => void }) {
           <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={async (e) => { const f = e.target.files?.[0]; if (f) { setText(await f.text()); } e.target.value = ""; }} />
           {text && <button className="btn soft" onClick={() => setText("")}>Clear</button>}
         </div>
-        <textarea className="pi-text" spellCheck={false} placeholder='…or paste the JSON here, e.g. { "name": "My pack", "topics": [ … ], "questions": [ … ] }' value={text} onChange={(e) => setText(e.target.value)} />
+        <textarea className="pi-text" spellCheck={false} placeholder='…or paste the JSON here, e.g. { "name": "My pack", "topics": [ … ], "questions": [ … ] }' value={text.length > 400_000 ? `(${(text.length / 1e6).toFixed(1)} MB file loaded, too big to show here. Check the preview below, then use it or press Clear.)` : text} readOnly={text.length > 400_000} onChange={(e) => setText(e.target.value)} />
 
         {result && result.errors.length > 0 && (
           <div className="pi-err" role="alert"><b>🔴 Fix this first:</b><ul>{result.errors.map((e, i) => <li key={i}>{e}</li>)}</ul></div>
@@ -116,7 +117,7 @@ export default function PackImport({ onDone }: { onDone?: () => void }) {
       {note && <p className="small muted" role="status">{note}</p>}
       {ask && (
         <ExportFirstModal what="question pack" action={ask} oldName={pack.name} newName={p?.name}
-          onExport={() => downloadJson(`${fileSafe(pack.name)}.json`, packToJson(pack))}
+          onExport={() => { exportPack(pack).then((j) => downloadJson(`${fileSafe(pack.name)}.json`, j)); }}
           onGo={() => (ask === "replace" ? useIt() : (remove(), setAsk(null), setNote("Pack removed.")))}
           onCancel={() => setAsk(null)} />
       )}

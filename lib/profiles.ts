@@ -75,6 +75,7 @@ export function deleteProfile(id: string, keys: string[]) {
   const list = listProfiles();
   if (list.length < 2) return;
   for (const k of keys) localStorage.removeItem(scope(k, id));
+  try { indexedDB.deleteDatabase(scope("images", id)); } catch { /* no pictures to remove */ }
   const rest = list.filter((p) => p.id !== id);
   saveList(rest);
   if (activeProfileId() === id) switchProfile(rest[0].id, `Deleted “${list.find((p) => p.id === id)?.name ?? "profile"}”`);

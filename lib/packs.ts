@@ -2,6 +2,7 @@
 // Nothing is built in. Upload a pack (JSON) on the Practice page and the app uses it. Pure functions, tested by scripts/check.ts.
 import { Question, Topic, TopicStatus } from "./types";
 import { repairBackslashes, texProblems } from "./tex";
+import { DATA_IMG, IMG, MAX_IMAGE, MAX_IMAGES_TOTAL, MAX_IMAGE_COUNT, hashData } from "./images";
 
 export interface MockPick { subject: string; one: number; two: number; topics?: string[] }
 export interface MockSection { name: string; picks: MockPick[] }
@@ -22,7 +23,7 @@ export interface PackData {
 
 export const EMPTY_PACK: PackData = { name: "No question pack yet", subjects: {}, topics: [], questions: [], mocks: [], mockTests: [], useBuiltinGenerators: false };
 
-export interface PackResult { pack: PackData | null; errors: string[]; warnings: string[] }
+export interface PackResult { pack: PackData | null; errors: string[]; warnings: string[]; images: Record<string, string> } // images: picture name -> data URI, to be saved when the pack is installed
 const MAX_ERRORS = 12;
 const ID = /^[A-Za-z0-9_.-]{1,48}$/;
 const STATUSES: TopicStatus[] = ["know", "shaky", "noidea"];
@@ -31,7 +32,7 @@ export function parsePack(input: unknown): PackResult {
   const errors: string[] = [];
   const warnings: string[] = [];
   const err = (m: string) => { if (errors.length < MAX_ERRORS) errors.push(m); else if (errors.length === MAX_ERRORS) errors.push("…and more. Fix these first."); };
-  const fail = (): PackResult => ({ pack: null, errors, warnings });
+  const fail = (): PackResult => ({ pack: null, errors, warnings, images: {} });
   const isObj = (x: unknown): x is Record<string, unknown> => typeof x === "object" && x !== null && !Array.isArray(x);
 
   if (!isObj(input)) { err('The file must be one JSON object, like { "name": …, "topics": […], "questions": […] }.'); return fail(); }
@@ -56,6 +57,44 @@ export function parsePack(input: unknown): PackResult {
   const subjects: Record<string, string> = {};
   for (const t of topics) subjects[t.subject] ??= subjectNames[t.subject] ?? t.subject.charAt(0).toUpperCase() + t.subject.slice(1);
   const topicIds = new Set(topics.map((t) => t.id));
+
+  // ----- pictures (optional): "images": { "fig1": "data:image/png;base64,…" }. Each gets a name made from its content. -----
+  const images: Record<string, string> = {};
+  const nameToHash: Record<string, string> = {};
+  const usedImages = new Set<string>();
+  if (input.images !== undefined) {
+    if (!isObj(input.images)) err('"images" must be an object like { "fig1": "data:image/png;base64,…" }.');
+    else {
+      const entries = Object.entries(input.images);
+      let total = 0;
+      if (entries.length > MAX_IMAGE_COUNT) err(`A pack can hold at most ${MAX_IMAGE_COUNT} pictures.`);
+      for (const [name, data] of entries) {
+        if (!ID.test(name)) { err(`images["${name}"]: the picture name must be a short id using letters, digits, - or _.`); continue; }
+        if (typeof data !== "string" || !DATA_IMG.test(data)) { err(`images["${name}"] must be a data URI like "data:image/png;base64,…" (png, jpeg, webp, gif or svg).`); continue; }
+        if (data.length > MAX_IMAGE) { err(`images["${name}"] is too big (${(data.length / 1e6).toFixed(1)} MB). Keep each picture under ${(MAX_IMAGE / 1e6).toFixed(0)} MB; shrink or crop it.`); continue; }
+        total += data.length;
+        const h = hashData(data);
+        images[h] = data; nameToHash[name] = h;
+      }
+      if (total > MAX_IMAGES_TOTAL) err(`The pictures add up to ${(total / 1e6).toFixed(0)} MB, more than the ${(MAX_IMAGES_TOTAL / 1e6).toFixed(0)} MB limit.`);
+    }
+  }
+  // checks the pictures a piece of text uses and renames them to their content names
+  const internImages = (value: string): { text: string; error?: string } => {
+    let error: string | undefined;
+    const text = value.replace(IMG, (m, alt: string, src: string) => {
+      if (src.startsWith("img:")) {
+        const h = nameToHash[src.slice(4)];
+        if (!h) { error ??= `uses the picture "${src.slice(4)}", which is not in "images".`; return m; }
+        usedImages.add(h);
+        return `![${alt}](img:${h})`;
+      }
+      if (/^https:\/\/[^\s]+$/i.test(src)) return m;
+      error ??= src.startsWith("data:") ? 'has a picture written inline. Put the data URI in "images" and write ![description](img:name) here.' : `has a picture source "${src.slice(0, 40)}" that is not img:name or an https:// link.`;
+      return m;
+    });
+    return { text, error };
+  };
 
   // ----- questions -----
   if (!Array.isArray(input.questions)) { err('"questions" must be a list.'); return fail(); }
@@ -82,9 +121,12 @@ export function parsePack(input: unknown): PackResult {
     // maths: repair single backslashes that JSON turned into control characters, then make sure every formula draws
     let fixedBackslashes = 0;
     const tex = (v: string) => { const r = repairBackslashes(v); fixedBackslashes += r.fixed; return r.text; };
-    const text = tex(raw.text);
-    const options = Array.isArray(raw.options) ? raw.options.map((o) => (typeof o === "string" ? tex(o) : o)) : raw.options;
-    const explanation = typeof raw.explanation === "string" ? tex(raw.explanation) : "";
+    let imgFail = false;
+    const im = (v: string, where: string) => { const r = internImages(v); if (r.error) { err(`${w}.${where} ${r.error}`); imgFail = true; } return r.text; };
+    const text = im(tex(raw.text), "text");
+    const options = Array.isArray(raw.options) ? raw.options.map((o, k) => (typeof o === "string" ? im(tex(o), `options[${k}]`) : o)) : raw.options;
+    const explanation = typeof raw.explanation === "string" ? im(tex(raw.explanation), "explanation") : "";
+    if (imgFail) return null;
     if (fixedBackslashes) fixedTotal += fixedBackslashes;
     const parts: [string, string][] = [["text", text], ["explanation", explanation], ...((Array.isArray(options) ? options : []) as string[]).map((o, k): [string, string] => [`options[${k}]`, o])];
     for (const [where, value] of parts) {
@@ -194,13 +236,16 @@ export function parsePack(input: unknown): PackResult {
   }
 
   if (errors.length) return fail();
+  const unused = Object.keys(images).filter((h) => !usedImages.has(h));
+  if (unused.length) warnings.push(`${unused.length} picture${unused.length === 1 ? " is" : "s are"} in "images" but no question uses ${unused.length === 1 ? "it" : "them"}. ${unused.length === 1 ? "It was" : "They were"} left out.`);
+  for (const h of unused) delete images[h];
   if (questions.length === 0) warnings.push("The pack has no questions yet, so Practice and Mocks will be empty until you add some.");
   const noQ = topics.filter((t) => !questions.some((q) => q.topic === t.id)).length;
   if (noQ && questions.length) warnings.push(`${noQ} topic${noQ === 1 ? " has" : "s have"} no questions.`);
   if (!mocks.length && !mockTests.length && questions.length) warnings.push('No "mockTests", so Mocks offers only a quick mixed test, subject tests and a weak-topics test (built from the practice questions).');
   if (mockTests.length && mockTests.every((m) => m.sections.every((x) => !x.questions.length))) warnings.push("Your mock tests have no questions.");
 
-  return { pack: { name, subjects, topics, questions, mocks, mockTests, useBuiltinGenerators: input.useBuiltinGenerators === true }, errors, warnings };
+  return { pack: { name, subjects, topics, questions, mocks, mockTests, useBuiltinGenerators: input.useBuiltinGenerators === true }, errors, warnings, images };
 }
 
 const qJson = (pack: { topics: Topic[] }, q: Question) => ({ id: q.id, subject: q.subject ?? pack.topics.find((t) => t.id === q.topic)?.subject, topic: q.topic, ...(q.tags?.length ? { tags: q.tags } : {}), type: q.type, marks: q.marks, text: q.text, ...(q.options ? { options: q.options } : {}), answer: q.answer, explanation: q.explanation });
@@ -359,6 +404,7 @@ Use exactly this format:
   - "nat": the answer is a number typed in. Add "answer" = the number and "tolerance" = allowed error.
 - "questions" is the PRACTICE bank. Mock tests have their own separate questions, so never put a mock-test question in "questions".
 - "mockTests": optional list of complete mock tests: { "id", "name", "minutes", "sections": [ { "name", "questions": [ ...questions written exactly like the ones above... ] } ] }. Every question inside a mock test belongs to that one mock test only: never reuse a question in two mocks or in "questions". Give every question an "id" that is unique across the whole file, for example "mock1-q1". Each question still needs "subject" and "topic" (declare any topic it uses in "topics").
+- Pictures (only if I give you pictures, otherwise never use them): in "text", in an option, or in "explanation", write ![what the picture shows](img:name). Then add a top-level "images" object that holds each picture once: { "name": "data:image/png;base64,..." }. Use only the picture names I give you. Never make up picture data.
 - Make sure every answer is actually correct and the numbers in each explanation add up.
 
 HOW TO WRITE MATHS (LaTeX). The app draws every question, option and explanation with KaTeX, so write ALL maths as LaTeX:

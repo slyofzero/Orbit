@@ -317,8 +317,8 @@ export default function Dashboard() {
               <button className="btn soft" onClick={() => setWipe(false)}>Cancel</button>
             </>
           )}
-          <button className="btn soft" onClick={() => {
-            const blob = new Blob([exportAll()], { type: "application/json" });
+          <button className="btn soft" onClick={async () => {
+            const blob = new Blob([await exportAll()], { type: "application/json" });
             const a = document.createElement("a");
             a.href = URL.createObjectURL(blob);
             a.download = `gate-progress-${todayIST()}.json`;
