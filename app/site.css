@@ -864,3 +864,58 @@ button.tg { cursor: pointer; font-family: inherit; } button.tg:hover { border-co
 .ad-qtable .ad-bank { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ad-qtable .ad-type { white-space: nowrap; }
 .ad-qtable .ad-text { max-width: none; }
+
+/* The day's matched questions: the main event, with a warm gradient frame (different from the blue banner) */
+.pl-main { margin: 12px 0 8px; padding: 14px 16px; border-radius: 16px; border: 2px solid transparent; display: grid; gap: 4px;
+  background: linear-gradient(var(--sheet), var(--sheet)) padding-box, linear-gradient(135deg, #f59e0b, #ef4444 50%, #d946ef) border-box;
+  box-shadow: 0 8px 24px -12px rgba(239, 68, 68, 0.55); position: relative; }
+.pl-main::before { content: ""; position: absolute; inset: 0; border-radius: 14px; pointer-events: none; background: linear-gradient(135deg, rgba(245, 158, 11, 0.16), rgba(217, 70, 239, 0.16)); }
+.pl-main > * { position: relative; }
+.pl-main-h { font-family: var(--font-display); font-size: 1.02rem; background: linear-gradient(90deg, #fbbf24, #fb7185 60%, #e879f9); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.pl-main-note { color: var(--ink-2); }
+.pl-main .bar > div { background: linear-gradient(90deg, #f59e0b, #ef4444, #d946ef); }
+.pl-main-go { border: none; color: #fff; background: linear-gradient(135deg, #f59e0b, #ef4444 55%, #d946ef); }
+.pl-main-go:hover { filter: brightness(1.1); }
+
+/* Plan editor */
+.pe { display: grid; gap: 12px; }
+.pe-f { display: grid; gap: 4px; font-size: 0.85rem; color: var(--ink-2); }
+.pe-in { font: inherit; padding: 9px 12px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--sheet); color: var(--ink); min-width: 0; }
+.pe-in:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.pe-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.pe-task { display: flex; gap: 8px; align-items: center; } .pe-task .pe-in { flex: 1; }
+@media (max-width: 700px) { .pe-grid { grid-template-columns: 1fr; } }
+.pe-qid { font-family: ui-monospace, monospace; font-size: 0.8rem; padding: 2px 8px; border-radius: 8px; background: var(--sheet-2); color: var(--ink); flex: none; }
+.pe-qtext { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Improve plan: gradient button + window */
+.ipm-btn { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; padding: 8px 16px; border: 1.5px solid transparent; border-radius: 999px; cursor: pointer; font: 700 0.92rem var(--font-body); color: #fff; background: linear-gradient(120deg, #14b8a6, #3b82f6, #a855f7, #3b82f6, #14b8a6); background-size: 200% 100%; animation: ipmFlow 5s linear infinite; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 0 22px -2px rgba(99, 102, 241, 0.75), 0 6px 18px -8px rgba(59, 130, 246, 0.9); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25); transition: transform 0.2s, filter 0.2s; }
+.ipm-btn:hover { transform: translateY(-1px); filter: brightness(1.1); }
+.ipm-btn svg { width: 15px; height: 15px; fill: #fff; }
+.ipm-veil { position: fixed; inset: 0; z-index: 9000; display: grid; place-items: center; padding: 20px; background: rgba(5, 10, 20, 0.62); backdrop-filter: blur(6px); animation: ipmFade 0.2s ease both; }
+.ipm { width: min(560px, 100%); max-height: calc(100vh - 40px); overflow: auto; border-radius: 24px; background: var(--sheet); color: var(--ink); box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.06); animation: ipmPop 0.35s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.ipm-head { position: relative; padding: 28px 28px 24px; color: #fff; overflow: hidden; background: linear-gradient(120deg, #0f766e, #2563eb 55%, #7c3aed); }
+.ipm-head::before { content: ""; position: absolute; width: 260px; height: 260px; right: -60px; top: -140px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 255, 255, 0.35), transparent 68%); }
+.ipm-head h2 { position: relative; margin: 0 0 6px; font-size: 1.6rem; letter-spacing: -0.02em; }
+.ipm-head p { position: relative; margin: 0; max-width: 40ch; color: rgba(255, 255, 255, 0.92); }
+.ipm-x { position: absolute; z-index: 1; top: 14px; right: 14px; width: 34px; height: 34px; border: none; border-radius: 50%; cursor: pointer; font-size: 1.4rem; line-height: 1; color: #fff; background: rgba(255, 255, 255, 0.18); }
+.ipm-x:hover { background: rgba(255, 255, 255, 0.32); }
+.ipm-body { padding: 22px 28px 26px; display: grid; gap: 14px; }
+.ipm-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 18px; }
+.ipm-steps li { display: grid; grid-template-columns: 36px 1fr; gap: 14px; align-items: start; }
+.ipm-steps p { margin: 2px 0 8px; color: var(--ink-2); font-size: 0.92rem; }
+.ipm-n { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; font: 800 1rem var(--font-display); color: #fff; background: linear-gradient(135deg, #2563eb, #7c3aed); }
+.ipm-apps { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.ipm-apps button { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-radius: 14px; cursor: pointer; font: 700 0.95rem var(--font-display); color: var(--ink); background: var(--sheet-2); border: 1.5px solid var(--line); transition: transform 0.15s, border-color 0.15s; }
+.ipm-apps button:hover { transform: translateY(-1px); border-color: #2563eb; }
+.ipm-apps i { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+.ipm-note { margin: 0; padding: 10px 14px; border-radius: 12px; font-size: 0.9rem; background: var(--accent-soft); border: 1.5px solid var(--accent); }
+.ipm-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding-top: 14px; border-top: 1.5px solid var(--line); }
+@keyframes ipmFade { from { opacity: 0; } }
+@keyframes ipmPop { from { opacity: 0; transform: translateY(14px) scale(0.96); } }
+@media (prefers-reduced-motion: reduce) { .ipm, .ipm-veil { animation: none; } }
+@media (max-width: 520px) { .ipm-apps { grid-template-columns: 1fr; } .ipm-head, .ipm-body { padding-left: 20px; padding-right: 20px; } }
+
+@keyframes ipmFlow { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .ipm-btn { animation: none; } }
+.ipm-copy { margin-top: 10px; }

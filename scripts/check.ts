@@ -13,6 +13,7 @@ import { aiPrompt, parsePlan, templateJson } from "../lib/customPlan";
 import { hashData as hashDataCheck } from "../lib/images";
 import { checkQuestion, deleteSection, freeId, moveQuestion, moveSection, removeQuestion, renameSection, searchIds, upsertQuestion } from "../lib/packEdit";
 import type { Attempt } from "../lib/types";
+import { linkPrompt, parseLinks, liveQuestionIds, readAnswer } from "../lib/links";
 
 let bad = 0;
 const err = (m: string) => { bad++; console.log("BAD:", m); };
@@ -277,6 +278,30 @@ if (ok.pack?.questions.map((q) => q.id).join() !== "a-1,a-2") err("auto ids shou
   if (!packPrompt().includes("Do NOT write an \"id\"")) err("the AI prompt should tell the AI not to write ids");
   console.log("admin edit: ok");
   console.log("mock tests: ok");
+  {
+    const q = (id: string, t: string) => ({ id, topic: t, type: "mcq", marks: 1, text: `Q ${id}`, options: ["a", "b"], answer: 0 });
+    const lp = parsePack({ name: "L", subjects: { s: "S" }, topics: [{ id: "t1", name: "T1", subject: "s", status: "shaky" }], questions: [q("t1-1", "t1"), q("t1-2", "t1")], mockTests: [{ id: "m1", name: "M1", minutes: 60, sections: [{ name: "A", questions: [q("m1-1", "t1")] }] }] });
+    if (!lp.pack) err("links fixture: " + lp.errors.join("; "));
+    else {
+      const plan = parsePlan({ name: "P", phaseNames: { a: "A" }, days: [{ date: "2026-11-08", phase: "a", kind: "study", hours: 2, title: "T1 day", topics: ["t1"], tasks: ["x"], targetQs: 2 }, { date: "2026-11-09", phase: "a", kind: "mock", hours: 3, title: "Mock", topics: [], tasks: ["y"], targetQs: 0 }] }).plan!;
+      if (!linkPrompt(plan, lp.pack).includes("t1-2 | t1")) err("prompt must list question ids");
+      if (linkPrompt(plan, lp.pack).includes("MY CURRENT LINKS")) err("no links, so no current-links section");
+      const withCur = linkPrompt(plan, lp.pack, { withText: true }, { "2026-11-08": { q: ["t1-1", "gone"], note: "n" } });
+      if (!withCur.includes("MY CURRENT LINKS") || !withCur.includes('"practice":["t1-1"]') || withCur.includes("gone")) err("current links must be included, minus ids that no longer exist");
+      if (linkPrompt(plan, lp.pack, { withText: false }).includes("Q t1-2")) err("prompt without text must omit question text");
+      const r = parseLinks({ days: [{ date: "2026-11-08", practice: ["t1-1", "nope", "m1-1", "t1-1"], note: "go" }, { date: "2026-11-09", mock: "m1" }, { date: "2030-01-01", practice: ["t1-2"] }, { date: "2026-11-09", practice: ["t1-1"] }] }, plan, lp.pack);
+      if (!r.links || r.questions !== 1 || r.mocks !== 1 || r.days !== 2) err("parseLinks counts wrong: " + JSON.stringify(r));
+      if (r.links?.["2026-11-08"]?.q.join() !== "t1-1" || r.links?.["2026-11-09"]?.q.join() !== "t1-1") err("a question may repeat across days but not within a day");
+      if (r.warnings.length !== 3) err("expected warnings for unknown id, mock id, bad date only (repeats across days are allowed): " + r.warnings.join(" | "));
+      if (parseLinks({ days: [{ date: "2030-01-01", practice: ["x"] }] }, plan, lp.pack).links) err("nothing valid must be an error");
+      if (parseLinks("nope", plan, lp.pack).links) err("non-object must fail");
+      const cut = readAnswer('```json\n{ "days": [ { "date": "2026-11-08", "practice": ["t1-1"] }, { "date": "2026-11-09", "mock": "m1" }\n]');
+      if (cut.errors.length || cut.warnings.length !== 1 || !parseLinks(cut.value, plan, lp.pack).links) err("a cut-off answer should be repaired with a warning: " + JSON.stringify(cut));
+      if (readAnswer("hello {").errors.length !== 1) err("garbage must give one friendly error");
+      if (liveQuestionIds({ q: ["t1-1", "gone"] }, lp.pack).missing !== 1) err("missing ids must be counted");
+    }
+    console.log("plan links: ok");
+  }
 }
 console.log(bad ? `${bad} PROBLEMS` : "ALL OK");
 

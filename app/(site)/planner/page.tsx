@@ -1,20 +1,29 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import ImprovePlan from "@/components/ImprovePlan";
+import PlanEdit from "@/components/PlanEdit";
+import LinkPlan from "@/components/LinkPlan";
 import PlanImport from "@/components/PlanImport";
+import { liveQuestionIds, Links } from "@/lib/links";
 import { KIND_LABEL, WEEKDAY_NAMES, addDays, daysBetween, fmtDate, fmtLong, todayIST, weekday } from "@/lib/plan";
 import { KEYS, usePack, usePersisted, usePlan } from "@/lib/store";
 import { burst } from "@/lib/fx";
 import { PracticeRec } from "@/lib/types";
 import { Day } from "@/lib/types";
 
-type View = "next" | "all" | "missed" | "plan";
+type View = "next" | "all" | "missed" | "plan" | "link" | "edit";
 type Done = Record<string, boolean>;
 
 const istDay = (at: number) => new Date(at).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
 
 function DayBody({ d, done, setDone, qs }: { d: Day; done: Done; setDone: (u: (p: Done) => Done) => void; qs: number }) {
-  const { topicById: TOPIC_BY_ID } = usePack();
+  const { topicById: TOPIC_BY_ID, pack } = usePack();
+  const [links, setLinks] = usePersisted<Links>(KEYS.links, {});
+  const [prac] = usePersisted<Record<string, PracticeRec>>(KEYS.practice, {});
+  const link = links[d.date];
+  const lq = liveQuestionIds(link, pack).ids;
+  const lmock = link?.mock ? pack.mockTests.find((m) => m.id === link.mock) : undefined;
   const complete = d.tasks.every((_, i) => done[`${d.date}:${i}`]);
   const tick = (i: number, checked: boolean, el: HTMLInputElement) => {
     setDone((p) => ({ ...p, [`${d.date}:${i}`]: checked }));
@@ -31,6 +40,18 @@ function DayBody({ d, done, setDone, qs }: { d: Day; done: Done; setDone: (u: (p
           <span>{t}</span>
         </label>
       ))}
+      {(lq.length > 0 || lmock) && (
+        <div className="pl-main">
+          <b className="pl-main-h">{lq.length ? "Main event: your questions for this day" : "Main event: the mock for this day"}</b>
+          <div className="small">
+            {lq.length > 0 && `${lq.filter((id) => prac[id]).length} of ${lq.length} answered, ${lq.filter((id) => prac[id]?.correct).length} correct`}
+            {lmock && `${lq.length ? " · " : ""}Mock: ${lmock.name}`}
+          </div>
+          {link?.note && <div className="small pl-main-note">{link.note}</div>}
+          {lq.length > 0 && <div className="bar"><div style={{ width: `${(lq.filter((id) => prac[id]).length / lq.length) * 100}%` }} /></div>}
+          <div className="row" style={{ marginTop: 8 }}><Link className="btn pl-main-go" href={`/day/${d.date}`}>{lq.length ? "Practise these questions" : "Open this day"}</Link><button className="btn soft" onClick={() => setLinks((p) => { const n = { ...p }; delete n[d.date]; return n; })}>Unlink this day</button></div>
+        </div>
+      )}
       {d.targetQs > 0 && (
         <div className="pl-target">
           <div className="small muted">Practice target: {Math.min(qs, d.targetQs)} of {d.targetQs} questions</div>
@@ -56,11 +77,13 @@ export default function Planner() {
   const PHASE_NAMES = plan.phaseNames;
   const [done, setDone, ready] = usePersisted<Done>(KEYS.done, {});
   const [practice] = usePersisted<Record<string, PracticeRec>>(KEYS.practice, {});
+  const [links, setLinks] = usePersisted<Links>(KEYS.links, {});
+  const [askUnlink, setAskUnlink] = useState(false);
   const [view, setView] = useState<View>("next");
   const [openDay, setOpenDay] = useState<Record<string, boolean>>({});
   const [openPhase, setOpenPhase] = useState<Record<string, boolean> | null>(null);
   const today = todayIST();
-  useEffect(() => { if (new URLSearchParams(window.location.search).get("tab") === "plan") setView("plan"); }, []);
+  useEffect(() => { const t = new URLSearchParams(window.location.search).get("tab"); if (t === "plan" || t === "link" || t === "edit") setView(t); }, []);
 
   if (!ready || !planReady) return <p className="muted">Loading…</p>;
 
@@ -142,18 +165,29 @@ export default function Planner() {
 
   return (
     <>
-      <div className="row" style={{ alignItems: "baseline" }}>
+      <div className="row" style={{ alignItems: "center" }}>
         <h1>Planner</h1>
-        <button className="btn soft right" onClick={() => setView((v) => (v === "plan" ? "next" : "plan"))}>{view === "plan" ? "Back to planner" : "Upload plan"}</button>
+        <ImprovePlan onPaste={() => setView("link")} />
+        {Object.keys(links).length > 0 && (askUnlink ? (
+          <>
+            <button className="btn" onClick={() => { setLinks({}); setAskUnlink(false); }}>Yes, unlink {Object.keys(links).length} days</button>
+            <button className="btn soft" onClick={() => setAskUnlink(false)}>Keep</button>
+          </>
+        ) : <button className="btn soft" onClick={() => setAskUnlink(true)}>Unlink questions</button>)}
+        <button className="btn soft" onClick={() => setView((v) => (v === "edit" ? "next" : "edit"))}>{view === "edit" ? "Back to planner" : "Edit plan"}</button>
+        <button className="btn soft" onClick={() => setView((v) => (v === "plan" ? "next" : "plan"))}>{view === "plan" ? "Back to planner" : "Upload plan"}</button>
+        {view === "link" && <button className="btn soft" onClick={() => setView("next")}>Back to planner</button>}
       </div>
       <p className="muted small" style={{ marginTop: -6 }}>{plan.name}</p>
-      {view !== "plan" && <div className="tabs">
+      {view !== "plan" && view !== "link" && view !== "edit" && <div className="tabs">
         <button className={view === "next" ? "on" : ""} onClick={() => setView("next")}>Next 3 days</button>
         <button className={view === "all" ? "on" : ""} onClick={() => setView("all")}>Full plan</button>
         <button className={view === "missed" ? "on" : ""} onClick={() => setView("missed")}>Missed{missed.length ? ` (${missed.length})` : ""}</button>
       </div>}
 
       {view === "plan" && <PlanImport onDone={() => setView("next")} />}
+      {view === "edit" && <PlanEdit />}
+      {view === "link" && <LinkPlan onDone={() => setView("next")} />}
 
       {view === "next" && (
         <div className="pl-focus">

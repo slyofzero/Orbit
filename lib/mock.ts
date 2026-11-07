@@ -1,4 +1,4 @@
-import { Question, Section } from "./types";
+import { Attempt, Question, Section } from "./types";
 import { GENERATORS, generate } from "./generators";
 import { FixedMock, MockPick, MockTemplate, PackData } from "./packs";
 import { makeRng, shuffle } from "./rng";
@@ -114,4 +114,9 @@ export function buildFixedMock(m: FixedMock): BuiltMock {
     questions.push(...sec.questions);
   }
   return { questions, sections, durationSec: m.minutes * 60, warnings: [], title: m.name };
+}
+
+/** Turns a built mock into an attempt you can open at /exam/<id>. */
+export function attemptFrom(m: BuiltMock): Attempt {
+  return { id: `m${Date.now().toString(36)}`, title: m.title, createdAt: Date.now(), durationSec: m.durationSec, questions: m.questions, sections: m.sections, responses: {}, warnings: m.warnings };
 }

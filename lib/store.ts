@@ -19,6 +19,7 @@ export const KEYS = {
   plan: "gate.plan", // PlanData (null = no plan yet)
   pack: "gate.pack", // PackData (null = no question pack yet)
   plog: "gate.plog", // LogEntry[]  (every practice answer / skip, for statistics)
+  links: "gate.links", // Record<date, {q, mock?, note?}>  (which questions go with which plan day)
 } as const;
 
 const LOG_MAX = 20000;
@@ -137,6 +138,7 @@ export function usePlan() {
   const [stored, setStored, ready] = usePersisted<PlanData | null>(KEYS.plan, null);
   const [, setMs] = usePersisted<Milestone[] | null>(KEYS.milestones, null);
   const [, setDone] = usePersisted<Record<string, boolean>>(KEYS.done, {});
+  const [, setLinks] = usePersisted<Record<string, unknown>>(KEYS.links, {});
   const plan = stored ?? EMPTY_PLAN;
   return {
     plan,
@@ -147,11 +149,15 @@ export function usePlan() {
     install: (next: PlanData, keepTicks: boolean) => {
       setStored(next);
       setMs(null);
+      setLinks({});
       if (!keepTicks) setDone({});
     },
+    // small edits: keeps milestones, ticks and links as they are
+    update: (next: PlanData) => setStored(next),
     remove: () => {
       setStored(null);
       setMs(null);
+      setLinks({});
       setDone({});
     },
   };
