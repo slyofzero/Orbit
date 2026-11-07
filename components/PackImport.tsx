@@ -16,7 +16,7 @@ const save = (name: string, text: string) => {
 // Where you load the questions: a JSON "question pack" with topics, questions and mock-test recipes.
 const mockQs = (p: PackData) => p.mockTests.reduce((n, m) => n + m.sections.reduce((k, x) => k + x.questions.length, 0), 0);
 
-export default function PackImport({ onDone }: { onDone?: () => void }) {
+export default function PackImport({ onDone }: { onDone?: (message: string) => void }) {
   const { pack, custom, install, remove } = usePack();
   const [text, setText] = useState("");
   const [keep, setKeep] = useState(false);
@@ -38,10 +38,11 @@ export default function PackImport({ onDone }: { onDone?: () => void }) {
     await install(merged.pack, true, result.images);
     setText("");
     const r = merged.report, added = r.newQuestions + r.newMockQuestions, replaced = r.updatedQuestions + r.updatedMockQuestions;
-    setNote(`Added ${added} question${added === 1 ? "" : "s"}${replaced ? ` and replaced ${replaced}` : ""} in "${pack.name}".`);
-    onDone?.();
+    const m = `Added ${added} question${added === 1 ? "" : "s"}${replaced ? ` and replaced ${replaced}` : ""} in "${pack.name}".`;
+    setNote(m);
+    onDone?.(m);
   };
-  const useIt = async () => { if (!p || !result) return; await install(p, keep, result.images); setText(""); setAsk(null); setNote(`"${p.name}" is now your pack.`); onDone?.(); };
+  const useIt = async () => { if (!p || !result) return; await install(p, keep, result.images); setText(""); setAsk(null); const m = `"${p.name}" is now your pack: ${p.questions.length} practice question${p.questions.length === 1 ? "" : "s"}.`; setNote(m); onDone?.(m); };
 
   const copy = async (what: string, value: string) => {
     try { await navigator.clipboard.writeText(value); setNote(`${what} copied.`); } catch { setNote("Copy was blocked by the browser. Use Download instead."); }

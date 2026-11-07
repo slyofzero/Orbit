@@ -15,6 +15,7 @@ export default function PracticeHome() {
   const SUBJECTS = pack.subjects;
   const TOPICS = pack.topics;
   const [managing, setManaging] = useState(false);
+  const [done, setDone] = useState("");
   const [practice, , ready] = usePersisted<Record<string, PracticeRec>>(KEYS.practice, {});
   const [only, setOnly] = useState<"all" | TopicStatus>("all");
   const [q, setQ] = useState("");
@@ -57,11 +58,12 @@ export default function PracticeHome() {
             <h2 style={{ marginTop: 0 }}>No questions yet</h2>
             <p className="muted" style={{ margin: 0 }}>Practice and Mocks are powered by a question pack: your topics, your questions and your mock-test recipes. Upload one below to get started.</p>
           </div>
-          <PackImport />
+          <PackImport onDone={(m) => { setDone(m); window.scrollTo({ top: 0 }); }} />
         </>
       )}
-      {hasPack && managing && <PackImport onDone={() => setManaging(false)} />}
+      {hasPack && managing && <PackImport onDone={(m) => { setDone(m); setManaging(false); window.scrollTo({ top: 0 }); }} />}
       {hasPack && !managing && <>
+      {done && <div className="pi-ok" role="status" style={{ marginBottom: 14 }}><span>✓ {done}</span><button className="btn soft" style={{ justifySelf: "start" }} onClick={() => setDone("")}>Dismiss</button></div>}
 
       {nextDay && nextTopics.length > 0 && (
         <section className="pr-next">
