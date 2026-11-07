@@ -7,10 +7,11 @@ import { GENERATORS, generate } from "../lib/generators";
 import { buildFixedMock, buildMock } from "../lib/mock";
 import { TOPICS } from "../lib/topics";
 import { GATE_PLAN } from "../lib/gatePlan";
-import { EMPTY_PACK, parsePack, packPrompt, packTemplateJson, packToJson, mergePack } from "../lib/packs";
+import { EMPTY_PACK, parsePack, packPrompt, packTemplateJson, packToJson, mergePack, mergeChanges, allQuestions } from "../lib/packs";
 import { gatePackJson, gatePlanJson } from "./export-gate";
 import { aiPrompt, parsePlan, templateJson } from "../lib/customPlan";
 import { hashData as hashDataCheck } from "../lib/images";
+import { checkQuestion, deleteSection, freeId, moveQuestion, moveSection, removeQuestion, renameSection, searchIds, upsertQuestion } from "../lib/packEdit";
 import type { Attempt } from "../lib/types";
 
 let bad = 0;
@@ -158,11 +159,13 @@ if (ok.pack?.questions.map((q) => q.id).join() !== "a-1,a-2") err("auto ids shou
   const a = mk({ questions: [q("alg-1", "one"), q("alg-2", "two")] }).pack!;
   const b = mk({ topics: [{ id: "alg", subject: "m", name: "Algebra" }, { id: "geo", subject: "m", name: "Geometry" }], questions: [q("alg-1", "one"), q("alg-2", "brand new"), q("geo-1", "g")] }).pack!;
   const r = mergePack(a, b);
-  if (r.report.duplicates !== 1 || r.report.newQuestions !== 2 || r.report.renamed !== 1 || r.report.newTopics !== 1) err("merge report wrong " + JSON.stringify(r.report));
+  if (r.report.unchanged !== 1 || r.report.updatedQuestions !== 1 || r.report.newQuestions !== 1 || r.report.newTopics !== 1) err("merge report wrong " + JSON.stringify(r.report));
   const ids = r.pack.questions.map((x) => x.id);
-  if (new Set(ids).size !== ids.length || r.pack.questions.length !== 4) err("merge ids not unique " + ids);
+  if (new Set(ids).size !== ids.length || r.pack.questions.length !== 3) err("merge ids not unique " + ids);
+  if (r.pack.questions.find((x) => x.id === "alg-2")?.text !== "brand new") err("a question with a known id must be replaced by the uploaded one");
+  if (r.pack.questions[1].id !== "alg-2") err("a replaced question keeps its place");
   const again = mergePack(r.pack, b);
-  if (again.report.newQuestions !== 0 || again.pack.questions.length !== 4) err("merging twice should add nothing");
+  if (mergeChanges(again.report) !== 0 || again.pack.questions.length !== 3) err("merging twice should change nothing");
   if (a.questions.length !== 2) err("merge must not change the original");
   if (!packPrompt(a).includes("alg [m]")) err("adding prompt should list topic ids");
   if (!parsePack(packToJson(r.pack)).pack) err("merged pack should round trip");
@@ -188,10 +191,11 @@ if (ok.pack?.questions.map((q) => q.id).join() !== "a-1,a-2") err("auto ids shou
   const B = mk([{ id: "t1", name: "T1", minutes: 30, sections: [{ name: "S", questions: [mq("t1-1", "a"), mq("t1-3", "c")] }] }, { id: "t2", name: "T2", minutes: 30, sections: [{ name: "S", questions: [mq("t1-2", "d")] }] }]).pack!;
   const mm = mergePack(A, B);
   const all = [...mm.pack.questions, ...mm.pack.mockTests.flatMap((m) => m.sections.flatMap((x) => x.questions))].map((q) => q.id);
-  if (mm.report.newMockTests !== 1 || mm.report.newMockQuestions !== 2 || mm.report.mockDuplicates !== 1) err("mock merge report wrong " + JSON.stringify(mm.report));
+  if (mm.report.newMockTests !== 0 || mm.report.newMockQuestions !== 1 || mm.report.unchanged !== 2 || mm.report.updatedMockQuestions !== 1) err("mock merge report wrong " + JSON.stringify(mm.report));
+  if (mm.pack.mockTests.length !== 1 || mm.pack.mockTests[0].sections[0].questions.find((x) => x.id === "t1-2")?.text !== "d") err("an id already in a mock is replaced in place, not copied into another mock");
   if (new Set(all).size !== all.length) err("ids must be unique across banks after merge: " + all);
   if (mm.pack.mockTests[0].sections[0].questions.length !== 3) err("new question should join the existing mock");
-  if (mergePack(mm.pack, B).report.newMockQuestions !== 0) err("merging mocks twice should add nothing");
+  if (mergeChanges(mergePack(mm.pack, B).report) !== 0) err("merging mocks twice should change nothing");
   // statistics cover mock questions too, with their subject, topic and tags
   const tagged = (id: string, tags: string[]) => ({ ...mq(id, "t " + id), tags });
   const sp2 = mk([{ id: "t1", name: "T1", minutes: 30, sections: [{ name: "S", questions: [tagged("m1", ["trap"]), tagged("m2", ["trap", "hard"])] }] }]).pack!;
@@ -227,6 +231,51 @@ if (ok.pack?.questions.map((q) => q.id).join() !== "a-1,a-2") err("auto ids shou
   const mixed = mergePack(pi.pack!, parsePack({ ...base, questions: [{ ...mq("i2", "other ![fig](img:a)"), explanation: "e" }], images: { a: png } }).pack!);
   if (mixed.pack.questions.length !== 2) err("merge with pictures");
   console.log("pictures: ok");
+  // editing one question at a time (admin)
+  const E = mk([{ id: "t1", name: "T1", minutes: 30, sections: [{ name: "S", questions: [mq("t1-1", "a"), mq("t1-2", "b")] }] }]).pack!;
+  const eq = (id: string, text: string) => checkQuestion(E, { ...mq(id, text), subject: "m" }, {}).question!;
+  const up = upsertQuestion(E, eq("t1-2", "B edited"), { bank: "mock", mockId: "t1", section: "S" });
+  if (up.mockTests[0].sections[0].questions[1].text !== "B edited" || up.mockTests[0].sections[0].questions.length !== 2) err("editing in place should keep the place");
+  const mv = upsertQuestion(E, eq("t1-2", "B moved"), { bank: "practice" });
+  if (mv.questions.at(-1)?.id !== "t1-2" || mv.mockTests[0].sections[0].questions.some((x) => x.id === "t1-2")) err("a moved question leaves its old bank");
+  const rm = removeQuestion(removeQuestion(E, "t1-1"), "t1-2");
+  if (rm.mockTests[0].sections.length !== 0) err("an emptied mock section should go away");
+  const nw = upsertQuestion(E, eq("brand-1", "x"), { bank: "mock", mockId: "t1", section: "Second" });
+  if (nw.mockTests[0].sections.length !== 2) err("a new section should be created");
+  const fid = freeId(E, "alg");
+  if (allQuestions(E).some((l) => l.q.id === fid)) err("freeId must be unused: " + fid);
+  if (checkQuestion(E, { ...mq("zz", "x"), topic: "nope" }, {}).errors.length === 0) err("a question with an unknown topic must be refused");
+  if (checkQuestion(E, { ...mq("zz", "price $5"), subject: "m" }, {}).errors.length === 0) err("a broken formula must be refused by the editor too");
+  if (searchIds(E, "T1-2")[0]?.q.id !== "t1-2" || searchIds(E, "t1").length !== 2) err("id search should find by part of an id");
+  const mv1 = moveQuestion(E, "t1", "S", "t1-1", 1);
+  if (mv1.mockTests[0].sections[0].questions.map((x) => x.id).join() !== "t1-2,t1-1") err("moving a question down swaps it with the next");
+  if (moveQuestion(E, "t1", "S", "t1-1", -1).mockTests[0].sections[0].questions[0].id !== "t1-1") err("the first question can't move up");
+  const sec2 = upsertQuestion(E, eq("brand-2", "y"), { bank: "mock", mockId: "t1", section: "Second" });
+  if (moveSection(sec2, "t1", "Second", -1).mockTests[0].sections[0].name !== "Second") err("sections should move");
+  const rn = renameSection(sec2, "t1", "Second", "Renamed");
+  if (typeof rn === "string" || rn.mockTests[0].sections[1].name !== "Renamed") err("a section should rename");
+  if (typeof renameSection(sec2, "t1", "Second", "S") !== "string" || typeof renameSection(sec2, "t1", "Second", "  ") !== "string") err("a duplicate or empty section name must be refused");
+  if (deleteSection(sec2, "t1", "Second").mockTests[0].sections.length !== 1) err("a section should delete");
+  // ids come from the system unless the file writes them; a system id never overrides an existing question
+  const noId = (text: string) => { const { id: _id, ...rest } = mq("x", text); void _id; return rest; };
+  const have = mk([{ id: "t1", name: "T1", minutes: 30, sections: [{ name: "S", questions: [mq("t1-1", "a")] }] }]).pack!;
+  const up1 = parsePack({ ...base, questions: [noId("p"), noId("q")], mockTests: [{ id: "t1", name: "T1", minutes: 30, sections: [{ name: "S", questions: [noId("m")] }] }] }, have);
+  if (!up1.pack || up1.autoIds !== 3) err("questions without ids get system ids: " + up1.errors.join("; "));
+  else {
+    const ids = [...up1.pack.questions.map((x) => x.id), ...up1.pack.mockTests[0].sections[0].questions.map((x) => x.id)];
+    if (ids.some((i) => allQuestions(have).some((l) => l.q.id === i))) err("a system id must never equal an existing id: " + ids);
+    const mm2 = mergePack(have, up1.pack);
+    if (mm2.report.replacedIds.length !== 0 || mm2.report.newQuestions !== 2 || mm2.report.newMockQuestions !== 1) err("id-less questions must be added, never override: " + JSON.stringify(mm2.report));
+  }
+  // explicit id elsewhere in the file is respected, and auto ids step around it
+  const mixed2 = parsePack({ ...base, questions: [noId("p"), { ...mq("alg-1", "explicit"), text: "explicit" }] });
+  if (!mixed2.pack || mixed2.pack.questions.map((x) => x.id).sort().join() !== "alg-1,alg-2") err("auto ids step around explicit ids in the same file: " + (mixed2.pack?.questions.map((x) => x.id) ?? mixed2.errors));
+  // an explicit id that exists is reported as an override
+  const over = mergePack(have, parsePack({ ...base, questions: [], mockTests: [{ id: "t1", name: "T1", minutes: 30, sections: [{ name: "S", questions: [mq("t1-1", "changed")] }] }] }, have).pack!);
+  if (over.report.replacedIds.join() !== "t1-1") err("an existing id must be listed as overridden: " + JSON.stringify(over.report));
+  if (mergePack(have, have).report.replacedIds.length !== 0) err("an identical question is not an override");
+  if (!packPrompt().includes("Do NOT write an \"id\"")) err("the AI prompt should tell the AI not to write ids");
+  console.log("admin edit: ok");
   console.log("mock tests: ok");
 }
 console.log(bad ? `${bad} PROBLEMS` : "ALL OK");

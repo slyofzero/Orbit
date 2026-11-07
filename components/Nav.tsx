@@ -1,6 +1,8 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { isAdminProfile } from "@/lib/profiles";
 import ThemeToggle from "./ThemeToggle";
 import ProfileSwitcher from "./ProfileSwitcher";
 import Companion from "./Companion";
@@ -18,13 +20,16 @@ const LINKS: [string, string, React.ReactNode][] = [
 
 export default function Nav() {
   const path = usePathname();
+  const [admin, setAdmin] = useState(false);
+  useEffect(() => { setAdmin(isAdminProfile()); }, []);
   return (
     <aside className="rail">
       <Link href="/" className="brand">
         Orbit<small>study hub</small>
       </Link>
       <ProfileSwitcher />
-      {LINKS.map(([href, label, icon]) => (
+      {admin && <Link href="/admin" className="item active">{I("M12 3l8 3v6c0 4.5-3.2 8-8 9-4.8-1-8-4.5-8-9V6z")}Admin</Link>}
+      {!admin && LINKS.map(([href, label, icon]) => (
         <Link key={href} href={href} className={`item ${(href === "/" ? path === "/" : path.startsWith(href)) ? "active" : ""}`}>
           {icon}
           {label}

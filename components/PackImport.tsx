@@ -1,6 +1,6 @@
 "use client";
 import { useMemo, useRef, useState } from "react";
-import { mergePack, packPrompt, packTemplateJson, parsePack, type PackData } from "@/lib/packs";
+import { mergeChanges, mergePack, packPrompt, packTemplateJson, parsePack, type PackData } from "@/lib/packs";
 import { exportPack } from "@/lib/imageStore";
 import { downloadJson, fileSafe } from "@/lib/download";
 import ExportFirstModal from "./ExportFirstModal";
@@ -25,15 +25,22 @@ export default function PackImport({ onDone }: { onDone?: () => void }) {
   const [note, setNote] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const adding = custom && mode === "add";
   const result = useMemo(() => {
     if (!text.trim()) return null;
-    try { return parsePack(JSON.parse(text)); } catch (e) { return { pack: null, errors: [`This is not valid JSON: ${(e as Error).message}`], warnings: [], images: {} as Record<string, string> }; }
-  }, [text]);
+    try { return parsePack(JSON.parse(text), adding ? pack : undefined); } catch (e) { return { pack: null, errors: [`This is not valid JSON: ${(e as Error).message}`], warnings: [], autoIds: 0, images: {} as Record<string, string> }; }
+  }, [text, adding, pack]);
   const p = result?.pack ?? null;
   const merged = useMemo(() => (p && custom ? mergePack(pack, p) : null), [p, custom, pack]);
-  const adding = custom && mode === "add";
 
-  const addIt = async () => { if (!merged || !result) return; await install(merged.pack, true, result.images); setText(""); const r = merged.report; setNote(`Added ${r.newQuestions} practice question${r.newQuestions === 1 ? "" : "s"}${r.newMockQuestions ? ` and ${r.newMockQuestions} mock question${r.newMockQuestions === 1 ? "" : "s"}` : ""} to "${pack.name}". It now has ${merged.pack.questions.length}.`); onDone?.(); };
+  const addIt = async () => {
+    if (!merged || !result) return;
+    await install(merged.pack, true, result.images);
+    setText("");
+    const r = merged.report, added = r.newQuestions + r.newMockQuestions, replaced = r.updatedQuestions + r.updatedMockQuestions;
+    setNote(`Added ${added} question${added === 1 ? "" : "s"}${replaced ? ` and replaced ${replaced}` : ""} in "${pack.name}".`);
+    onDone?.();
+  };
   const useIt = async () => { if (!p || !result) return; await install(p, keep, result.images); setText(""); setAsk(null); setNote(`"${p.name}" is now your pack.`); onDone?.(); };
 
   const copy = async (what: string, value: string) => {
@@ -95,14 +102,23 @@ export default function PackImport({ onDone }: { onDone?: () => void }) {
             )}
             {adding && merged && (
               <div className="pi-merge">
-                <b>After adding: {merged.pack.questions.length} questions ({merged.pack.topics.length} topics, {Object.keys(merged.pack.subjects).length} subjects)</b>
+                <b>After adding: {merged.pack.questions.length} practice questions, {merged.pack.mockTests.length} mock test{merged.pack.mockTests.length === 1 ? "" : "s"} ({merged.pack.topics.length} topics, {Object.keys(merged.pack.subjects).length} subjects)</b>
+                {merged.report.replacedIds.length > 0 && (
+                  <div className="callout" role="alert">
+                    🔴 CAUTION: {merged.report.replacedIds.length} question id{merged.report.replacedIds.length === 1 ? " in this file already exists" : "s in this file already exist"} in your pack. Adding will OVERRIDE {merged.report.replacedIds.length === 1 ? "that question" : "those questions"} with the one{merged.report.replacedIds.length === 1 ? "" : "s"} from this file: <code>{merged.report.replacedIds.slice(0, 12).join(", ")}{merged.report.replacedIds.length > 12 ? ` and ${merged.report.replacedIds.length - 12} more` : ""}</code>. To check them first, open Admin, pick this profile, go to Questions and search the id.
+                  </div>
+                )}
                 <ul>
-                  <li>+{merged.report.newQuestions} new practice question{merged.report.newQuestions === 1 ? "" : "s"}{merged.report.newTopics ? `, +${merged.report.newTopics} new topic${merged.report.newTopics === 1 ? "" : "s"}` : ""}{merged.report.newSubjects ? `, +${merged.report.newSubjects} new subject${merged.report.newSubjects === 1 ? "" : "s"}` : ""}{merged.report.newMocks ? `, +${merged.report.newMocks} mock recipe${merged.report.newMocks === 1 ? "" : "s"}` : ""}</li>
-                  {(merged.report.newMockTests > 0 || merged.report.newMockQuestions > 0) && <li>+{merged.report.newMockTests} new mock test{merged.report.newMockTests === 1 ? "" : "s"}, {merged.report.newMockQuestions} mock question{merged.report.newMockQuestions === 1 ? "" : "s"} in total (mock questions stay out of Practice)</li>}
-                  {merged.report.mockDuplicates > 0 && <li>{merged.report.mockDuplicates} mock question{merged.report.mockDuplicates === 1 ? " is" : "s are"} already in one of your mocks, skipped</li>}
-                  {merged.report.duplicates > 0 && <li>{merged.report.duplicates} already in your pack, skipped</li>}
-                  {merged.report.renamed > 0 && <li>{merged.report.renamed} got a new id because that id was taken by a different question</li>}
-                  {merged.report.renamedMocks > 0 && <li>{merged.report.renamedMocks} mock recipe{merged.report.renamedMocks === 1 ? " has" : "s have"} the same id as one you have, so it is added as a separate recipe</li>}
+                  {result && result.autoIds > 0 && <li>{result.autoIds} question{result.autoIds === 1 ? " had" : "s had"} no id, so the system gave {result.autoIds === 1 ? "it a new id" : "them new ids"}.</li>}
+                  {merged.report.newQuestions > 0 && <li>+{merged.report.newQuestions} new practice question{merged.report.newQuestions === 1 ? "" : "s"}</li>}
+                  {merged.report.updatedQuestions > 0 && <li>{merged.report.updatedQuestions} practice question{merged.report.updatedQuestions === 1 ? "" : "s"} overridden (same id)</li>}
+                  {(merged.report.newMockTests > 0 || merged.report.newMockQuestions > 0) && <li>+{merged.report.newMockTests} new mock test{merged.report.newMockTests === 1 ? "" : "s"}, {merged.report.newMockQuestions} new mock question{merged.report.newMockQuestions === 1 ? "" : "s"} (mock questions stay out of Practice)</li>}
+                  {merged.report.updatedMockQuestions > 0 && <li>{merged.report.updatedMockQuestions} mock question{merged.report.updatedMockQuestions === 1 ? "" : "s"} overridden (same id)</li>}
+                  {(merged.report.newTopics > 0 || merged.report.newSubjects > 0) && <li>{merged.report.newTopics > 0 ? `+${merged.report.newTopics} new topic${merged.report.newTopics === 1 ? "" : "s"}` : ""}{merged.report.newTopics > 0 && merged.report.newSubjects > 0 ? ", " : ""}{merged.report.newSubjects > 0 ? `+${merged.report.newSubjects} new subject${merged.report.newSubjects === 1 ? "" : "s"}` : ""}</li>}
+                  {merged.report.updatedMocks > 0 && <li>{merged.report.updatedMocks} mock test detail{merged.report.updatedMocks === 1 ? "" : "s"} updated</li>}
+                  {merged.report.newMocks > 0 && <li>+{merged.report.newMocks} old-style mock recipe{merged.report.newMocks === 1 ? "" : "s"}</li>}
+                  {merged.report.unchanged > 0 && <li>{merged.report.unchanged} already identical in your pack, left as they are</li>}
+                  {mergeChanges(merged.report) === 0 && <li>Nothing new: this file matches what you already have.</li>}
                   {merged.report.warnings.map((w, i) => <li key={i} className="warn">{w}</li>)}
                 </ul>
                 <p className="small muted" style={{ margin: "4px 0 0" }}>Your practice history and mock results are kept.</p>
@@ -110,7 +126,7 @@ export default function PackImport({ onDone }: { onDone?: () => void }) {
             )}
             {!adding && custom && <div className="callout">🔴 CAUTION: Replacing swaps your whole pack for this file. Your mock results are kept.</div>}
             {!adding && <label className="small pi-keep"><input type="checkbox" checked={keep} onChange={(e) => setKeep(e.target.checked)} /> Keep my practice history (only if the question ids match the old pack)</label>}
-            <button className="btn primary" disabled={adding && merged?.report.newQuestions === 0 && merged.report.newMocks === 0 && merged.report.newTopics === 0 && merged.report.newMockQuestions === 0} onClick={() => (adding ? addIt() : custom ? setAsk("replace") : useIt())}>{adding ? "Add to my pack" : custom ? "Replace my pack" : "Use this pack"}</button>
+            <button className="btn primary" disabled={adding && !!merged && mergeChanges(merged.report) === 0} onClick={() => (adding ? addIt() : custom ? setAsk("replace") : useIt())}>{adding ? (merged && merged.report.replacedIds.length > 0 ? `Add and override ${merged.report.replacedIds.length}` : "Add to my pack") : custom ? "Replace my pack" : "Use this pack"}</button>
           </div>
         )}
       </section>

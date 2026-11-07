@@ -6,6 +6,8 @@ import { todayIST } from "@/lib/plan";
 import { KEYS, usePersisted, usePlan } from "@/lib/store";
 import { BUDDIES, type Reaction } from "./mascots";
 import { OUTCOME_LINES } from "./outcomes";
+import { ADMIN_LINES, ADMIN_NOTES } from "./adminLines";
+import { isAdminProfile } from "@/lib/profiles";
 import { takePending, type Outcome } from "@/lib/outcome";
 
 const STARS: [number, number, number][] = [[12, 8, 0], [70, 14, 1.2], [38, 20, 2.1], [84, 32, 0.6], [20, 38, 1.7], [58, 44, 2.6], [8, 56, 0.9], [76, 60, 1.9], [44, 66, 0.3], [90, 74, 2.3], [26, 80, 1.4], [62, 8, 0.8], [30, 52, 2.0], [84, 88, 1.1]];
@@ -36,6 +38,7 @@ export default function Companion() {
   const svg = useRef<SVGSVGElement>(null);
   const bubble = useRef<ReturnType<typeof setTimeout> | null>(null);
   const clicks = useRef<number[]>([]);
+  const adminRef = useRef(false); // the Admin profile gets its own dialogue, and treats you as the boss
 
   const buddy = BUDDIES[idx];
   const today = todayIST();
@@ -50,7 +53,8 @@ export default function Companion() {
 
   const speak = useCallback((t?: string, ms = 5200) => {
     const b = BUDDIES[idxRef.current];
-    setSay(t ?? (moodRef.current === "sleep" ? b.sleep : moodRef.current === "party" ? pick(["All done today! Brilliant.", "Day complete. Go rest, champion.", "Look at you, ticking everything!"]) : pick(b.chat)));
+    const a = adminRef.current ? ADMIN_LINES[b.id] : null;
+    setSay(t ?? (a ? (moodRef.current === "sleep" ? a.sleep : pick(a.chat)) : moodRef.current === "sleep" ? b.sleep : moodRef.current === "party" ? pick(["All done today! Brilliant.", "Day complete. Go rest, champion.", "Look at you, ticking everything!"]) : pick(b.chat)));
     if (bubble.current) clearTimeout(bubble.current);
     bubble.current = setTimeout(() => setSay(null), ms);
   }, []);
@@ -66,6 +70,7 @@ export default function Companion() {
   }, []);
 
   useEffect(() => {
+    adminRef.current = isAdminProfile();
     setHour(Number(new Date().toLocaleString("en-GB", { hour: "numeric", hour12: false, timeZone: "Asia/Kolkata" })));
     try { const s = sessionStorage.getItem("gate.buddy"); if (s) setIdx(Number(s) % BUDDIES.length); } catch { /* ignore */ }
   }, []);
@@ -100,8 +105,8 @@ export default function Companion() {
   // chatter, and reactions to the sky show
   useEffect(() => {
     const t = setInterval(() => { if (!document.hidden && Math.random() < 0.6) speak(); }, 150_000);
-    const first = setTimeout(() => { if (!document.hidden) speak("Hi! I'm your study buddy. Click me. Click my sky, too."); }, 9000);
-    const cosmic = (e: Event) => { const line = BUDDIES[idxRef.current].react[(e as CustomEvent).detail as Reaction]; if (line) setTimeout(() => speak(line), 600); };
+    const first = setTimeout(() => { if (!document.hidden) speak(adminRef.current ? ADMIN_LINES[BUDDIES[idxRef.current].id]?.hello : "Hi! I'm your study buddy. Click me. Click my sky, too."); }, 9000);
+    const cosmic = (e: Event) => { const b = BUDDIES[idxRef.current]; const line = adminRef.current ? ADMIN_LINES[b.id]?.react : b.react[(e as CustomEvent).detail as Reaction]; if (line) setTimeout(() => speak(line), 600); };
     let lastOutcome = 0;
     const outcome = (kind: Outcome) => {
       // right/wrong answers get a reaction only now and then; skips and give-ups always do
@@ -124,14 +129,15 @@ export default function Companion() {
     const schedule = (delay: number) => {
       quoteT = setTimeout(() => {
         if (document.hidden || pathRef.current === "/") return schedule(60_000);
-        if (!pool.length) pool = QUOTES.map((_, i) => i);
+        const list = adminRef.current ? ADMIN_NOTES : QUOTES;
+        if (!pool.length) pool = list.map((_, i) => i);
         const [i] = pool.splice(Math.floor(Math.random() * pool.length), 1);
-        speak(QUOTES[i], Math.max(7000, 2500 + QUOTES[i].length * 70));
+        speak(list[i], Math.max(7000, 2500 + list[i].length * 70));
         schedule(gap());
       }, delay);
     };
     schedule(gap());
-    const finale = () => { setParty(true); speak("You found the secret! Cosmic party!"); setTimeout(() => setParty(false), 9000); };
+    const finale = () => { setParty(true); speak(adminRef.current ? "Boss found the secret! Cosmic party!" : "You found the secret! Cosmic party!"); setTimeout(() => setParty(false), 9000); };
     window.addEventListener("gate-cosmos", cosmic);
     window.addEventListener("gate-cosmos-phase", cosmic);
     window.addEventListener("gate-finale", finale);
@@ -143,7 +149,7 @@ export default function Companion() {
     clicks.current = [...clicks.current.filter((t) => now - t < 3000), now];
     if (clicks.current.length >= 5) {
       clicks.current = [];
-      setDizzy(true); speak("Whee… too much spinning…");
+      setDizzy(true); speak(adminRef.current ? "Whee… Boss, too much spinning…" : "Whee… too much spinning…");
       window.dispatchEvent(new CustomEvent("gate-cosmos-now", { detail: "nebula" }));
       setTimeout(() => setDizzy(false), 2400);
       return;

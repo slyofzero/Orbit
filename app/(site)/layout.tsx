@@ -1,6 +1,7 @@
 import Nav from "@/components/Nav";
 import Ambient from "@/components/Ambient";
 import Cosmos from "@/components/Cosmos";
+import AdminGate from "@/components/AdminGate";
 import PageTransitions from "@/components/PageTransitions";
 
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
@@ -9,6 +10,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
       <Ambient />
       <Cosmos />
       <PageTransitions />
+      <AdminGate />
       <Nav />
       <main className="page">{children}</main>
     </div>

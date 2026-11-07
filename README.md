@@ -73,3 +73,9 @@ The **Stats** page (sidebar) turns every answer, skip and mock into numbers cut 
 ## Separate banks for practice and mock tests
 
 A pack has two question banks. `questions` is the **practice bank**. `mockTests` is a list of complete mock tests, each with its own questions inside its sections, so a mock question belongs to exactly one mock and never shows up in Practice or in another mock. Ids must be unique across the whole file. The quick, subject and weak-topics tests still draw from the practice bank. Uploading a pack on top of an existing one ("Add to my pack") adds new mock tests whole, and puts new questions into a mock that has the same id.
+
+## Admin profile
+
+Open the profile menu and choose **Admin: manage all profiles**. The admin profile has no plan or questions of its own. It lists every profile, and picking one opens that profile's questions (practice and mock), mock tests, topics, plan and an upload box. You can add, edit and delete questions, find any question by id (inside one profile or across all of them), edit the plan as JSON and upload a pack.
+
+Question ids are unique across Practice and every mock test. Uploading a pack with ids that already exist **replaces** those questions in place, which is also how you edit questions in bulk.

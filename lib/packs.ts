@@ -23,16 +23,20 @@ export interface PackData {
 
 export const EMPTY_PACK: PackData = { name: "No question pack yet", subjects: {}, topics: [], questions: [], mocks: [], mockTests: [], useBuiltinGenerators: false };
 
-export interface PackResult { pack: PackData | null; errors: string[]; warnings: string[]; images: Record<string, string> } // images: picture name -> data URI, to be saved when the pack is installed
+export interface PackResult { pack: PackData | null; errors: string[]; warnings: string[]; autoIds: number; images: Record<string, string> } // images: picture name -> data URI, to be saved when the pack is installed
 const MAX_ERRORS = 12;
 const ID = /^[A-Za-z0-9_.-]{1,48}$/;
 const STATUSES: TopicStatus[] = ["know", "shaky", "noidea"];
 
-export function parsePack(input: unknown): PackResult {
+/**
+ * Checks an uploaded pack and turns it into a PackData. A question without an "id" gets one from the system, never one that is already
+ * taken (pass the pack you already have as `existing`). A question WITH an id keeps it, and if that id is in your pack it will replace that question.
+ */
+export function parsePack(input: unknown, existing?: PackData): PackResult {
   const errors: string[] = [];
   const warnings: string[] = [];
   const err = (m: string) => { if (errors.length < MAX_ERRORS) errors.push(m); else if (errors.length === MAX_ERRORS) errors.push("…and more. Fix these first."); };
-  const fail = (): PackResult => ({ pack: null, errors, warnings, images: {} });
+  const fail = (): PackResult => ({ pack: null, errors, warnings, autoIds: 0, images: {} });
   const isObj = (x: unknown): x is Record<string, unknown> => typeof x === "object" && x !== null && !Array.isArray(x);
 
   if (!isObj(input)) { err('The file must be one JSON object, like { "name": …, "topics": […], "questions": […] }.'); return fail(); }
@@ -102,6 +106,12 @@ export function parsePack(input: unknown): PackResult {
   const questions: Question[] = [];
   const seen = new Set<string>();
   const counters: Record<string, number> = {};
+  // ids the system hands out must not clash with ids already in the pack, nor with ids this file writes explicitly (even further down)
+  const taken = new Set<string>(existing ? allQuestions(existing).map((l) => l.q.id) : []);
+  const explicit = (qs: unknown) => { if (Array.isArray(qs)) for (const q of qs) if (isObj(q) && typeof q.id === "string") taken.add(q.id); };
+  explicit(input.questions);
+  if (Array.isArray(input.mockTests)) for (const m of input.mockTests) if (isObj(m) && Array.isArray(m.sections)) for (const sec of m.sections) if (isObj(sec)) explicit(sec.questions);
+  let autoIds = 0;
   let fixedTotal = 0;
   // one question; used for the practice questions and for the questions inside each mock test
   const parseQuestion = (raw: unknown, w: string, autoPrefix?: string): Question | null => {
@@ -116,7 +126,7 @@ export function parsePack(input: unknown): PackResult {
     if (raw.id !== undefined) {
       if (typeof raw.id !== "string" || !ID.test(raw.id)) { err(`${w}.id must be a short id using letters, digits, - or _.`); return null; }
       id = raw.id;
-    } else { counters[auto] = (counters[auto] ?? 0) + 1; id = `${auto}-${counters[auto]}`; while (seen.has(id)) { counters[auto]++; id = `${auto}-${counters[auto]}`; } }
+    } else { counters[auto] = (counters[auto] ?? 0) + 1; id = `${auto}-${counters[auto]}`; while (seen.has(id) || taken.has(id)) { counters[auto]++; id = `${auto}-${counters[auto]}`; } autoIds++; }
     if (seen.has(id)) { err(`${w}.id "${id}" is used twice${seen.has(id) && !autoPrefix ? "" : " (ids must be unique across the practice questions and every mock test)"}.`); return null; }
     // maths: repair single backslashes that JSON turned into control characters, then make sure every formula draws
     let fixedBackslashes = 0;
@@ -245,7 +255,7 @@ export function parsePack(input: unknown): PackResult {
   if (!mocks.length && !mockTests.length && questions.length) warnings.push('No "mockTests", so Mocks offers only a quick mixed test, subject tests and a weak-topics test (built from the practice questions).');
   if (mockTests.length && mockTests.every((m) => m.sections.every((x) => !x.questions.length))) warnings.push("Your mock tests have no questions.");
 
-  return { pack: { name, subjects, topics, questions, mocks, mockTests, useBuiltinGenerators: input.useBuiltinGenerators === true }, errors, warnings, images };
+  return { pack: { name, subjects, topics, questions, mocks, mockTests, useBuiltinGenerators: input.useBuiltinGenerators === true }, errors, warnings, autoIds, images };
 }
 
 const qJson = (pack: { topics: Topic[] }, q: Question) => ({ id: q.id, subject: q.subject ?? pack.topics.find((t) => t.id === q.topic)?.subject, topic: q.topic, ...(q.tags?.length ? { tags: q.tags } : {}), type: q.type, marks: q.marks, text: q.text, ...(q.options ? { options: q.options } : {}), answer: q.answer, explanation: q.explanation });
@@ -266,22 +276,34 @@ export function packToJson(pack: PackData) {
   };
 }
 
+// ---------- finding questions ----------
+export interface Loc { bank: "practice" | "mock"; mockId?: string; mockName?: string; section?: string; q: Question }
+/** Every question in the pack with where it lives: the practice bank or one section of one mock test. */
+export function allQuestions(pack: PackData): Loc[] {
+  return [
+    ...pack.questions.map((q): Loc => ({ bank: "practice", q })),
+    ...(pack.mockTests ?? []).flatMap((m) => m.sections.flatMap((x) => x.questions.map((q): Loc => ({ bank: "mock", mockId: m.id, mockName: m.name, section: x.name, q })))),
+  ];
+}
+export const locate = (pack: PackData, id: string): Loc | undefined => allQuestions(pack).find((l) => l.q.id === id);
+
 // ---------- adding to a pack you already have ----------
 export interface MergeReport {
-  newQuestions: number; duplicates: number; renamed: number;
-  newTopics: number; newSubjects: number; newMocks: number; renamedMocks: number;
-  newMockTests: number; newMockQuestions: number; mockDuplicates: number;
+  newQuestions: number; updatedQuestions: number; unchanged: number;
+  newMockTests: number; newMockQuestions: number; updatedMockQuestions: number;
+  newTopics: number; newSubjects: number; newMocks: number; updatedMocks: number;
+  replacedIds: string[]; // ids that already existed and whose question was REPLACED by a different one
   warnings: string[];
 }
-const qKey = (q: Question) => `${q.type}|${q.text.trim()}|${(q.options ?? []).join("\u00a6")}`;
+export const mergeChanges = (r: MergeReport) => r.newQuestions + r.updatedQuestions + r.newMockTests + r.newMockQuestions + r.updatedMockQuestions + r.newTopics + r.newSubjects + r.newMocks + r.updatedMocks;
 
 /**
- * Appends `add` to `base`: new subjects, topics, questions and mock recipes are added; what you already have is never changed.
- * A question you already have (same text and options) is skipped, so uploading a file twice is harmless.
- * A new question whose id is taken by a different question gets a fresh id. Your practice history keeps matching.
+ * Adds `add` to `base`. What you already have is kept, with one rule: a question whose id is already in the pack REPLACES that question
+ * (in the same place), so uploading a corrected file is how you edit questions. New ids are added. Uploading the same file twice changes nothing.
+ * New subjects and topics are added; an existing topic keeps its name and status. A mock test with a known id gets its details updated and its new questions added.
  */
 export function mergePack(base: PackData, add: PackData): { pack: PackData; report: MergeReport } {
-  const report: MergeReport = { newQuestions: 0, duplicates: 0, renamed: 0, newTopics: 0, newSubjects: 0, newMocks: 0, renamedMocks: 0, newMockTests: 0, newMockQuestions: 0, mockDuplicates: 0, warnings: [] };
+  const report: MergeReport = { newQuestions: 0, updatedQuestions: 0, unchanged: 0, newMockTests: 0, newMockQuestions: 0, updatedMockQuestions: 0, newTopics: 0, newSubjects: 0, newMocks: 0, updatedMocks: 0, replacedIds: [], warnings: [] };
   const subjects = { ...base.subjects };
   for (const [id, name] of Object.entries(add.subjects)) if (!(id in subjects)) { subjects[id] = name; report.newSubjects++; }
 
@@ -294,61 +316,51 @@ export function mergePack(base: PackData, add: PackData): { pack: PackData; repo
   }
 
   const questions = [...base.questions];
-  const ids = new Set([...questions.map((q) => q.id), ...(base.mockTests ?? []).flatMap((m) => m.sections.flatMap((x) => x.questions.map((q) => q.id)))]);
-  const keys = new Set(questions.map(qKey));
+  const mockTests: FixedMock[] = (base.mockTests ?? []).map((m) => ({ ...m, sections: m.sections.map((x) => ({ ...x, questions: [...x.questions] })) }));
+  const fix = (q: Question): Question => ({ ...q, subject: topicById.get(q.topic)?.subject ?? q.subject });
+  const same = (a: Question, b: Question) => JSON.stringify(a) === JSON.stringify(b);
+  // finds an existing question by id (practice or any mock) and replaces it in place; returns where it was, or null when the id is new
+  const override = (q: Question): "practice" | "mock" | "same" | null => {
+    const i = questions.findIndex((x) => x.id === q.id);
+    if (i >= 0) { if (same(questions[i], q)) return "same"; questions[i] = q; return "practice"; }
+    for (const m of mockTests) for (const x of m.sections) { const j = x.questions.findIndex((y) => y.id === q.id); if (j >= 0) { if (same(x.questions[j], q)) return "same"; x.questions[j] = q; return "mock"; } }
+    return null;
+  };
+
   for (const raw of add.questions) {
-    const k = qKey(raw);
-    if (keys.has(k)) { report.duplicates++; continue; }
-    const topic = topicById.get(raw.topic);
-    let q: Question = { ...raw, subject: topic?.subject ?? raw.subject };
-    if (ids.has(q.id)) {
-      const auto = new RegExp(`^${raw.topic.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}-\\d+$`).test(q.id);
-      let n = questions.filter((x) => x.topic === raw.topic).length + 1, id = auto ? `${raw.topic}-${n}` : `${q.id}-2`;
-      while (ids.has(id)) { n++; id = auto ? `${raw.topic}-${n}` : `${q.id}-${n}`; }
-      q = { ...q, id };
-      report.renamed++;
-    }
-    ids.add(q.id); keys.add(k); questions.push(q); report.newQuestions++;
+    const q = fix(raw), r = override(q);
+    if (r === "same") report.unchanged++;
+    else if (r === "practice") { report.updatedQuestions++; report.replacedIds.push(q.id); }
+    else if (r === "mock") { report.updatedMockQuestions++; report.replacedIds.push(q.id); report.warnings.push(`Question "${q.id}" already lives in a mock test, so it was updated there and not copied to the practice questions.`); }
+    else { questions.push(q); report.newQuestions++; }
   }
 
-  const mocks = [...base.mocks];
-  const mockIds = new Set(mocks.map((m) => m.id));
-  for (const m of add.mocks) {
-    if (JSON.stringify({ ...m, id: "" , name: ""}) === JSON.stringify({ ...(mocks.find((x) => x.id === m.id) ?? {}), id: "", name: "" }) && mockIds.has(m.id)) continue; // identical recipe already there
-    let id = m.id, name = m.name;
-    if (mockIds.has(id)) { let n = 2; while (mockIds.has(`${m.id}-${n}`)) n++; id = `${m.id}-${n}`; name = `${m.name} (new)`; report.renamedMocks++; } else report.newMocks++;
-    mockIds.add(id); mocks.push({ ...m, id, name });
-  }
-  // mock tests with their own questions: same id + new questions = those questions are added to that mock; otherwise a new mock
-  const allIds = new Set([...ids, ...(base.mockTests ?? []).flatMap((m) => m.sections.flatMap((x) => x.questions.map((q) => q.id)))]);
-  const mockKeys = new Set((base.mockTests ?? []).flatMap((m) => m.sections.flatMap((x) => x.questions.map(qKey))));
-  const mockTests: FixedMock[] = (base.mockTests ?? []).map((m) => ({ ...m, sections: m.sections.map((x) => ({ ...x, questions: [...x.questions] })) }));
-  const fresh = (q: Question, mockId: string): Question => {
-    if (!allIds.has(q.id)) { allIds.add(q.id); return q; }
-    let n = 2, id = `${q.id}-${n}`;
-    while (allIds.has(id)) id = `${q.id}-${++n}`;
-    allIds.add(id); report.renamed++;
-    return { ...q, id };
-  };
   for (const m of add.mockTests ?? []) {
-    const have = mockTests.find((x) => x.id === m.id);
-    const target = have ?? { id: m.id, name: m.name, minutes: m.minutes, note: m.note, sections: [] as FixedMock["sections"] };
+    let target = mockTests.find((x) => x.id === m.id);
+    const isNew = !target;
+    if (!target) target = { id: m.id, name: m.name, minutes: m.minutes, note: m.note, sections: [] };
+    else if (target.name !== m.name || target.minutes !== m.minutes || (target.note ?? "") !== (m.note ?? "")) { target.name = m.name; target.minutes = m.minutes; target.note = m.note; report.updatedMocks++; }
     let added = 0;
     for (const sec of m.sections) {
       let into = target.sections.find((x) => x.name === sec.name);
       for (const raw of sec.questions) {
-        const k = qKey(raw);
-        if (mockKeys.has(k)) { report.mockDuplicates++; continue; }
+        const q = fix(raw), r = override(q);
+        if (r === "same") { report.unchanged++; continue; }
+        if (r) { report.updatedMockQuestions++; report.replacedIds.push(q.id); if (r === "practice") report.warnings.push(`Question "${q.id}" already lives in the practice questions, so it was updated there and not copied into mock "${m.name}".`); continue; }
         if (!into) { into = { name: sec.name, questions: [] }; target.sections.push(into); }
-        mockKeys.add(k);
-        into.questions.push(fresh({ ...raw, subject: topicById.get(raw.topic)?.subject ?? raw.subject }, m.id));
-        added++;
+        into.questions.push(q); added++;
       }
     }
     report.newMockQuestions += added;
-    if (!have && added) { mockTests.push(target); report.newMockTests++; }
+    if (isNew && added) { mockTests.push(target); report.newMockTests++; }
   }
 
+  const mocks = [...base.mocks];
+  for (const m of add.mocks) {
+    const i = mocks.findIndex((x) => x.id === m.id);
+    if (i < 0) { mocks.push(m); report.newMocks++; }
+    else if (JSON.stringify(mocks[i]) !== JSON.stringify(m)) { mocks[i] = m; report.updatedMocks++; }
+  }
   return { pack: { ...base, subjects, topics, questions, mocks, mockTests, useBuiltinGenerators: base.useBuiltinGenerators || add.useBuiltinGenerators }, report };
 }
 
@@ -369,10 +381,10 @@ export const packTemplateJson = (): string => JSON.stringify({
   mockTests: [
     { id: "mock1", name: "Mock test 1", minutes: 30, note: "Optional line shown on the card", sections: [
       { name: "Mathematics", questions: [
-        { id: "mock1-q1", subject: "maths", topic: "algebra", tags: ["quadratics"], type: "nat", marks: 1, text: "What is the larger root of $x^2 - 7x + 12 = 0$?", answer: 4, tolerance: 0, explanation: "$(x-3)(x-4)=0$, so the larger root is $4$." },
+        { subject: "maths", topic: "algebra", tags: ["quadratics"], type: "nat", marks: 1, text: "What is the larger root of $x^2 - 7x + 12 = 0$?", answer: 4, tolerance: 0, explanation: "$(x-3)(x-4)=0$, so the larger root is $4$." },
       ] },
       { name: "Science", questions: [
-        { id: "mock1-q2", subject: "sci", topic: "motion", tags: ["units"], type: "mcq", marks: 1, text: "The SI unit of force is:", options: ["Joule", "Newton", "Watt", "Pascal"], answer: 1, explanation: "Force is measured in newtons." },
+        { subject: "sci", topic: "motion", tags: ["units"], type: "mcq", marks: 1, text: "The SI unit of force is:", options: ["Joule", "Newton", "Watt", "Pascal"], answer: 1, explanation: "Force is measured in newtons." },
       ] },
     ] },
   ],
@@ -403,7 +415,8 @@ Use exactly this format:
   - "msq": one or more correct options. Add "options" and "answer" = list of right option numbers, counting from 0.
   - "nat": the answer is a number typed in. Add "answer" = the number and "tolerance" = allowed error.
 - "questions" is the PRACTICE bank. Mock tests have their own separate questions, so never put a mock-test question in "questions".
-- "mockTests": optional list of complete mock tests: { "id", "name", "minutes", "sections": [ { "name", "questions": [ ...questions written exactly like the ones above... ] } ] }. Every question inside a mock test belongs to that one mock test only: never reuse a question in two mocks or in "questions". Give every question an "id" that is unique across the whole file, for example "mock1-q1". Each question still needs "subject" and "topic" (declare any topic it uses in "topics").
+- "mockTests": optional list of complete mock tests: { "id", "name", "minutes", "sections": [ { "name", "questions": [ ...questions written exactly like the ones above... ] } ] }. Every question inside a mock test belongs to that one mock test only: never reuse a question in two mocks or in "questions". Each question still needs "subject" and "topic" (declare any topic it uses in "topics").
+- Do NOT write an "id" on any question. The app gives every question its own unique id. Only add an "id" if I tell you to correct an existing question, and then use exactly the id I give you; that replaces the old question.
 - Pictures (only if I give you pictures, otherwise never use them): in "text", in an option, or in "explanation", write ![what the picture shows](img:name). Then add a top-level "images" object that holds each picture once: { "name": "data:image/png;base64,..." }. Use only the picture names I give you. Never make up picture data.
 - Make sure every answer is actually correct and the numbers in each explanation add up.
 

@@ -1,6 +1,6 @@
 // Profiles work like browser profiles: each one has its own plan, question pack, progress, mocks, milestones and name.
 // The first profile ("main") keeps the original storage keys, so nothing saved earlier is lost.
-export interface Profile { id: string; name: string }
+export interface Profile { id: string; name: string; admin?: boolean }
 const LIST = "gate.profiles";
 const ACTIVE = "gate.profile";
 const MAIN: Profile = { id: "main", name: "Main" };
@@ -31,11 +31,20 @@ export function scope(key: string, id = activeProfileId()): string {
   return id === MAIN.id ? key : key.replace(/^gate\./, `gate.p.${id}.`);
 }
 
+export const ADMIN_ID = "admin";
+export const isAdminProfile = (id = activeProfileId()) => listProfiles().some((p) => p.id === id && p.admin);
+/** The admin profile is made the first time it is opened. It keeps no plan or questions of its own: it manages the other profiles. */
+export function ensureAdmin(): string {
+  const list = listProfiles();
+  if (!list.some((p) => p.id === ADMIN_ID)) saveList([...list, { id: ADMIN_ID, name: "Admin", admin: true }]);
+  return ADMIN_ID;
+}
+
 export function createProfile(name: string): string {
   const list = listProfiles();
   const base = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "profile";
   let id = base;
-  for (let n = 2; list.some((p) => p.id === id) || id === "main"; n++) id = `${base}-${n}`;
+  for (let n = 2; list.some((p) => p.id === id) || id === "main" || id === ADMIN_ID; n++) id = `${base}-${n}`;
   saveList([...list, { id, name: name.trim() || "New profile" }]);
   return id;
 }
@@ -73,11 +82,12 @@ export function switchProfile(id: string, note = "") {
 /** Removes a profile and everything saved in it. The last remaining profile can't be removed. */
 export function deleteProfile(id: string, keys: string[]) {
   const list = listProfiles();
-  if (list.length < 2) return;
+  if (list.filter((p) => !p.admin).length < 2 && !list.find((p) => p.id === id)?.admin) return; // keep at least one normal profile
+  if (list.find((p) => p.id === id)?.admin) return; // the admin profile stays
   for (const k of keys) localStorage.removeItem(scope(k, id));
   try { indexedDB.deleteDatabase(scope("images", id)); } catch { /* no pictures to remove */ }
   const rest = list.filter((p) => p.id !== id);
   saveList(rest);
-  if (activeProfileId() === id) switchProfile(rest[0].id, `Deleted “${list.find((p) => p.id === id)?.name ?? "profile"}”`);
+  if (activeProfileId() === id) switchProfile(rest.find((p) => !p.admin)?.id ?? rest[0].id, `Deleted “${list.find((p) => p.id === id)?.name ?? "profile"}”`);
   else window.dispatchEvent(new CustomEvent("gate-profiles"));
 }
