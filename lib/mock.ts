@@ -1,6 +1,6 @@
 import { Question, Section } from "./types";
 import { GENERATORS, generate } from "./generators";
-import { MockPick, MockTemplate, PackData } from "./packs";
+import { FixedMock, MockPick, MockTemplate, PackData } from "./packs";
 import { makeRng, shuffle } from "./rng";
 
 export interface MockOptions {
@@ -102,4 +102,16 @@ export function buildMock(pack: PackData, opts: MockOptions): BuiltMock {
     questions.push(...g.qs);
   }
   return { questions, sections, durationSec: minutes * 60, warnings: [...new Set(warnings)].slice(0, 6), title };
+}
+
+/** A real mock test: exactly its own questions, in the order they were written. Nothing is drawn from Practice. */
+export function buildFixedMock(m: FixedMock): BuiltMock {
+  const questions: Question[] = [];
+  const sections: Section[] = [];
+  for (const sec of m.sections) {
+    if (!sec.questions.length) continue;
+    sections.push({ name: sec.name, from: questions.length, to: questions.length + sec.questions.length - 1 });
+    questions.push(...sec.questions);
+  }
+  return { questions, sections, durationSec: m.minutes * 60, warnings: [], title: m.name };
 }

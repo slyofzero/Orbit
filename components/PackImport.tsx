@@ -1,6 +1,6 @@
 "use client";
 import { useMemo, useRef, useState } from "react";
-import { mergePack, packPrompt, packTemplateJson, packToJson, parsePack } from "@/lib/packs";
+import { mergePack, packPrompt, packTemplateJson, packToJson, parsePack, type PackData } from "@/lib/packs";
 import { downloadJson, fileSafe } from "@/lib/download";
 import ExportFirstModal from "./ExportFirstModal";
 import { usePack } from "@/lib/store";
@@ -13,6 +13,8 @@ const save = (name: string, text: string) => {
 };
 
 // Where you load the questions: a JSON "question pack" with topics, questions and mock-test recipes.
+const mockQs = (p: PackData) => p.mockTests.reduce((n, m) => n + m.sections.reduce((k, x) => k + x.questions.length, 0), 0);
+
 export default function PackImport({ onDone }: { onDone?: () => void }) {
   const { pack, custom, install, remove } = usePack();
   const [text, setText] = useState("");
@@ -30,7 +32,7 @@ export default function PackImport({ onDone }: { onDone?: () => void }) {
   const merged = useMemo(() => (p && custom ? mergePack(pack, p) : null), [p, custom, pack]);
   const adding = custom && mode === "add";
 
-  const addIt = () => { if (!merged) return; install(merged.pack, true); setText(""); const r = merged.report; setNote(`Added ${r.newQuestions} question${r.newQuestions === 1 ? "" : "s"} to "${pack.name}". It now has ${merged.pack.questions.length}.`); onDone?.(); };
+  const addIt = () => { if (!merged) return; install(merged.pack, true); setText(""); const r = merged.report; setNote(`Added ${r.newQuestions} practice question${r.newQuestions === 1 ? "" : "s"}${r.newMockQuestions ? ` and ${r.newMockQuestions} mock question${r.newMockQuestions === 1 ? "" : "s"}` : ""} to "${pack.name}". It now has ${merged.pack.questions.length}.`); onDone?.(); };
   const useIt = () => { if (!p) return; install(p, keep); setText(""); setAsk(null); setNote(`"${p.name}" is now your pack.`); onDone?.(); };
 
   const copy = async (what: string, value: string) => {
@@ -44,7 +46,7 @@ export default function PackImport({ onDone }: { onDone?: () => void }) {
         <div className="small muted">Your current question pack</div>
         <h2 style={{ margin: "2px 0 4px" }}>{custom ? pack.name : "None loaded"}</h2>
         <p className="small muted" style={{ margin: 0 }}>
-          {custom ? `${pack.topics.length} topics · ${pack.questions.length} questions · ${pack.mocks.length} mock recipe${pack.mocks.length === 1 ? "" : "s"}` : "Practice and Mocks stay empty until you upload a pack."}
+          {custom ? `${pack.topics.length} topics · ${pack.questions.length} practice questions · ${pack.mockTests.length} mock recipe${pack.mocks.length === 1 ? "" : "s"}` : "Practice and Mocks stay empty until you upload a pack."}
         </p>
         {custom && (
           <div className="row" style={{ marginTop: 12 }}>
@@ -83,7 +85,7 @@ export default function PackImport({ onDone }: { onDone?: () => void }) {
         {p && (
           <div className="pi-ok">
             <b>✓ Looks good: {p.name}</b>
-            <p className="small" style={{ margin: "4px 0" }}>{p.topics.length} topics in {Object.keys(p.subjects).length} subject{Object.keys(p.subjects).length === 1 ? "" : "s"} · {p.questions.length} questions ({count("mcq")} MCQ, {count("msq")} MSQ, {count("nat")} NAT) · {p.mocks.length} mock recipe{p.mocks.length === 1 ? "" : "s"}{p.mocks.length ? `: ${p.mocks.map((m) => m.name).join(", ")}` : ""}</p>
+            <p className="small" style={{ margin: "4px 0" }}>{p.topics.length} topics in {Object.keys(p.subjects).length} subject{Object.keys(p.subjects).length === 1 ? "" : "s"} · {p.questions.length} practice questions ({count("mcq")} MCQ, {count("msq")} MSQ, {count("nat")} NAT) · {p.mockTests.length} mock test{p.mockTests.length === 1 ? "" : "s"} with {mockQs(p)} questions of their own{p.mockTests.length ? `: ${p.mockTests.map((m) => m.name).join(", ")}` : ""}{p.mocks.length ? ` · ${p.mocks.length} old-style recipe${p.mocks.length === 1 ? "" : "s"}` : ""}</p>
             {custom && (
               <div className="pi-mode" role="radiogroup" aria-label="What to do with this file">
                 <button role="radio" aria-checked={mode === "add"} className={mode === "add" ? "on" : ""} onClick={() => setMode("add")}><b>Add to my pack</b><span>Keeps everything you have and appends the new questions.</span></button>
@@ -94,7 +96,9 @@ export default function PackImport({ onDone }: { onDone?: () => void }) {
               <div className="pi-merge">
                 <b>After adding: {merged.pack.questions.length} questions ({merged.pack.topics.length} topics, {Object.keys(merged.pack.subjects).length} subjects)</b>
                 <ul>
-                  <li>+{merged.report.newQuestions} new question{merged.report.newQuestions === 1 ? "" : "s"}{merged.report.newTopics ? `, +${merged.report.newTopics} new topic${merged.report.newTopics === 1 ? "" : "s"}` : ""}{merged.report.newSubjects ? `, +${merged.report.newSubjects} new subject${merged.report.newSubjects === 1 ? "" : "s"}` : ""}{merged.report.newMocks ? `, +${merged.report.newMocks} mock recipe${merged.report.newMocks === 1 ? "" : "s"}` : ""}</li>
+                  <li>+{merged.report.newQuestions} new practice question{merged.report.newQuestions === 1 ? "" : "s"}{merged.report.newTopics ? `, +${merged.report.newTopics} new topic${merged.report.newTopics === 1 ? "" : "s"}` : ""}{merged.report.newSubjects ? `, +${merged.report.newSubjects} new subject${merged.report.newSubjects === 1 ? "" : "s"}` : ""}{merged.report.newMocks ? `, +${merged.report.newMocks} mock recipe${merged.report.newMocks === 1 ? "" : "s"}` : ""}</li>
+                  {(merged.report.newMockTests > 0 || merged.report.newMockQuestions > 0) && <li>+{merged.report.newMockTests} new mock test{merged.report.newMockTests === 1 ? "" : "s"}, {merged.report.newMockQuestions} mock question{merged.report.newMockQuestions === 1 ? "" : "s"} in total (mock questions stay out of Practice)</li>}
+                  {merged.report.mockDuplicates > 0 && <li>{merged.report.mockDuplicates} mock question{merged.report.mockDuplicates === 1 ? " is" : "s are"} already in one of your mocks, skipped</li>}
                   {merged.report.duplicates > 0 && <li>{merged.report.duplicates} already in your pack, skipped</li>}
                   {merged.report.renamed > 0 && <li>{merged.report.renamed} got a new id because that id was taken by a different question</li>}
                   {merged.report.renamedMocks > 0 && <li>{merged.report.renamedMocks} mock recipe{merged.report.renamedMocks === 1 ? " has" : "s have"} the same id as one you have, so it is added as a separate recipe</li>}
@@ -105,7 +109,7 @@ export default function PackImport({ onDone }: { onDone?: () => void }) {
             )}
             {!adding && custom && <div className="callout">🔴 CAUTION: Replacing swaps your whole pack for this file. Your mock results are kept.</div>}
             {!adding && <label className="small pi-keep"><input type="checkbox" checked={keep} onChange={(e) => setKeep(e.target.checked)} /> Keep my practice history (only if the question ids match the old pack)</label>}
-            <button className="btn primary" disabled={adding && merged?.report.newQuestions === 0 && merged.report.newMocks === 0 && merged.report.newTopics === 0} onClick={() => (adding ? addIt() : custom ? setAsk("replace") : useIt())}>{adding ? "Add to my pack" : custom ? "Replace my pack" : "Use this pack"}</button>
+            <button className="btn primary" disabled={adding && merged?.report.newQuestions === 0 && merged.report.newMocks === 0 && merged.report.newTopics === 0 && merged.report.newMockQuestions === 0} onClick={() => (adding ? addIt() : custom ? setAsk("replace") : useIt())}>{adding ? "Add to my pack" : custom ? "Replace my pack" : "Use this pack"}</button>
           </div>
         )}
       </section>

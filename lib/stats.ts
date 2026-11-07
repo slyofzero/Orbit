@@ -92,10 +92,15 @@ export function metrics(evs: Ev[], total = 0, now = Date.now()): M {
 
 export interface Node { id: string; name: string; m: M; kind: "subject" | "topic" | "question"; parent?: string; status?: string }
 
+/** Every question in the pack, from the practice bank and from every mock test. `mock` is the mock's name for mock questions. */
+export function bankQuestions(pack: PackData): (Question & { mock?: string })[] {
+  return [...pack.questions, ...(pack.mockTests ?? []).flatMap((m) => m.sections.flatMap((x) => x.questions.map((q) => ({ ...q, mock: m.name }))))];
+}
+
 /** Subjects, topics and questions with their numbers, for the given (already filtered) events. */
 export function breakdown(evs: Ev[], pack: PackData, now = Date.now()) {
   const totals = { subject: {} as Record<string, number>, topic: {} as Record<string, number> };
-  for (const q of pack.questions) {
+  for (const q of bankQuestions(pack)) {
     const s = q.subject ?? pack.topics.find((t) => t.id === q.topic)?.subject ?? "other";
     totals.subject[s] = (totals.subject[s] ?? 0) + 1;
     totals.topic[q.topic] = (totals.topic[q.topic] ?? 0) + 1;
@@ -113,12 +118,13 @@ export function breakdown(evs: Ev[], pack: PackData, now = Date.now()) {
     return { id, name: t?.name ?? id, kind: "topic" as const, parent: subj, status: t?.status, m: metrics(byTopic.get(id) ?? [], totals.topic[id] ?? 0, now) };
   });
 
-  const qIds = new Set<string>([...pack.questions.map((q) => q.id), ...byQ.keys()]);
-  const packQ = new Map(pack.questions.map((q) => [q.id, q]));
-  const questions: (Node & { q?: Question; tags: string[] })[] = [...qIds].map((id) => {
+  const everyQ = bankQuestions(pack);
+  const qIds = new Set<string>([...everyQ.map((q) => q.id), ...byQ.keys()]);
+  const packQ = new Map(everyQ.map((q) => [q.id, q]));
+  const questions: (Node & { q?: Question; tags: string[]; mock?: string })[] = [...qIds].map((id) => {
     const evq = byQ.get(id) ?? [];
     const q = packQ.get(id);
-    return { id, name: q?.text ?? id, kind: "question" as const, parent: q?.topic ?? evq[0]?.topic, q, tags: q?.tags ?? evq[0]?.tags ?? [], m: metrics(evq, 1, now) };
+    return { id, name: q?.text ?? id, kind: "question" as const, parent: q?.topic ?? evq[0]?.topic, q, mock: q?.mock, tags: q?.tags ?? evq[0]?.tags ?? [], m: metrics(evq, 1, now) };
   });
   return { subjects, topics, questions };
 }
@@ -135,10 +141,10 @@ export function tagStats(evs: Ev[], pack: PackData, now = Date.now()): TagStat[]
   const m = new Map<string, Ev[]>();
   for (const e of evs) for (const t of e.tags) (m.get(t) ?? m.set(t, []).get(t)!).push(e);
   const total = new Map<string, number>();
-  for (const q of pack.questions) for (const t of q.tags ?? []) total.set(t, (total.get(t) ?? 0) + 1);
+  for (const q of bankQuestions(pack)) for (const t of q.tags ?? []) total.set(t, (total.get(t) ?? 0) + 1);
   return [...m.entries()].map(([tag, list]) => ({ tag, m: metrics(list, total.get(tag) ?? 0, now) })).sort((a, b) => b.m.n - a.m.n);
 }
-export const allTags = (pack: PackData): string[] => [...new Set(pack.questions.flatMap((q) => q.tags ?? []))].sort();
+export const allTags = (pack: PackData): string[] => [...new Set(bankQuestions(pack).flatMap((q) => q.tags ?? []))].sort();
 
 /** Days with activity, current streak and best streak. */
 export function activity(evs: Ev[], now = Date.now()) {

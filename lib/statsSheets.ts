@@ -1,3 +1,4 @@
+import { bankSize } from "./packs";
 // Turns the statistics into the sheets of the Excel export.
 import { PackData } from "./packs";
 import { Ev, Filters, activity, breakdown, insights, mockScores, tagStats } from "./stats";
@@ -23,7 +24,7 @@ export function statsSheets(args: { evs: Ev[]; pack: PackData; attempts: Attempt
       ["Orbit statistics", ""],
       ["Profile", profile], ["Question pack", pack.name], ["Exported", iso(now)],
       ["", ""],
-      ["Encounters (answers + skips)", evs.length], ["Different questions seen", new Set(evs.map((e) => e.q)).size], ["Questions in the pack", pack.questions.length],
+      ["Encounters (answers + skips)", evs.length], ["Different questions seen", new Set(evs.map((e) => e.q)).size], ["Questions in the pack (practice + mock tests)", bankSize(pack)],
       ["Overall accuracy (right / answered)", answered.length ? `${Math.round((right / answered.length) * 100)}%` : "n/a"],
       ["Active days", act.activeDays], ["Current streak (days)", act.current], ["Best streak (days)", act.best],
       ["", ""], ["Findings", ""],
@@ -47,10 +48,10 @@ export function statsSheets(args: { evs: Ev[]; pack: PackData; attempts: Attempt
 
   const topicName = (id: string | undefined) => pack.topics.find((t) => t.id === id)?.name ?? id ?? "";
   const questions: Sheet = {
-    name: "Questions", widths: [22, 24, 26, 24, 7, 7, 11, 8, 8, 9, 11, 12, 18, 60],
-    formats: [undefined, undefined, undefined, undefined, undefined, "int", "int", "int", "int", "int", "pct", "dec", undefined, undefined],
-    rows: [["Question id", "Subject", "Topic", "Tags", "Type", "Marks", "Encounters", "Right", "Wrong", "Skipped", "Accuracy", "Avg seconds", "Last seen", "Question text"],
-      ...b.questions.map((q) => [q.id, subName(q.q?.subject ?? pack.topics.find((t) => t.id === q.parent)?.subject ?? "other"), topicName(q.parent), q.tags.join(", "), q.q?.type ?? "", q.q?.marks ?? null, q.m.n, q.m.right, q.m.wrong, q.m.skip, r4(q.m.acc), sec(q.m.avgMs), iso(q.m.last), (q.q?.text ?? "").replace(/\s+/g, " ").slice(0, 300)])],
+    name: "Questions", widths: [22, 20, 24, 26, 24, 7, 7, 11, 8, 8, 9, 11, 12, 18, 60],
+    formats: [undefined, undefined, undefined, undefined, undefined, undefined, "int", "int", "int", "int", "int", "pct", "dec", undefined, undefined],
+    rows: [["Question id", "Bank", "Subject", "Topic", "Tags", "Type", "Marks", "Encounters", "Right", "Wrong", "Skipped", "Accuracy", "Avg seconds", "Last seen", "Question text"],
+      ...b.questions.map((q) => [q.id, q.mock ? `Mock: ${q.mock}` : "Practice", subName(q.q?.subject ?? pack.topics.find((t) => t.id === q.parent)?.subject ?? "other"), topicName(q.parent), q.tags.join(", "), q.q?.type ?? "", q.q?.marks ?? null, q.m.n, q.m.right, q.m.wrong, q.m.skip, r4(q.m.acc), sec(q.m.avgMs), iso(q.m.last), (q.q?.text ?? "").replace(/\s+/g, " ").slice(0, 300)])],
   };
 
   const tags: Sheet = {

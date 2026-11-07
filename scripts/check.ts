@@ -4,12 +4,13 @@ import { buildXlsx } from "../lib/xlsx";
 import { writeFileSync } from "node:fs";
 import { BANK } from "../lib/gateBank";
 import { GENERATORS, generate } from "../lib/generators";
-import { buildMock } from "../lib/mock";
+import { buildFixedMock, buildMock } from "../lib/mock";
 import { TOPICS } from "../lib/topics";
 import { GATE_PLAN } from "../lib/gatePlan";
 import { EMPTY_PACK, parsePack, packPrompt, packTemplateJson, packToJson, mergePack } from "../lib/packs";
 import { gatePackJson, gatePlanJson } from "./export-gate";
 import { aiPrompt, parsePlan, templateJson } from "../lib/customPlan";
+import type { Attempt } from "../lib/types";
 
 let bad = 0;
 const err = (m: string) => { bad++; console.log("BAD:", m); };
@@ -108,7 +109,7 @@ if (ov.plan?.milestones.length !== 1) err("exam days should become milestones wh
 // ---- imported packs ----
 const tp = parsePack(JSON.parse(packTemplateJson()));
 if (!tp.pack) err("pack template does not parse: " + tp.errors.join("; "));
-else if (tp.pack.questions.length !== 4 || tp.pack.mocks.length !== 1) err("pack template shape changed");
+else if (tp.pack.questions.length !== 4 || tp.pack.mockTests.length !== 1) err("pack template shape changed");
 if (!packPrompt().includes('"mcq"')) err("pack prompt missing schema");
 // ---- export of the current pack / plan can be uploaded again ----
 const rt = parsePack(JSON.parse(JSON.stringify(packToJson(pack))));
@@ -165,6 +166,44 @@ if (ok.pack?.questions.map((q) => q.id).join() !== "a-1,a-2") err("auto ids shou
   if (!packPrompt(a).includes("alg [m]")) err("adding prompt should list topic ids");
   if (!parsePack(packToJson(r.pack)).pack) err("merged pack should round trip");
   console.log("merge: ok");
+}
+{
+  const base = { name: "P", subjects: { m: "Maths" }, topics: [{ id: "alg", subject: "m", name: "Algebra" }] };
+  const mq = (id: string, text: string) => ({ id, topic: "alg", type: "nat", marks: 1, text, answer: 1, explanation: "e" });
+  const mk = (mockTests: unknown, questions: unknown[] = [mq("alg-1", "practice one")]) => parsePack({ ...base, questions, mockTests });
+  const okm = mk([{ id: "t1", name: "T1", minutes: 30, sections: [{ name: "S", questions: [mq("t1-1", "a"), mq("t1-2", "b")] }] }]);
+  if (!okm.pack || okm.pack.mockTests[0].sections[0].questions.length !== 2) err("mockTests should parse: " + okm.errors.join("; "));
+  else {
+    const f = buildFixedMock(okm.pack.mockTests[0]);
+    if (f.questions.length !== 2 || f.sections.length !== 1 || f.durationSec !== 1800) err("fixed mock build wrong");
+    if (!parsePack(packToJson(okm.pack)).pack?.mockTests.length) err("mockTests must round trip");
+  }
+  if (mk([{ id: "t1", name: "T1", minutes: 30, sections: [{ name: "S", questions: [mq("alg-1", "x")] }] }]).pack) err("a mock question may not reuse a practice id");
+  if (mk([{ id: "t1", name: "T1", minutes: 30, sections: [{ name: "S", questions: [mq("z", "x")] }] }, { id: "t2", name: "T2", minutes: 30, sections: [{ name: "S", questions: [mq("z", "y")] }] }]).pack) err("a question id may not be shared by two mocks");
+  const dupText = mk([{ id: "t1", name: "T1", minutes: 30, sections: [{ name: "S", questions: [mq("a", "same")] }] }, { id: "t2", name: "T2", minutes: 30, sections: [{ name: "S", questions: [mq("b", "same")] }] }]);
+  if (!dupText.warnings.some((w) => w.includes("same text"))) err("same text in two mocks should warn");
+  // merging: a mock with the same id gets only its new questions; a new mock arrives whole; ids never clash with practice
+  const A = mk([{ id: "t1", name: "T1", minutes: 30, sections: [{ name: "S", questions: [mq("t1-1", "a"), mq("t1-2", "b")] }] }]).pack!;
+  const B = mk([{ id: "t1", name: "T1", minutes: 30, sections: [{ name: "S", questions: [mq("t1-1", "a"), mq("t1-3", "c")] }] }, { id: "t2", name: "T2", minutes: 30, sections: [{ name: "S", questions: [mq("t1-2", "d")] }] }]).pack!;
+  const mm = mergePack(A, B);
+  const all = [...mm.pack.questions, ...mm.pack.mockTests.flatMap((m) => m.sections.flatMap((x) => x.questions))].map((q) => q.id);
+  if (mm.report.newMockTests !== 1 || mm.report.newMockQuestions !== 2 || mm.report.mockDuplicates !== 1) err("mock merge report wrong " + JSON.stringify(mm.report));
+  if (new Set(all).size !== all.length) err("ids must be unique across banks after merge: " + all);
+  if (mm.pack.mockTests[0].sections[0].questions.length !== 3) err("new question should join the existing mock");
+  if (mergePack(mm.pack, B).report.newMockQuestions !== 0) err("merging mocks twice should add nothing");
+  // statistics cover mock questions too, with their subject, topic and tags
+  const tagged = (id: string, tags: string[]) => ({ ...mq(id, "t " + id), tags });
+  const sp2 = mk([{ id: "t1", name: "T1", minutes: 30, sections: [{ name: "S", questions: [tagged("m1", ["trap"]), tagged("m2", ["trap", "hard"])] }] }]).pack!;
+  const att: Attempt = { id: "a1", title: "T1", createdAt: 1, startedAt: 1, submittedAt: 5000, durationSec: 60, questions: sp2.mockTests[0].sections[0].questions, sections: [], responses: { 0: { ans: 1 }, 1: { ans: 9 } } as never, warnings: [] };
+  const evm = buildEvents({ log: [], practice: {}, attempts: [att], pack: sp2, find: () => undefined });
+  const bdm = breakdown(evm, sp2, 10_000);
+  const mq1 = bdm.questions.find((x) => x.id === "m1");
+  if (evm.length !== 2 || evm[0].subject !== "m" || !evm[0].tags.includes("trap")) err("mock answers should become events with subject and tags");
+  if (!mq1 || mq1.mock !== "T1") err("mock questions should be listed in the breakdown with their mock name");
+  if (bdm.subjects.find((x) => x.id === "m")?.m.total !== 3 || bdm.topics.find((x) => x.id === "alg")?.m.total !== 3) err("totals should count practice and mock questions");
+  const trap = tagStats(evm, sp2, 10_000).find((t) => t.tag === "trap");
+  if (!trap || trap.m.total !== 2 || trap.m.n !== 2) err("tag stats should include mock questions");
+  console.log("mock tests: ok");
 }
 console.log(bad ? `${bad} PROBLEMS` : "ALL OK");
 

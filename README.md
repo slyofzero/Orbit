@@ -69,3 +69,7 @@ Every question carries two mandatory tags, its **subject** and its **topic**, an
 ```
 
 The **Stats** page (sidebar) turns every answer, skip and mock into numbers cut along those tags: strongest and weakest subject and topic, most and least encountered questions, accuracy per tag, streaks, speed, coverage and more. **Explore** is an interactive treemap (click a subject, then a topic, then a question). **Export to Excel** saves everything as an .xlsx file. Mistakes live in the Stats page too.
+
+## Separate banks for practice and mock tests
+
+A pack has two question banks. `questions` is the **practice bank**. `mockTests` is a list of complete mock tests, each with its own questions inside its sections, so a mock question belongs to exactly one mock and never shows up in Practice or in another mock. Ids must be unique across the whole file. The quick, subject and weak-topics tests still draw from the practice bank. Uploading a pack on top of an existing one ("Add to my pack") adds new mock tests whole, and puts new questions into a mock that has the same id.

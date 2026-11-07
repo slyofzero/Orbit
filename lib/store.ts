@@ -156,10 +156,10 @@ export function usePack() {
   const [, setPractice] = usePersisted<Record<string, unknown>>(KEYS.practice, {});
   const [, setExtra] = usePersisted<Record<string, unknown>>(KEYS.extra, {});
   const [, setFixed] = usePersisted<Record<string, unknown>>(KEYS.fixed, {});
-  const pack = stored ?? EMPTY_PACK;
+  const pack = useMemo(() => (stored ? { ...stored, mockTests: stored.mockTests ?? [] } : EMPTY_PACK), [stored]);
   const derived = useMemo(() => ({
     topicById: Object.fromEntries(pack.topics.map((t) => [t.id, t])) as Record<string, PackData["topics"][number]>,
-    byId: new Map(pack.questions.map((q) => [q.id, q])),
+    byId: new Map([...pack.questions, ...pack.mockTests.flatMap((m) => m.sections.flatMap((x) => x.questions))].map((q) => [q.id, q])),
   }), [pack]);
   const [, setLog] = usePersisted<unknown[]>(KEYS.plog, []);
   const clearHistory = () => { setPractice({}); setExtra({}); setFixed({}); setLog([]); };

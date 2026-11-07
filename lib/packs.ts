@@ -1,4 +1,4 @@
-// A "question pack" is what makes Practice and Mocks work: the topics, the questions, and the mock-test recipes.
+// A "question pack" is what makes Practice and Mocks work: the topics, the practice questions, and separate mock tests that each own their questions.
 // Nothing is built in. Upload a pack (JSON) on the Practice page and the app uses it. Pure functions, tested by scripts/check.ts.
 import { Question, Topic, TopicStatus } from "./types";
 import { repairBackslashes, texProblems } from "./tex";
@@ -7,16 +7,20 @@ export interface MockPick { subject: string; one: number; two: number; topics?: 
 export interface MockSection { name: string; picks: MockPick[] }
 export interface MockTemplate { id: string; name: string; minutes: number; note?: string; sections: MockSection[] }
 
+/** A complete mock test with its own questions. Each question belongs to exactly one mock test and never shows up in Practice or in another mock. */
+export interface FixedMock { id: string; name: string; minutes: number; note?: string; sections: { name: string; questions: Question[] }[] }
+
 export interface PackData {
   name: string;
   subjects: Record<string, string>; // subject id -> display name, in display order
   topics: Topic[];
   questions: Question[];
-  mocks: MockTemplate[];
+  mocks: MockTemplate[]; // old-style recipes: they draw from the practice questions
+  mockTests: FixedMock[]; // real mock tests, each with questions of its own
   useBuiltinGenerators: boolean; // only the GATE DA pack sets this: asks for endless fresh numeric questions made by code
 }
 
-export const EMPTY_PACK: PackData = { name: "No question pack yet", subjects: {}, topics: [], questions: [], mocks: [], useBuiltinGenerators: false };
+export const EMPTY_PACK: PackData = { name: "No question pack yet", subjects: {}, topics: [], questions: [], mocks: [], mockTests: [], useBuiltinGenerators: false };
 
 export interface PackResult { pack: PackData | null; errors: string[]; warnings: string[] }
 const MAX_ERRORS = 12;
@@ -60,20 +64,21 @@ export function parsePack(input: unknown): PackResult {
   const seen = new Set<string>();
   const counters: Record<string, number> = {};
   let fixedTotal = 0;
-  input.questions.forEach((raw, i) => {
-    const w = `questions[${i}]`;
-    if (!isObj(raw)) { err(`${w} must be an object.`); return; }
-    if (typeof raw.topic !== "string" || !topicIds.has(raw.topic)) { err(`${w}.topic "${String(raw.topic)}" is not one of your topic ids.`); return; }
+  // one question; used for the practice questions and for the questions inside each mock test
+  const parseQuestion = (raw: unknown, w: string, autoPrefix?: string): Question | null => {
+    if (!isObj(raw)) { err(`${w} must be an object.`); return null; }
+    if (typeof raw.topic !== "string" || !topicIds.has(raw.topic)) { err(`${w}.topic "${String(raw.topic)}" is not one of your topic ids.`); return null; }
     const type = raw.type;
-    if (type !== "mcq" && type !== "msq" && type !== "nat") { err(`${w}.type must be "mcq", "msq" or "nat".`); return; }
-    if (raw.marks !== 1 && raw.marks !== 2) { err(`${w}.marks must be 1 or 2.`); return; }
-    if (typeof raw.text !== "string" || !raw.text.trim()) { err(`${w} needs the question "text".`); return; }
+    if (type !== "mcq" && type !== "msq" && type !== "nat") { err(`${w}.type must be "mcq", "msq" or "nat".`); return null; }
+    if (raw.marks !== 1 && raw.marks !== 2) { err(`${w}.marks must be 1 or 2.`); return null; }
+    if (typeof raw.text !== "string" || !raw.text.trim()) { err(`${w} needs the question "text".`); return null; }
+    const auto = autoPrefix ?? raw.topic;
     let id: string;
     if (raw.id !== undefined) {
-      if (typeof raw.id !== "string" || !ID.test(raw.id)) { err(`${w}.id must be a short id using letters, digits, - or _.`); return; }
+      if (typeof raw.id !== "string" || !ID.test(raw.id)) { err(`${w}.id must be a short id using letters, digits, - or _.`); return null; }
       id = raw.id;
-    } else { counters[raw.topic] = (counters[raw.topic] ?? 0) + 1; id = `${raw.topic}-${counters[raw.topic]}`; while (seen.has(id)) { counters[raw.topic]++; id = `${raw.topic}-${counters[raw.topic]}`; } }
-    if (seen.has(id)) { err(`${w}.id "${id}" is used twice.`); return; }
+    } else { counters[auto] = (counters[auto] ?? 0) + 1; id = `${auto}-${counters[auto]}`; while (seen.has(id)) { counters[auto]++; id = `${auto}-${counters[auto]}`; } }
+    if (seen.has(id)) { err(`${w}.id "${id}" is used twice${seen.has(id) && !autoPrefix ? "" : " (ids must be unique across the practice questions and every mock test)"}.`); return null; }
     // maths: repair single backslashes that JSON turned into control characters, then make sure every formula draws
     let fixedBackslashes = 0;
     const tex = (v: string) => { const r = repairBackslashes(v); fixedBackslashes += r.fixed; return r.text; };
@@ -84,14 +89,14 @@ export function parsePack(input: unknown): PackResult {
     const parts: [string, string][] = [["text", text], ["explanation", explanation], ...((Array.isArray(options) ? options : []) as string[]).map((o, k): [string, string] => [`options[${k}]`, o])];
     for (const [where, value] of parts) {
       const problem = typeof value === "string" ? texProblems(value)[0] : undefined;
-      if (problem) { err(`${w}.${where} ${problem}`); return; }
+      if (problem) { err(`${w}.${where} ${problem}`); return null; }
     }
     // mandatory tags: the topic (checked above) and its subject; optional tags: anything the author or their AI adds
     const subject = topics.find((t) => t.id === raw.topic)!.subject;
-    if (raw.subject !== undefined && raw.subject !== subject) { err(`${w}.subject "${String(raw.subject)}" does not match topic "${raw.topic}", which belongs to subject "${subject}". Leave "subject" out or fix it.`); return; }
+    if (raw.subject !== undefined && raw.subject !== subject) { err(`${w}.subject "${String(raw.subject)}" does not match topic "${raw.topic}", which belongs to subject "${subject}". Leave "subject" out or fix it.`); return null; }
     let tags: string[] | undefined;
     if (raw.tags !== undefined) {
-      if (!Array.isArray(raw.tags) || raw.tags.some((t) => typeof t !== "string")) { err(`${w}.tags must be a list of short words, like ["formula", "hard"].`); return; }
+      if (!Array.isArray(raw.tags) || raw.tags.some((t) => typeof t !== "string")) { err(`${w}.tags must be a list of short words, like ["formula", "hard"].`); return null; }
       tags = [...new Set((raw.tags as string[]).map((t) => t.trim().toLowerCase().replace(/\s+/g, "-").slice(0, 28)).filter(Boolean))].slice(0, 8);
       if (!tags.length) tags = undefined;
     }
@@ -101,22 +106,23 @@ export function parsePack(input: unknown): PackResult {
       let value: number, tol: number;
       if (typeof raw.answer === "number") { value = raw.answer; tol = typeof raw.tolerance === "number" ? raw.tolerance : 0.01; }
       else if (isObj(raw.answer) && typeof raw.answer.value === "number" && typeof raw.answer.tol === "number") { value = raw.answer.value; tol = raw.answer.tol; }
-      else { err(`${w}.answer for a "nat" question must be a number (add "tolerance" for the allowed error).`); return; }
-      if (!isFinite(value) || !isFinite(tol) || tol < 0) { err(`${w}: answer and tolerance must be finite numbers.`); return; }
+      else { err(`${w}.answer for a "nat" question must be a number (add "tolerance" for the allowed error).`); return null; }
+      if (!isFinite(value) || !isFinite(tol) || tol < 0) { err(`${w}: answer and tolerance must be finite numbers.`); return null; }
       q = { id, topic: raw.topic, type, marks: raw.marks, text, answer: { value, tol }, explanation, ...tagged };
     } else {
-      if (!Array.isArray(options) || options.length < 2 || options.length > 8 || options.some((o) => typeof o !== "string")) { err(`${w}.options must be a list of 2 to 8 texts.`); return; }
+      if (!Array.isArray(options) || options.length < 2 || options.length > 8 || options.some((o) => typeof o !== "string")) { err(`${w}.options must be a list of 2 to 8 texts.`); return null; }
       const n = options.length;
       if (type === "mcq") {
-        if (!Number.isInteger(raw.answer) || (raw.answer as number) < 0 || (raw.answer as number) >= n) { err(`${w}.answer for "mcq" must be the number of the right option, counting from 0 (0 to ${n - 1}).`); return; }
+        if (!Number.isInteger(raw.answer) || (raw.answer as number) < 0 || (raw.answer as number) >= n) { err(`${w}.answer for "mcq" must be the number of the right option, counting from 0 (0 to ${n - 1}).`); return null; }
       } else if (!Array.isArray(raw.answer) || raw.answer.length === 0 || raw.answer.some((a) => !Number.isInteger(a) || a < 0 || a >= n) || new Set(raw.answer).size !== raw.answer.length) {
-        err(`${w}.answer for "msq" must be a list of the right option numbers, counting from 0 (0 to ${n - 1}).`); return;
+        err(`${w}.answer for "msq" must be a list of the right option numbers, counting from 0 (0 to ${n - 1}).`); return null;
       }
       q = { id, topic: raw.topic, type, marks: raw.marks, text, options: options as string[], answer: raw.answer as number | number[], explanation, ...tagged };
     }
     seen.add(id);
-    questions.push(q);
-  });
+    return q;
+  };
+  input.questions.forEach((raw, i) => { const q = parseQuestion(raw, `questions[${i}]`); if (q) questions.push(q); });
   if (fixedTotal) warnings.push(`Fixed ${fixedTotal} LaTeX backslash${fixedTotal === 1 ? "" : "es"} that JSON had turned into tabs or other invisible characters. Next time write every LaTeX backslash twice (\\\\frac).`);
 
   // ----- mock recipes (optional) -----
@@ -154,14 +160,53 @@ export function parsePack(input: unknown): PackResult {
     });
   }
 
+  // ----- mock tests with their own questions (optional) -----
+  const mockTests: FixedMock[] = [];
+  const mockKey = new Map<string, string>(); // question text -> mock id, to warn about the same question in two mocks
+  if (input.mockTests !== undefined) {
+    if (!Array.isArray(input.mockTests)) err('"mockTests" must be a list.');
+    else input.mockTests.forEach((m, i) => {
+      const w = `mockTests[${i}]`;
+      if (!isObj(m)) { err(`${w} must be an object.`); return; }
+      if (typeof m.id !== "string" || !ID.test(m.id) || mockTests.some((x) => x.id === m.id) || mocks.some((x) => x.id === m.id)) { err(`${w}.id must be a short, unique id.`); return; }
+      if (typeof m.name !== "string" || !m.name.trim()) { err(`${w} needs a "name".`); return; }
+      if (typeof m.minutes !== "number" || !(m.minutes >= 5 && m.minutes <= 600)) { err(`${w}.minutes must be a number from 5 to 600.`); return; }
+      if (!Array.isArray(m.sections) || m.sections.length === 0) { err(`${w}.sections must be a list with at least one section, each with its "questions".`); return; }
+      const sections: FixedMock["sections"] = [];
+      for (const [j, sec] of (m.sections as unknown[]).entries()) {
+        const ws = `${w}.sections[${j}]`;
+        if (!isObj(sec) || typeof sec.name !== "string" || !sec.name.trim()) { err(`${ws} needs a "name".`); return; }
+        if (!Array.isArray(sec.questions) || sec.questions.length === 0) { err(`${ws}.questions must be a list with at least one question.`); return; }
+        const qs: Question[] = [];
+        sec.questions.forEach((raw, k) => {
+          const q = parseQuestion(raw, `${ws}.questions[${k}]`, m.id as string);
+          if (!q) return;
+          const key = `${q.type}|${q.text.trim()}`;
+          const other = mockKey.get(key);
+          if (other && other !== m.id) warnings.push(`A question in mock "${m.id}" has the same text as one in mock "${other}". Each mock should have its own questions.`);
+          mockKey.set(key, m.id as string);
+          qs.push(q);
+        });
+        sections.push({ name: sec.name.trim().slice(0, 60), questions: qs });
+      }
+      mockTests.push({ id: m.id, name: m.name.trim().slice(0, 60), minutes: Math.round(m.minutes), note: typeof m.note === "string" ? m.note.slice(0, 200) : undefined, sections });
+    });
+  }
+
   if (errors.length) return fail();
   if (questions.length === 0) warnings.push("The pack has no questions yet, so Practice and Mocks will be empty until you add some.");
   const noQ = topics.filter((t) => !questions.some((q) => q.topic === t.id)).length;
   if (noQ && questions.length) warnings.push(`${noQ} topic${noQ === 1 ? " has" : "s have"} no questions.`);
-  if (!mocks.length && questions.length) warnings.push('No "mocks" recipes, so Mocks offers only a quick mixed test, subject tests and a weak-topics test.');
+  if (!mocks.length && !mockTests.length && questions.length) warnings.push('No "mockTests", so Mocks offers only a quick mixed test, subject tests and a weak-topics test (built from the practice questions).');
+  if (mockTests.length && mockTests.every((m) => m.sections.every((x) => !x.questions.length))) warnings.push("Your mock tests have no questions.");
 
-  return { pack: { name, subjects, topics, questions, mocks, useBuiltinGenerators: input.useBuiltinGenerators === true }, errors, warnings };
+  return { pack: { name, subjects, topics, questions, mocks, mockTests, useBuiltinGenerators: input.useBuiltinGenerators === true }, errors, warnings };
 }
+
+const qJson = (pack: { topics: Topic[] }, q: Question) => ({ id: q.id, subject: q.subject ?? pack.topics.find((t) => t.id === q.topic)?.subject, topic: q.topic, ...(q.tags?.length ? { tags: q.tags } : {}), type: q.type, marks: q.marks, text: q.text, ...(q.options ? { options: q.options } : {}), answer: q.answer, explanation: q.explanation });
+
+/** Every question in the pack: the practice bank plus all mock tests. */
+export const bankSize = (p: PackData) => p.questions.length + (p.mockTests ?? []).reduce((n, m) => n + m.sections.reduce((k, x) => k + x.questions.length, 0), 0);
 
 // The reverse of parsePack: the pack as a JSON object you can upload again (used to export a pack before replacing it).
 export function packToJson(pack: PackData) {
@@ -170,8 +215,9 @@ export function packToJson(pack: PackData) {
     ...(pack.useBuiltinGenerators ? { useBuiltinGenerators: true } : {}),
     subjects: pack.subjects,
     topics: pack.topics.map(({ id, subject, name, status }) => ({ id, subject, name, status })),
-    questions: pack.questions.map((q) => ({ id: q.id, subject: q.subject ?? pack.topics.find((t) => t.id === q.topic)?.subject, topic: q.topic, ...(q.tags?.length ? { tags: q.tags } : {}), type: q.type, marks: q.marks, text: q.text, ...(q.options ? { options: q.options } : {}), answer: q.answer, explanation: q.explanation })),
+    questions: pack.questions.map((q) => qJson(pack, q)),
     mocks: pack.mocks,
+    ...(pack.mockTests?.length ? { mockTests: pack.mockTests.map((m) => ({ ...m, sections: m.sections.map((x) => ({ name: x.name, questions: x.questions.map((q) => qJson(pack, q)) })) })) } : {}),
   };
 }
 
@@ -179,6 +225,7 @@ export function packToJson(pack: PackData) {
 export interface MergeReport {
   newQuestions: number; duplicates: number; renamed: number;
   newTopics: number; newSubjects: number; newMocks: number; renamedMocks: number;
+  newMockTests: number; newMockQuestions: number; mockDuplicates: number;
   warnings: string[];
 }
 const qKey = (q: Question) => `${q.type}|${q.text.trim()}|${(q.options ?? []).join("\u00a6")}`;
@@ -189,7 +236,7 @@ const qKey = (q: Question) => `${q.type}|${q.text.trim()}|${(q.options ?? []).jo
  * A new question whose id is taken by a different question gets a fresh id. Your practice history keeps matching.
  */
 export function mergePack(base: PackData, add: PackData): { pack: PackData; report: MergeReport } {
-  const report: MergeReport = { newQuestions: 0, duplicates: 0, renamed: 0, newTopics: 0, newSubjects: 0, newMocks: 0, renamedMocks: 0, warnings: [] };
+  const report: MergeReport = { newQuestions: 0, duplicates: 0, renamed: 0, newTopics: 0, newSubjects: 0, newMocks: 0, renamedMocks: 0, newMockTests: 0, newMockQuestions: 0, mockDuplicates: 0, warnings: [] };
   const subjects = { ...base.subjects };
   for (const [id, name] of Object.entries(add.subjects)) if (!(id in subjects)) { subjects[id] = name; report.newSubjects++; }
 
@@ -202,7 +249,7 @@ export function mergePack(base: PackData, add: PackData): { pack: PackData; repo
   }
 
   const questions = [...base.questions];
-  const ids = new Set(questions.map((q) => q.id));
+  const ids = new Set([...questions.map((q) => q.id), ...(base.mockTests ?? []).flatMap((m) => m.sections.flatMap((x) => x.questions.map((q) => q.id)))]);
   const keys = new Set(questions.map(qKey));
   for (const raw of add.questions) {
     const k = qKey(raw);
@@ -227,7 +274,37 @@ export function mergePack(base: PackData, add: PackData): { pack: PackData; repo
     if (mockIds.has(id)) { let n = 2; while (mockIds.has(`${m.id}-${n}`)) n++; id = `${m.id}-${n}`; name = `${m.name} (new)`; report.renamedMocks++; } else report.newMocks++;
     mockIds.add(id); mocks.push({ ...m, id, name });
   }
-  return { pack: { ...base, subjects, topics, questions, mocks, useBuiltinGenerators: base.useBuiltinGenerators || add.useBuiltinGenerators }, report };
+  // mock tests with their own questions: same id + new questions = those questions are added to that mock; otherwise a new mock
+  const allIds = new Set([...ids, ...(base.mockTests ?? []).flatMap((m) => m.sections.flatMap((x) => x.questions.map((q) => q.id)))]);
+  const mockKeys = new Set((base.mockTests ?? []).flatMap((m) => m.sections.flatMap((x) => x.questions.map(qKey))));
+  const mockTests: FixedMock[] = (base.mockTests ?? []).map((m) => ({ ...m, sections: m.sections.map((x) => ({ ...x, questions: [...x.questions] })) }));
+  const fresh = (q: Question, mockId: string): Question => {
+    if (!allIds.has(q.id)) { allIds.add(q.id); return q; }
+    let n = 2, id = `${q.id}-${n}`;
+    while (allIds.has(id)) id = `${q.id}-${++n}`;
+    allIds.add(id); report.renamed++;
+    return { ...q, id };
+  };
+  for (const m of add.mockTests ?? []) {
+    const have = mockTests.find((x) => x.id === m.id);
+    const target = have ?? { id: m.id, name: m.name, minutes: m.minutes, note: m.note, sections: [] as FixedMock["sections"] };
+    let added = 0;
+    for (const sec of m.sections) {
+      let into = target.sections.find((x) => x.name === sec.name);
+      for (const raw of sec.questions) {
+        const k = qKey(raw);
+        if (mockKeys.has(k)) { report.mockDuplicates++; continue; }
+        if (!into) { into = { name: sec.name, questions: [] }; target.sections.push(into); }
+        mockKeys.add(k);
+        into.questions.push(fresh({ ...raw, subject: topicById.get(raw.topic)?.subject ?? raw.subject }, m.id));
+        added++;
+      }
+    }
+    report.newMockQuestions += added;
+    if (!have && added) { mockTests.push(target); report.newMockTests++; }
+  }
+
+  return { pack: { ...base, subjects, topics, questions, mocks, mockTests, useBuiltinGenerators: base.useBuiltinGenerators || add.useBuiltinGenerators }, report };
 }
 
 // ---------- help for people writing a pack ----------
@@ -244,8 +321,15 @@ export const packTemplateJson = (): string => JSON.stringify({
     { subject: "maths", topic: "algebra", tags: ["series", "calculation"], type: "nat", marks: 2, text: "Evaluate the sum:\n$$\\sum_{k=1}^{4} k^2$$", answer: 30, tolerance: 0, explanation: "$1 + 4 + 9 + 16 = 30$." },
     { subject: "sci", topic: "motion", tags: ["units", "formula"], type: "nat", marks: 1, text: "A car moves at $20\\ \\text{m/s}$ for $5\\ \\text{s}$. How many metres does it cover?", answer: 100, tolerance: 0.5, explanation: "$d = v \\times t = 100\\ \\text{m}$." },
   ],
-  mocks: [
-    { id: "full", name: "Full test", minutes: 60, note: "Optional line shown on the card", sections: [{ name: "Mathematics", picks: [{ subject: "maths", one: 5, two: 3 }] }, { name: "Science", picks: [{ subject: "sci", one: 5, two: 3 }] }] },
+  mockTests: [
+    { id: "mock1", name: "Mock test 1", minutes: 30, note: "Optional line shown on the card", sections: [
+      { name: "Mathematics", questions: [
+        { id: "mock1-q1", subject: "maths", topic: "algebra", tags: ["quadratics"], type: "nat", marks: 1, text: "What is the larger root of $x^2 - 7x + 12 = 0$?", answer: 4, tolerance: 0, explanation: "$(x-3)(x-4)=0$, so the larger root is $4$." },
+      ] },
+      { name: "Science", questions: [
+        { id: "mock1-q2", subject: "sci", topic: "motion", tags: ["units"], type: "mcq", marks: 1, text: "The SI unit of force is:", options: ["Joule", "Newton", "Watt", "Pascal"], answer: 1, explanation: "Force is measured in newtons." },
+      ] },
+    ] },
   ],
 }, null, 2);
 
@@ -255,7 +339,7 @@ const addingNote = (p: PackData) => `
 I already have a pack called "${p.name}" and I am ADDING to it. Reuse these ids exactly so the new questions join the right places, and add new subjects or topics only when truly needed:
 - Subjects: ${Object.entries(p.subjects).map(([id, n]) => `${id} (${n})`).join(", ") || "none"}
 - Topics: ${p.topics.map((t) => `${t.id} [${t.subject}]`).join(", ") || "none"}
-Write only NEW questions. Do not repeat the ones I already have, and leave out "mocks" unless I ask for new recipes.`;
+Write only NEW questions. Do not repeat the ones I already have, and leave out "mockTests" unless I ask for new mock tests. If I do, each mock test keeps its own questions and ids that do not clash with the ones I already have.`;
 export const packPrompt = (existing?: PackData): string => String.raw`Write a question pack for me and reply with ONLY one JSON object (no explanation, no markdown fence).${existing ? addingNote(existing) : ""}
 
 About me (fill this in before sending):
@@ -273,7 +357,8 @@ Use exactly this format:
   - "mcq": exactly one correct option. Add "options" (2 to 8 texts) and "answer" = number of the right option, counting from 0.
   - "msq": one or more correct options. Add "options" and "answer" = list of right option numbers, counting from 0.
   - "nat": the answer is a number typed in. Add "answer" = the number and "tolerance" = allowed error.
-- "mocks": optional list of mock-test recipes: { "id", "name", "minutes", "sections": [ { "name", "picks": [ { "subject": "subjectId", "one": 5, "two": 3 } ] } ] } where "one" and "two" are how many 1-mark and 2-mark questions to draw from that subject.
+- "questions" is the PRACTICE bank. Mock tests have their own separate questions, so never put a mock-test question in "questions".
+- "mockTests": optional list of complete mock tests: { "id", "name", "minutes", "sections": [ { "name", "questions": [ ...questions written exactly like the ones above... ] } ] }. Every question inside a mock test belongs to that one mock test only: never reuse a question in two mocks or in "questions". Give every question an "id" that is unique across the whole file, for example "mock1-q1". Each question still needs "subject" and "topic" (declare any topic it uses in "topics").
 - Make sure every answer is actually correct and the numbers in each explanation add up.
 
 HOW TO WRITE MATHS (LaTeX). The app draws every question, option and explanation with KaTeX, so write ALL maths as LaTeX:

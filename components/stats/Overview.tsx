@@ -1,4 +1,5 @@
 "use client";
+import { bankSize } from "@/lib/packs";
 import { useMemo } from "react";
 import { PackData } from "@/lib/packs";
 import { Attempt } from "@/lib/types";
@@ -44,7 +45,7 @@ function MockTrend({ attempts }: { attempts: Attempt[] }) {
 
 export default function Overview({ evs, pack, attempts, onExplore }: { evs: Ev[]; pack: PackData; attempts: Attempt[]; onExplore: (path: string[]) => void }) {
   const bd = useMemo(() => breakdown(evs, pack), [evs, pack]);
-  const all = useMemo(() => metrics(evs, pack.questions.length), [evs, pack]);
+  const all = useMemo(() => metrics(evs, bankSize(pack)), [evs, pack]);
   const act = useMemo(() => activity(evs), [evs]);
   const subs = useMemo(() => rank(bd.subjects, 5), [bd]);
   const tips = useMemo(() => insights(evs, bd), [evs, bd]);
@@ -55,7 +56,7 @@ export default function Overview({ evs, pack, attempts, onExplore }: { evs: Ev[]
       <div className="st-kpis">
         <div><b>{all.n}</b><span>encounters</span></div>
         <div><b>{fmtPct(all.acc)}</b><span>accuracy</span></div>
-        <div><b>{all.unique}<small> / {pack.questions.length}</small></b><span>questions seen</span></div>
+        <div><b>{all.unique}<small> / {bankSize(pack)}</small></b><span>questions seen</span></div>
         <div><b>{act.current}<small> day{act.current === 1 ? "" : "s"}</small></b><span>current streak (best {act.best})</span></div>
         <div><b>{fmtMs(all.avgMs)}</b><span>avg time per answer</span></div>
         <div><b>{mocks.length ? fmtPct(mocks[mocks.length - 1].pct) : "n/a"}</b><span>latest mock</span></div>

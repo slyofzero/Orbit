@@ -1,4 +1,5 @@
 "use client";
+import { bankSize } from "@/lib/packs";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import Rich from "@/components/Rich";
@@ -70,7 +71,7 @@ export default function Explorer({ evs, pack, initialPath = [] }: { evs: Ev[]; p
     if (focusNode.kind === "topic") return filtered.filter((e) => e.topic === focusNode.id);
     return filtered.filter((e) => e.q === focusNode.id);
   }, [focusNode, filtered]);
-  const focusM = focusNode?.m ?? metrics(filtered, pack.questions.length);
+  const focusM = focusNode?.m ?? metrics(filtered, bankSize(pack));
   const focusTags = useMemo(() => tagStats(focusEvs, pack).slice(0, 8), [focusEvs, pack]);
   const kids = rank(nodes.filter((n) => n.kind !== "question"), 3);
 
