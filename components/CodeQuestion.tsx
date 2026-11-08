@@ -96,7 +96,7 @@ export default function CodeQuestion({ q, onSubmit, onSkip, onReset }: {
             <span className="small muted">Give it to your AI. It writes a script that builds this data on your computer.</span>
           </div>
           <label className="small">Practice folder (the full path the script printed)
-            <input className="ad-in" spellCheck={false} placeholder="C:\\Users\\you\\orbit-practice-id" value={dir} onChange={(e) => setDrafts((d) => ({ ...d, [`dir:${q.id}`]: e.target.value }))} />
+            <input className="ad-in" spellCheck={false} placeholder="C:\Users\you\orbit-practice-id" value={dir} onChange={(e) => setDrafts((d) => ({ ...d, [`dir:${q.id}`]: e.target.value }))} />
           </label>
           <span className="small muted">{dir.trim() ? "Run examples and Submit run your code inside this folder, so relative paths like data/a.txt work. You can also run your code yourself in that folder." : "Until you set the folder, your code runs in an empty temporary folder and tests that need the data will fail."}</span>
           {copied && <span className="small" role="status">{copied}</span>}

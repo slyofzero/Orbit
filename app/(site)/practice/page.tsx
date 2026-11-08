@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { hasGenerator } from "@/lib/bank";
 import PackImport from "@/components/PackImport";
+import PracticeTabs from "@/components/PracticeTabs";
 import { fmtDate, todayIST } from "@/lib/plan";
 import { KEYS, usePack, usePersisted, usePlan } from "@/lib/store";
 import { PracticeRec, TopicStatus } from "@/lib/types";
@@ -47,8 +48,9 @@ export default function PracticeHome() {
 
   return (
     <>
-      <div className="row" style={{ alignItems: "baseline" }}>
+      <div className="row" style={{ alignItems: "center", marginBottom: 18 }}>
         <h1>Practice</h1>
+        <PracticeTabs active="topics" />
         {hasPack && <button className="btn soft right" onClick={() => setManaging((m) => !m)}>{managing ? "Back to topics" : "Question pack"}</button>}
       </div>
 
@@ -109,7 +111,7 @@ export default function PracticeHome() {
                 <div className="pr-rows">
                   {ts.map((t) => {
                     const s = stats[t.id];
-                    const n = pack.questions.filter((x) => x.topic === t.id).length;
+                    const n = pack.questions.filter((x) => x.topic === t.id && x.type !== "code").length;
                     return (
                       <Link key={t.id} href={`/practice/${t.id}`} className="pr-row">
                         <i className={`dot ${t.status}`} title={STATUS_LABEL[t.status]} />

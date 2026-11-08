@@ -954,3 +954,18 @@ pre.code code.hljs { background: none; padding: 0; color: inherit; }
 @media (max-width: 640px) { .cq-pair { grid-template-columns: 1fr; } }
 pre.code code { background: none !important; border: none !important; padding: 0 !important; border-radius: 0 !important; box-shadow: none !important; }
 .cq-setup { display: grid; gap: 8px; padding: 12px 14px; border-radius: 14px; border: 1.5px dashed var(--accent); background: var(--accent-soft); }
+
+/* Practice sections and the programming list */
+.pt-tabs { display: inline-flex; gap: 4px; padding: 4px; margin: 0 0 0 10px; border-radius: 999px; background: var(--sheet-2); border: 1px solid var(--line); }
+.pt-tabs a { padding: 7px 18px; border-radius: 999px; font-weight: 700; font-size: 0.92rem; color: var(--ink-2); text-decoration: none; }
+.pt-tabs a.on { background: var(--accent); color: #04211c; }
+.pg-list { display: grid; gap: 8px; }
+.pg-item { background: var(--sheet); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+.pg-item.open { border-color: var(--accent); }
+.pg-item > .qcard { margin: 0; border: none; border-top: 1px solid var(--line); border-radius: 0; background: transparent; }
+.pg-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; width: 100%; padding: 12px 16px; border: none; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.pg-head .nm { flex: 1 1 260px; min-width: 0; font-weight: 600; }
+.pg-meta { flex-basis: 100%; padding-left: 34px; }
+.pg-state { display: grid; place-items: center; width: 24px; height: 24px; flex: none; border-radius: 50%; border: 1.5px solid var(--line); font-size: 0.8rem; }
+.pg-state.ok { background: var(--accent); border-color: var(--accent); color: #04211c; font-weight: 800; }
+.pg-state.tried { color: var(--ink-2); }

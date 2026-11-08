@@ -19,7 +19,7 @@ export default function TopicPractice() {
   const questions: Question[] = useMemo(() => {
     if (!t) return [];
     const gen = (extra[topic] ?? []).map((s) => newGenerated(pack, topic, s)).filter(Boolean) as Question[];
-    return [...staticForTopic(pack, topic), ...gen];
+    return [...staticForTopic(pack, topic).filter((x) => x.type !== "code"), ...gen]; // programming questions live in Practice, Programming
   }, [t, topic, extra, pack]);
 
   // leaving with unsolved questions gets a reaction

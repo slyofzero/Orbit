@@ -57,7 +57,7 @@ export default function QuestionCard({
         <span className="pill">{q.marks} mark{q.marks > 1 ? "s" : ""}</span>
         <span className="small muted">{q.type === "mcq" ? `Negative: −${negLabel(q)}` : "No negative marking"}</span>
         {showTopic && TOPIC_BY_ID[q.topic] && (
-          <Link href={`/practice/${q.topic}`} className="small right">{TOPIC_BY_ID[q.topic].name}</Link>
+          <Link href={q.type === "code" ? "/practice/programming" : `/practice/${q.topic}`} className="small right">{TOPIC_BY_ID[q.topic].name}</Link>
         )}
       </div>
       <div className="qtext"><Rich text={q.text} /></div>
