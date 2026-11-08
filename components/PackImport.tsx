@@ -3,6 +3,8 @@ import { useMemo, useRef, useState } from "react";
 import { mergeChanges, mergePack, packPrompt, packTemplateJson, parsePack, type PackData } from "@/lib/packs";
 import { exportPack } from "@/lib/imageStore";
 import { downloadJson, fileSafe } from "@/lib/download";
+import { mergeFiles } from "@/lib/packMerge";
+import PackBreakdown from "./PackBreakdown";
 import ExportFirstModal from "./ExportFirstModal";
 import { usePack } from "@/lib/store";
 
@@ -23,6 +25,10 @@ export default function PackImport({ onDone }: { onDone?: (message: string) => v
   const [mode, setMode] = useState<"add" | "replace">("add"); // when you already have a pack, adding is the default
   const [ask, setAsk] = useState<null | "replace" | "remove">(null);
   const [note, setNote] = useState("");
+  const [newName, setNewName] = useState(""); // a name typed for the file being loaded; empty means keep the name inside the file
+  const [renaming, setRenaming] = useState<string | null>(null); // the draft while the current pack is being renamed
+  const [loadErrors, setLoadErrors] = useState<string[]>([]);
+  const [mergeNotes, setMergeNotes] = useState<string[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const adding = custom && mode === "add";
@@ -42,23 +48,31 @@ export default function PackImport({ onDone }: { onDone?: (message: string) => v
     setNote(m);
     onDone?.(m);
   };
-  const useIt = async () => { if (!p || !result) return; await install(p, keep, result.images); setText(""); setAsk(null); const m = `"${p.name}" is now your pack: ${p.questions.length} practice question${p.questions.length === 1 ? "" : "s"}.`; setNote(m); onDone?.(m); };
+  const useIt = async () => { if (!p || !result) return; const named = { ...p, name: chosen }; await install(named, keep, result.images); setNewName(""); setText(""); setAsk(null); const m = `"${chosen}" is now your pack: ${p.questions.length} practice question${p.questions.length === 1 ? "" : "s"}.`; setNote(m); onDone?.(m); };
 
   const copy = async (what: string, value: string) => {
     try { await navigator.clipboard.writeText(value); setNote(`${what} copied.`); } catch { setNote("Copy was blocked by the browser. Use Download instead."); }
   };
+  const chosen = (newName.trim() || p?.name || "").slice(0, 60);
   const count = (t: string) => p?.questions.filter((q) => q.type === t).length ?? 0;
 
   return (
     <div className="pi">
       <section className="panel pi-now">
         <div className="small muted">Your current question pack</div>
-        <h2 style={{ margin: "2px 0 4px" }}>{custom ? pack.name : "None loaded"}</h2>
+        {renaming === null ? <h2 style={{ margin: "2px 0 4px" }}>{custom ? pack.name : "None loaded"}</h2> : (
+          <form className="row" style={{ margin: "4px 0" }} onSubmit={async (e) => { e.preventDefault(); const n = renaming.trim().slice(0, 60); if (!n) return; await install({ ...pack, name: n }, true); setRenaming(null); const m = `Your pack is now called "${n}".`; setNote(m); onDone?.(m); }}>
+            <input className="ad-in" autoFocus maxLength={60} value={renaming} onChange={(e) => setRenaming(e.target.value)} aria-label="Question pack name" style={{ minWidth: 260 }} onKeyDown={(e) => { if (e.key === "Escape") setRenaming(null); }} />
+            <button className="btn primary" type="submit" disabled={!renaming.trim()}>Save name</button>
+            <button className="btn soft" type="button" onClick={() => setRenaming(null)}>Cancel</button>
+          </form>
+        )}
         <p className="small muted" style={{ margin: 0 }}>
           {custom ? `${pack.topics.length} topics · ${pack.questions.length} practice questions · ${pack.mockTests.length} mock recipe${pack.mocks.length === 1 ? "" : "s"}` : "Practice and Mocks stay empty until you upload a pack."}
         </p>
         {custom && (
           <div className="row" style={{ marginTop: 12 }}>
+            <button className="btn soft" onClick={() => setRenaming(pack.name)} disabled={renaming !== null}>Rename</button>
             <button className="btn soft" onClick={() => setAsk("remove")}>Remove this pack</button>
             <button className="btn soft" onClick={async () => downloadJson(`${fileSafe(pack.name)}.json`, await exportPack(pack))}>Export this pack</button>
           </div>
@@ -80,12 +94,24 @@ export default function PackImport({ onDone }: { onDone?: (message: string) => v
       <section className="panel">
         <h2 style={{ marginTop: 0 }}>2. Upload or paste it</h2>
         <div className="row">
-          <button className="btn soft" onClick={() => fileRef.current?.click()}>Upload JSON file</button>
-          <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={async (e) => { const f = e.target.files?.[0]; if (f) { setText(await f.text()); } e.target.value = ""; }} />
-          {text && <button className="btn soft" onClick={() => setText("")}>Clear</button>}
+          <button className="btn soft" onClick={() => fileRef.current?.click()}>Upload JSON file(s)</button>
+          <input ref={fileRef} type="file" accept="application/json,.json" multiple hidden onChange={async (e) => {
+            const list = [...(e.target.files ?? [])]; e.target.value = "";
+            setLoadErrors([]); setMergeNotes([]); setNewName("");
+            if (list.length === 0) return;
+            const files = await Promise.all(list.map(async (f) => ({ name: f.name, text: await f.text() })));
+            if (files.length === 1) { setText(files[0].text); return; }
+            const m = mergeFiles(files);
+            if (m.errors.length || !m.json) { setText(""); setLoadErrors(m.errors); return; }
+            setText(m.json); setMergeNotes(m.notes);
+          }} />
+          {text && <button className="btn soft" onClick={() => { setText(""); setMergeNotes([]); setLoadErrors([]); setNewName(""); }}>Clear</button>}
+          <span className="small muted">Pick several files at once to merge them into one pack.</span>
         </div>
         <textarea className="pi-text" spellCheck={false} placeholder='…or paste the JSON here, e.g. { "name": "My pack", "topics": [ … ], "questions": [ … ] }' value={text.length > 400_000 ? `(${(text.length / 1e6).toFixed(1)} MB file loaded, too big to show here. Check the preview below, then use it or press Clear.)` : text} readOnly={text.length > 400_000} onChange={(e) => setText(e.target.value)} />
 
+        {loadErrors.length > 0 && <div className="pi-err" role="alert"><b>🔴 Fix this first:</b><ul>{loadErrors.map((e, i) => <li key={i}>{e}</li>)}</ul></div>}
+        {text && mergeNotes.length > 0 && <ul className="pi-warn">{mergeNotes.map((w, i) => <li key={i}>{w}</li>)}</ul>}
         {result && result.errors.length > 0 && (
           <div className="pi-err" role="alert"><b>🔴 Fix this first:</b><ul>{result.errors.map((e, i) => <li key={i}>{e}</li>)}</ul></div>
         )}
@@ -93,8 +119,17 @@ export default function PackImport({ onDone }: { onDone?: (message: string) => v
 
         {p && (
           <div className="pi-ok">
-            <b>✓ Looks good: {p.name}</b>
-            <p className="small" style={{ margin: "4px 0" }}>{p.topics.length} topics in {Object.keys(p.subjects).length} subject{Object.keys(p.subjects).length === 1 ? "" : "s"} · {p.questions.length} practice questions ({count("mcq")} MCQ, {count("msq")} MSQ, {count("nat")} NAT) · {p.mockTests.length} mock test{p.mockTests.length === 1 ? "" : "s"} with {mockQs(p)} questions of their own{p.mockTests.length ? `: ${p.mockTests.map((m) => m.name).join(", ")}` : ""}{p.mocks.length ? ` · ${p.mocks.length} old-style recipe${p.mocks.length === 1 ? "" : "s"}` : ""}</p>
+            <b>✓ Looks good: {chosen}</b>
+            {!adding && (
+              <label className="small" style={{ display: "grid", gap: 4, margin: "6px 0" }}>Pack name (you can change it later with Rename)
+                <input className="ad-in" maxLength={60} value={newName} placeholder={p.name} onChange={(e) => setNewName(e.target.value)} />
+              </label>
+            )}
+            <p className="small" style={{ margin: "4px 0" }}>{p.topics.length} topics in {Object.keys(p.subjects).length} subject{Object.keys(p.subjects).length === 1 ? "" : "s"} · {p.questions.length} practice questions ({count("mcq")} MCQ, {count("msq")} MSQ, {count("nat")} NAT{count("code") ? `, ${count("code")} programming` : ""}) · {p.mockTests.length} mock test{p.mockTests.length === 1 ? "" : "s"} with {mockQs(p)} questions of their own{p.mockTests.length ? `: ${p.mockTests.map((m) => m.name).join(", ")}` : ""}{p.mocks.length ? ` · ${p.mocks.length} old-style recipe${p.mocks.length === 1 ? "" : "s"}` : ""}</p>
+            <details className="bd-det" open>
+              <summary>What is in this file</summary>
+              <PackBreakdown pack={p} />
+            </details>
             {custom && (
               <div className="pi-mode" role="radiogroup" aria-label="What to do with this file">
                 <button role="radio" aria-checked={mode === "add"} className={mode === "add" ? "on" : ""} onClick={() => setMode("add")}><b>Add to my pack</b><span>Keeps everything you have and appends the new questions.</span></button>

@@ -1,7 +1,9 @@
 "use client";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import TagFilter from "@/components/TagFilter";
+import { makeMatcher } from "@/lib/questionFilter";
 import { announce } from "@/lib/outcome";
 import QuestionCard from "@/components/QuestionCard";
 import { hasGenerator, newGenerated, staticForTopic } from "@/lib/bank";
@@ -16,6 +18,8 @@ export default function TopicPractice() {
   const [extra, setExtra] = usePersisted<Record<string, number[]>>(KEYS.extra, {});
   const [, setFixed] = usePersisted<Record<string, boolean>>(KEYS.fixed, {});
 
+  const [picked, setPicked] = useState<string[]>([]);
+  const passes = useMemo(() => makeMatcher(pack, picked), [pack, picked]);
   const questions: Question[] = useMemo(() => {
     if (!t) return [];
     const gen = (extra[topic] ?? []).map((s) => newGenerated(pack, topic, s)).filter(Boolean) as Question[];
@@ -62,7 +66,10 @@ export default function TopicPractice() {
 
       {questions.length === 0 && <div className="card muted">No questions for this topic yet. Add some to your question pack and upload it again.</div>}
 
-      {questions.map((q, i) => (
+      <div className="pr-bar" style={{ justifyContent: "flex-end" }}><TagFilter pack={pack} groups={["difficulty", "tag"]} qs={questions} picked={picked} onChange={setPicked} /></div>
+      {picked.length > 0 && questions.filter(passes).length === 0 && <div className="card muted">No question has those tags.</div>}
+
+      {questions.filter(passes).map((q, i) => (
         <QuestionCard
           key={q.id}
           q={q}

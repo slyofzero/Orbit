@@ -3,6 +3,8 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { hasGenerator } from "@/lib/bank";
 import PackImport from "@/components/PackImport";
+import TagFilter from "@/components/TagFilter";
+import { makeMatcher } from "@/lib/questionFilter";
 import PracticeTabs from "@/components/PracticeTabs";
 import { fmtDate, todayIST } from "@/lib/plan";
 import { KEYS, usePack, usePersisted, usePlan } from "@/lib/store";
@@ -20,6 +22,7 @@ export default function PracticeHome() {
   const [practice, , ready] = usePersisted<Record<string, PracticeRec>>(KEYS.practice, {});
   const [only, setOnly] = useState<"all" | TopicStatus>("all");
   const [q, setQ] = useState("");
+  const [picked, setPicked] = useState<string[]>([]);
   const [open, setOpen] = useState<Record<string, boolean> | null>(null);
 
   const today = todayIST();
@@ -38,13 +41,17 @@ export default function PracticeHome() {
 
   if (!ready || !planReady || !packReady) return <p className="muted">Loading…</p>;
 
-  const searching = q.trim().length > 0 || only !== "all";
+  const searching = q.trim().length > 0 || only !== "all" || picked.length > 0;
+  const passes = makeMatcher(pack, picked);
+  const tagged = (id: string) => pack.questions.filter((x) => x.topic === id && x.type !== "code" && passes(x)).length;
+  const practiceQs = pack.questions.filter((x) => x.type !== "code");
   const firstSubject = nextTopics[0]?.subject;
   const isOpen = (sid: string) => searching || (open ? !!open[sid] : sid === firstSubject || (!firstSubject && sid === Object.keys(SUBJECTS)[0]));
   const toggle = (sid: string) => setOpen((o) => ({ ...(o ?? { [firstSubject ?? Object.keys(SUBJECTS)[0]]: true }), [sid]: !isOpen(sid) }));
 
   const match = (name: string, status: TopicStatus) =>
     (only === "all" || status === only) && name.toLowerCase().includes(q.trim().toLowerCase());
+  const matchTopic = (t: { id: string; name: string; status: TopicStatus }) => match(t.name, t.status) && (picked.length === 0 || tagged(t.id) > 0);
 
   return (
     <>
@@ -88,12 +95,15 @@ export default function PracticeHome() {
             <button key={k} className={only === k ? "on" : ""} onClick={() => setOnly(k)}>{l}</button>
           ))}
         </div>
+        <TagFilter pack={pack} qs={practiceQs} picked={picked} onChange={setPicked} />
       </div>
+
+      {picked.length > 0 && !TOPICS.some(matchTopic) && <p className="muted">No topic has questions that match this filter.</p>}
 
       <div className="pr-list">
         {Object.entries(SUBJECTS).map(([sid, sname]) => {
           const all = TOPICS.filter((t) => t.subject === sid);
-          const ts = all.filter((t) => match(t.name, t.status));
+          const ts = all.filter(matchTopic);
           if (!ts.length) return null;
           const started = all.filter((t) => stats[t.id]?.n).length;
           const o = isOpen(sid);
@@ -116,7 +126,7 @@ export default function PracticeHome() {
                       <Link key={t.id} href={`/practice/${t.id}`} className="pr-row">
                         <i className={`dot ${t.status}`} title={STATUS_LABEL[t.status]} />
                         <span className="nm">{t.name}</span>
-                        <span className="muted small">{s ? `${s.c}/${s.n} right` : `${n}${hasGenerator(pack, t.id) ? "+" : ""} q`}</span>
+                        <span className="muted small">{picked.length > 0 ? `${tagged(t.id)} matching q` : s ? `${s.c}/${s.n} right` : `${n}${hasGenerator(pack, t.id) ? "+" : ""} q`}</span>
                       </Link>
                     );
                   })}

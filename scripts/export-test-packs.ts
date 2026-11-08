@@ -2,9 +2,9 @@ import { writeFileSync } from "node:fs";
 import { parsePack, mergePack, packToJson } from "../lib/packs";
 const subjects = { m: "Maths", p: "Probability" };
 const q = (id: string, topic: string, text: string, answer: number, extra: object = {}) =>
-  ({ id, subject: topic === "alg" || topic === "calc" ? "m" : "p", topic, type: "nat", marks: 1, text, answer, explanation: "Worked out in one step.", tags: ["test"], ...extra });
+  ({ id, subject: topic === "alg" || topic === "calc" ? "m" : "p", topic, difficulty: "easy", type: "nat", marks: 1, text, answer, explanation: "Worked out in one step.", tags: ["test"], ...extra });
 const mcq = (id: string, topic: string, text: string, options: string[], answer: number) =>
-  ({ id, subject: topic === "alg" || topic === "calc" ? "m" : "p", topic, type: "mcq", marks: 1, text, options, answer, explanation: "Option " + "ABCD"[answer] + " is right.", tags: ["test"] });
+  ({ id, subject: topic === "alg" || topic === "calc" ? "m" : "p", topic, difficulty: "easy", type: "mcq", marks: 1, text, options, answer, explanation: "Option " + "ABCD"[answer] + " is right.", tags: ["test"] });
 const A = { name: "Test pack A", subjects: { m: "Maths" }, topics: [{ id: "alg", subject: "m", name: "Algebra" }, { id: "calc", subject: "m", name: "Calculus" }],
   questions: [q("alg-1", "alg", "If $2x + 3 = 11$, what is $x$?", 4), q("alg-2", "alg", "What is $3^2 + 4^2$?", 25), mcq("calc-1", "calc", "What is $\\frac{d}{dx} x^2$?", ["$x$", "$2x$", "$x^2$", "$2$"], 1)],
   mockTests: [{ id: "mock1", name: "Test mock 1", minutes: 20, sections: [{ name: "Maths", questions: [q("mock1-q1", "alg", "Solve $x - 9 = 1$.", 10), q("mock1-q2", "calc", "What is $\\int_0^1 2x\\,dx$?", 1)] }] }] };

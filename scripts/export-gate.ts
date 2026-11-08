@@ -28,7 +28,7 @@ export function gatePackJson() {
     useBuiltinGenerators: true,
     subjects: SUBJECTS,
     topics: TOPICS.map(({ id, subject, name, status }) => ({ id, subject, name, status })),
-    questions: BANK.map((q) => ({ id: q.id, subject: TOPICS.find((t) => t.id === q.topic)?.subject, topic: q.topic, type: q.type, marks: q.marks, text: q.text, ...(q.options ? { options: q.options } : {}), answer: q.answer, explanation: q.explanation })),
+    questions: BANK.map((q) => ({ id: q.id, subject: TOPICS.find((t) => t.id === q.topic)?.subject, topic: q.topic, type: q.type, marks: q.marks, difficulty: q.marks === 1 ? "easy" : "medium", text: q.text, ...(q.options ? { options: q.options } : {}), answer: q.answer, explanation: q.explanation })),
     mocks: [
       mockFor("full", "Full mock (GATE DA pattern)", 180, 1, "10 General Aptitude + 55 technical questions, like the real paper."),
       mockFor("sectional", "1-hour sectional mock", 60, 1 / 3, "About a third of the paper. Use it in busy weeks."),

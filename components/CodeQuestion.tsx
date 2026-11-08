@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { CodeLanguage, LANGUAGE_LABEL } from "@/lib/codeLanguages";
+import { canRunInBrowser, warmUp } from "@/lib/browserRunner";
 import { Graded, gradeCode, runtimeStatus, RuntimeStatus } from "@/lib/judge";
 import { KEYS, usePersisted } from "@/lib/store";
 import { Question } from "@/lib/types";
@@ -44,13 +45,19 @@ export default function CodeQuestion({ q, onSubmit, onSkip, onReset }: {
   }, [code, q.id, setDrafts]);
 
   const status = env?.languages?.[lang];
-  const blocked = !env ? "Checking your setup…" : env.error ? env.error : status && !status.ok ? `${LANGUAGE_LABEL[lang]} is not installed on this computer. ${status.hint ?? ""}` : "";
+  const serverOk = !!status?.ok;
+  const inBrowser = !!env && !serverOk && canRunInBrowser(lang) && !spec.setup;
+  const blocked = !env ? "Checking your setup…"
+    : serverOk || inBrowser ? ""
+    : spec.setup && canRunInBrowser(lang) ? "This question works on files, so it needs Orbit running on your own computer (not the hosted site)."
+    : env.error ? env.error : status && !status.ok ? `${LANGUAGE_LABEL[lang]} is not installed on this computer. ${status.hint ?? ""}` : "";
+  useEffect(() => { if (inBrowser) warmUp(lang); }, [inBrowser, lang]);
   const examples = spec.tests.filter((t) => !t.hidden).slice(0, 3);
 
   const go = async (what: "run" | "submit") => {
     if (code === null || busy || blocked) return;
     setBusy(what); setRes(null);
-    const g = await gradeCode(q, code, what === "run" ? "visible" : "all", dir.trim() || undefined);
+    const g = await gradeCode(q, code, what === "run" ? "visible" : "all", dir.trim() || undefined, inBrowser ? "browser" : "server");
     setRes({ what, g }); setBusy(null);
     if (what === "submit" && !g.failure && !g.missing) { setState("done"); onSubmit(!g.compileError && g.total > 0 && g.passed === g.total); }
   };
@@ -108,6 +115,7 @@ export default function CodeQuestion({ q, onSubmit, onSkip, onReset }: {
         rows={Math.min(26, Math.max(10, (code ?? "").split("\n").length + 1))}
         value={code ?? ""} onChange={(e) => setCode(e.target.value)} onKeyDown={onKey} readOnly={locked}
       />
+      {inBrowser && <p className="small muted" style={{ margin: "6px 0 0" }}>Your code runs inside this browser tab. {lang === "python" ? "The first Python run downloads about 10 MB, then it is kept." : ""}</p>}
       {blocked && env && <div className="callout" role="alert">🔴 CAUTION: {blocked}</div>}
       <div className="row" style={{ marginTop: 10 }}>
         {state === "open" ? (

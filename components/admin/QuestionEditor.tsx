@@ -5,7 +5,8 @@ import { loadImages, saveImages } from "@/lib/imageStore";
 import { DATA_IMG, MAX_IMAGE, hashData, storedImageNames } from "@/lib/images";
 import { Loc, PackData, allQuestions } from "@/lib/packs";
 import { Target, checkQuestion, freeId, upsertQuestion } from "@/lib/packEdit";
-import { QType } from "@/lib/types";
+import { DIFFICULTIES, QType } from "@/lib/types";
+import { difficultyOf } from "@/lib/questionFilter";
 import { CODE_LANGUAGES, LANGUAGE_LABEL } from "@/lib/codeLanguages";
 
 type Field = "text" | "explanation" | `opt${number}`;
@@ -31,7 +32,8 @@ export default function QuestionEditor({ profile, pack, loc, preset, onClose, on
   const [setup, setSetup] = useState(q?.code?.setup ?? "");
   const [limit, setLimit] = useState(q?.code?.timeLimitMs ? String(q.code.timeLimitMs) : "");
   const [testsJson, setTestsJson] = useState(JSON.stringify(q?.code?.tests ?? [{ input: "", output: "" }], null, 2));
-  const [tags, setTags] = useState((q?.tags ?? []).join(", "));
+  const [difficulty, setDifficulty] = useState<string>(q ? difficultyOf(q) ?? "" : "");
+  const [tags, setTags] = useState((q?.tags ?? []).filter((t) => !(DIFFICULTIES as string[]).includes(t)).join(", "));
   const [where, setWhere] = useState<string>(loc ? (loc.bank === "practice" ? "practice" : `mock:${loc.mockId}`) : preset ? `mock:${preset.mockId}` : "practice");
   const [section, setSection] = useState(loc?.section ?? preset?.section ?? "");
   const [newSec, setNewSec] = useState(false);
@@ -71,10 +73,11 @@ export default function QuestionEditor({ profile, pack, loc, preset, onClose, on
     const errs: string[] = [];
     const cleanId = id.trim();
     if (!loc && allQuestions(pack).some((l) => l.q.id === cleanId)) errs.push(`The id "${cleanId}" is already used by another question. Ids must be unique across Practice and every mock test.`);
+    if (!difficulty) errs.push("Pick a difficulty: easy, medium or hard.");
     if (where.startsWith("mock:") && !mock) errs.push("Pick a mock test.");
     if (mock && !sectionName) errs.push("Give the mock section a name.");
     const raw: Record<string, unknown> = {
-      id: cleanId, subject: pack.topics.find((t) => t.id === topic)?.subject, topic, type, marks, text, explanation,
+      id: cleanId, subject: pack.topics.find((t) => t.id === topic)?.subject, topic, type, marks, text, explanation, ...(difficulty ? { difficulty } : {}),
       ...(tags.trim() ? { tags: tags.split(",").map((t) => t.trim()).filter(Boolean) } : {}),
     };
     if (type === "code") {
@@ -156,7 +159,13 @@ export default function QuestionEditor({ profile, pack, loc, preset, onClose, on
           )}
 
           <label>Explanation<textarea className="ad-ta" rows={3} value={explanation} onFocus={() => (last.current = "explanation")} onChange={(e) => setExplanation(e.target.value)} spellCheck={false} /></label>
-          <label>Tags <span className="small muted">(optional, separated by commas)</span><input className="ad-in" value={tags} onChange={(e) => setTags(e.target.value)} placeholder="formula, hard" /></label>
+          <label>Difficulty
+            <select className="ad-in" value={difficulty} onChange={(e) => setDifficulty(e.target.value)}>
+              <option value="">Pick one…</option>
+              {DIFFICULTIES.map((d) => <option key={d} value={d}>{d[0].toUpperCase() + d.slice(1)}</option>)}
+            </select>
+          </label>
+          <label>Tags <span className="small muted">(optional, at most 3, general skills only like formula or trap, separated by commas)</span><input className="ad-in" value={tags} onChange={(e) => setTags(e.target.value)} placeholder="formula, trap" /></label>
           <div className="row">
             <button className="btn soft" onClick={() => file.current?.click()}>Add picture…</button>
             <span className="small muted">It goes into the field you last clicked.</span>

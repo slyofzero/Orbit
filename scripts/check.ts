@@ -13,6 +13,9 @@ import { aiPrompt, parsePlan, templateJson } from "../lib/customPlan";
 import { hashData as hashDataCheck } from "../lib/images";
 import { checkQuestion, deleteSection, freeId, moveQuestion, moveSection, removeQuestion, renameSection, searchIds, upsertQuestion } from "../lib/packEdit";
 import type { Attempt } from "../lib/types";
+import { mergeFiles } from "../lib/packMerge";
+import { facets, makeMatcher } from "../lib/questionFilter";
+import { typeBreakdown } from "../lib/typeBreakdown";
 import { setupPrompt } from "../lib/setupPrompt";
 import { mkdtempSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -129,7 +132,7 @@ if (!rt.pack || rt.pack.questions.length !== pack.questions.length || rt.pack.mo
 const pr = packPrompt();
 if (!pr.includes("LaTeX") || !pr.includes("\\\\frac") || !pr.includes("TWICE")) err("pack prompt must teach LaTeX and the doubled backslash rule");
 const texBase = { topics: [{ id: "a", subject: "s", name: "A", status: "know" }] };
-const q1 = (text: string, extra: object = {}) => ({ topic: "a", type: "nat", marks: 1, text, answer: 1, ...extra });
+const q1 = (text: string, extra: object = {}) => ({ topic: "a", difficulty: "easy", type: "nat", marks: 1, text, answer: 1, ...extra });
 const fixedTex = parsePack({ ...texBase, questions: [q1("Simplify $\x0crac{1}{2} \x09imes 2$")] });
 if (!fixedTex.pack || fixedTex.pack.questions[0].text !== "Simplify $\\frac{1}{2} \\times 2$") err("control characters from single backslashes should be repaired: " + JSON.stringify(fixedTex.pack?.questions[0].text) + JSON.stringify(fixedTex.errors));
 if (!fixedTex.warnings.some((w) => w.includes("Fixed 2"))) err("repair should warn");
@@ -139,7 +142,7 @@ const money = parsePack({ ...texBase, questions: [q1("costs \\$5 and $x^2$")] })
 if (!money.pack) err("escaped dollar should pass: " + money.errors.join("; "));
 const badMacro = parsePack({ ...texBase, questions: [q1("$\\notamacro{x}$")] });
 if (badMacro.pack || !badMacro.errors.some((e) => e.includes("will not draw"))) err("unknown macro should fail with a plain message");
-const badOpt = parsePack({ ...texBase, questions: [{ topic: "a", type: "mcq", marks: 1, text: "ok $x$", options: ["$\\frac{1}{$", "b"], answer: 0 }] });
+const badOpt = parsePack({ ...texBase, questions: [{ topic: "a", difficulty: "easy", type: "mcq", marks: 1, text: "ok $x$", options: ["$\\frac{1}{$", "b"], answer: 0 }] });
 if (badOpt.pack || !badOpt.errors.some((e) => e.includes("options[0]"))) err("bad maths in an option should point at the option");
 const disp = parsePack({ ...texBase, questions: [q1("$$\\begin{aligned} a &= 1 \\\\ b &= 2 \\end{aligned}$$ and \\(y\\) and ```py\nx = '$'\n```")] });
 if (!disp.pack) err("display/aligned/\\( \\)/code should pass: " + disp.errors.join("; "));
@@ -147,24 +150,24 @@ const base = { topics: [{ id: "a", subject: "s", name: "A" }] };
 const badPacks: [string, unknown, string][] = [
   ["not object", 5, "one JSON object"],
   ["no topics", { questions: [] }, '"topics"'],
-  ["unknown topic", { ...base, questions: [{ topic: "zzz", type: "mcq", marks: 1, text: "q", options: ["x", "y"], answer: 0 }] }, "not one of your topic ids"],
+  ["unknown topic", { ...base, questions: [{ topic: "zzz", difficulty: "easy", type: "mcq", marks: 1, text: "q", options: ["x", "y"], answer: 0 }] }, "not one of your topic ids"],
   ["bad type", { ...base, questions: [{ topic: "a", type: "essay", marks: 1, text: "q" }] }, "type"],
-  ["bad marks", { ...base, questions: [{ topic: "a", type: "nat", marks: 3, text: "q", answer: 1 }] }, "marks"],
-  ["mcq answer range", { ...base, questions: [{ topic: "a", type: "mcq", marks: 1, text: "q", options: ["x", "y"], answer: 2 }] }, "counting from 0"],
-  ["msq dup", { ...base, questions: [{ topic: "a", type: "msq", marks: 2, text: "q", options: ["x", "y"], answer: [1, 1] }] }, "msq"],
-  ["nat answer", { ...base, questions: [{ topic: "a", type: "nat", marks: 1, text: "q", answer: "four" }] }, "nat"],
-  ["dup id", { ...base, questions: [{ id: "q1", topic: "a", type: "nat", marks: 1, text: "q", answer: 1 }, { id: "q1", topic: "a", type: "nat", marks: 1, text: "q2", answer: 2 }] }, "used twice"],
+  ["bad marks", { ...base, questions: [{ topic: "a", difficulty: "easy", type: "nat", marks: 3, text: "q", answer: 1 }] }, "marks"],
+  ["mcq answer range", { ...base, questions: [{ topic: "a", difficulty: "easy", type: "mcq", marks: 1, text: "q", options: ["x", "y"], answer: 2 }] }, "counting from 0"],
+  ["msq dup", { ...base, questions: [{ topic: "a", difficulty: "easy", type: "msq", marks: 2, text: "q", options: ["x", "y"], answer: [1, 1] }] }, "msq"],
+  ["nat answer", { ...base, questions: [{ topic: "a", difficulty: "easy", type: "nat", marks: 1, text: "q", answer: "four" }] }, "nat"],
+  ["dup id", { ...base, questions: [{ id: "q1", topic: "a", difficulty: "easy", type: "nat", marks: 1, text: "q", answer: 1 }, { id: "q1", topic: "a", difficulty: "easy", type: "nat", marks: 1, text: "q2", answer: 2 }] }, "used twice"],
   ["mock subject", { ...base, questions: [], mocks: [{ id: "m", name: "M", minutes: 30, sections: [{ name: "S", picks: [{ subject: "nope", one: 1 }] }] }] }, "subject"],
 ];
 for (const [label, input, needle] of badPacks) {
   const r = parsePack(input);
   if (r.pack || !r.errors.some((e) => e.includes(needle))) err(`invalid pack "${label}" should fail with "${needle}", got ${JSON.stringify(r.errors)}`);
 }
-const ok = parsePack({ ...base, questions: [{ topic: "a", type: "nat", marks: 1, text: "q", answer: 4 }, { topic: "a", type: "mcq", marks: 1, text: "q2", options: ["x", "y"], answer: 1 }] });
+const ok = parsePack({ ...base, questions: [{ topic: "a", difficulty: "easy", type: "nat", marks: 1, text: "q", answer: 4 }, { topic: "a", difficulty: "easy", type: "mcq", marks: 1, text: "q2", options: ["x", "y"], answer: 1 }] });
 if (ok.pack?.questions.map((q) => q.id).join() !== "a-1,a-2") err("auto ids should be topic-n");
 {
   const mk = (extra: object) => parsePack({ name: "P", subjects: { m: "Maths" }, topics: [{ id: "alg", subject: "m", name: "Algebra" }], questions: [], ...extra });
-  const q = (id: string, text: string) => ({ id, topic: "alg", type: "nat", marks: 1, text, answer: 1, explanation: "e" });
+  const q = (id: string, text: string) => ({ id, topic: "alg", difficulty: "easy", type: "nat", marks: 1, text, answer: 1, explanation: "e" });
   const a = mk({ questions: [q("alg-1", "one"), q("alg-2", "two")] }).pack!;
   const b = mk({ topics: [{ id: "alg", subject: "m", name: "Algebra" }, { id: "geo", subject: "m", name: "Geometry" }], questions: [q("alg-1", "one"), q("alg-2", "brand new"), q("geo-1", "g")] }).pack!;
   const r = mergePack(a, b);
@@ -182,7 +185,7 @@ if (ok.pack?.questions.map((q) => q.id).join() !== "a-1,a-2") err("auto ids shou
 }
 {
   const base = { name: "P", subjects: { m: "Maths" }, topics: [{ id: "alg", subject: "m", name: "Algebra" }] };
-  const mq = (id: string, text: string) => ({ id, topic: "alg", type: "nat", marks: 1, text, answer: 1, explanation: "e" });
+  const mq = (id: string, text: string) => ({ id, topic: "alg", difficulty: "easy", type: "nat", marks: 1, text, answer: 1, explanation: "e" });
   const mk = (mockTests: unknown, questions: unknown[] = [mq("alg-1", "practice one")]) => parsePack({ ...base, questions, mockTests });
   const okm = mk([{ id: "t1", name: "T1", minutes: 30, sections: [{ name: "S", questions: [mq("t1-1", "a"), mq("t1-2", "b")] }] }]);
   if (!okm.pack || okm.pack.mockTests[0].sections[0].questions.length !== 2) err("mockTests should parse: " + okm.errors.join("; "));
@@ -287,7 +290,7 @@ if (ok.pack?.questions.map((q) => q.id).join() !== "a-1,a-2") err("auto ids shou
   console.log("admin edit: ok");
   console.log("mock tests: ok");
   {
-    const q = (id: string, t: string) => ({ id, topic: t, type: "mcq", marks: 1, text: `Q ${id}`, options: ["a", "b"], answer: 0 });
+    const q = (id: string, t: string) => ({ id, topic: t, difficulty: "easy", type: "mcq", marks: 1, text: `Q ${id}`, options: ["a", "b"], answer: 0 });
     const lp = parsePack({ name: "L", subjects: { s: "S" }, topics: [{ id: "t1", name: "T1", subject: "s", status: "shaky" }], questions: [q("t1-1", "t1"), q("t1-2", "t1")], mockTests: [{ id: "m1", name: "M1", minutes: 60, sections: [{ name: "A", questions: [q("m1-1", "t1")] }] }] });
     if (!lp.pack) err("links fixture: " + lp.errors.join("; "));
     else {
@@ -330,7 +333,7 @@ if (ok.pack?.questions.map((q) => q.id).join() !== "a-1,a-2") err("auto ids shou
   if (mergeTickLines("a `x` b\n`y`") !== "a `x` b\n`y`") err("one lone inline line must stay inline");
   console.log("code: ok");
   {
-    const mq = (id: string, t: string) => ({ subject: "s", topic: t, type: "mcq", marks: 1, text: `Q ${id}`, options: ["a", "b"], answer: 0, explanation: "e" });
+    const mq = (id: string, t: string) => ({ subject: "s", topic: t, difficulty: "easy", type: "mcq", marks: 1, text: `Q ${id}`, options: ["a", "b"], answer: 0, explanation: "e" });
     const tp = parsePack({ name: "T", subjects: { s: "S" }, topics: [{ id: "a", name: "Topic A", subject: "s", status: "shaky" }, { id: "b", name: "Topic B", subject: "s", status: "know" }], questions: [mq("1", "a"), mq("2", "a"), mq("3", "b"), mq("4", "b")] });
     if (!tp.pack) err("topic fixture: " + tp.errors.join("; "));
     else {
@@ -340,7 +343,7 @@ if (ok.pack?.questions.map((q) => q.id).join() !== "a-1,a-2") err("auto ids shou
     }
     console.log("topic test: ok");
   {
-    const cq = (extra: Record<string, unknown>, ...rest: Record<string, unknown>[]) => ({ subject: "s", topic: "a", type: "code", marks: 2, text: "Print the sum.", explanation: "e", language: "python", tests: [{ input: "1 2", output: "3" }], ...extra, ...Object.assign({}, ...rest) });
+    const cq = (extra: Record<string, unknown>, ...rest: Record<string, unknown>[]) => ({ subject: "s", topic: "a", difficulty: "easy", type: "code", marks: 2, text: "Print the sum.", explanation: "e", language: "python", tests: [{ input: "1 2", output: "3" }], ...extra, ...Object.assign({}, ...rest) });
     const base = { name: "C", subjects: { s: "S" }, topics: [{ id: "a", name: "A", subject: "s", status: "shaky" }] };
     const ok = parsePack({ ...base, questions: [cq({ language: "py", tests: [{ input: "1 2", output: 3 }, { input: "5 5", output: "10", hidden: true }], solution: "print(1)" })] });
     if (!ok.pack || ok.pack.questions[0].code?.language !== "python" || ok.pack.questions[0].code?.tests[0].output !== "3") err("code question must parse (alias py, numeric output): " + ok.errors.join("; "));
@@ -350,7 +353,7 @@ if (ok.pack?.questions.map((q) => q.id).join() !== "a-1,a-2") err("auto ids shou
       if (parsePack({ ...base, questions: [cq({}, bad)] }).pack) err(`code question with ${name} must be refused`);
     if (parsePack({ ...base, questions: [], mockTests: [{ id: "m", name: "M", minutes: 30, sections: [{ name: "S", questions: [cq({})] }] }] }).pack) err("code questions must be refused inside mock tests");
     // programming questions never leak into generated tests
-    const mixed = parsePack({ ...base, questions: [cq({ marks: 1 }), { subject: "s", topic: "a", type: "mcq", marks: 1, text: "q", options: ["a", "b"], answer: 0, explanation: "e" }] });
+    const mixed = parsePack({ ...base, questions: [cq({ marks: 1 }), { subject: "s", topic: "a", difficulty: "easy", type: "mcq", marks: 1, text: "q", options: ["a", "b"], answer: 0, explanation: "e" }] });
     if (buildMock(mixed.pack!, { kind: "topic", topic: "a", seed: 3, seenIds: new Set() }).questions.some((q) => q.type === "code")) err("programming questions must not enter generated tests");
     if (!sameOutput("1 2\r\n3  \n\n", "1 2\n3") || sameOutput("1", "2") || sameOutput("a b", "a  b")) err("output comparison rules");
     // real runs on this computer, for every language that is installed here
@@ -405,6 +408,116 @@ if (ok.pack?.questions.map((q) => q.id).join() !== "a-1,a-2") err("auto ids shou
   }
   }
 }
+
+{
+  const mk = (id: string, topic: string, type: "mcq" | "msq" | "nat" | "code", marks = 1) => ({ id, topic, type, marks, text: "t", answer: type === "nat" ? 1 : "A", explanation: "e" }) as any;
+  const pk: any = {
+    name: "T", subjects: { s1: "Subj" }, topics: [{ id: "a", name: "Alpha", subject: "s1" }, { id: "b", name: "Beta", subject: "s1" }, { id: "c", name: "Gamma", subject: "s1" }],
+    questions: [mk("1", "a", "mcq"), mk("2", "a", "mcq", 2), mk("3", "a", "nat"), mk("4", "b", "code", 5)], mocks: [], useBuiltinGenerators: false,
+    mockTests: [{ id: "m1", name: "Mock 1", minutes: 60, sections: [{ name: "S", questions: [mk("5", "b", "msq", 2), mk("6", "a", "mcq")] }] }],
+  };
+  const bd = typeBreakdown(pk);
+  const a = bd.practice.rows.find((r) => r.key === "a")!;
+  if (a.counts.mcq !== 2 || a.counts.nat !== 1 || a.total !== 3 || a.marks !== 4) err("practice row wrong");
+  if (bd.practice.totals.total !== 4 || bd.practice.totals.counts.code !== 1 || bd.practice.totals.marks !== 9) err("practice totals wrong");
+  if (bd.practice.topicsWithout !== 1) err("topicsWithout wrong");
+  if (bd.mock.totals.total !== 2 || bd.mock.totals.counts.msq !== 1 || bd.mocks[0].marks !== 3 || bd.mocks[0].minutes !== 60) err("mock breakdown wrong");
+  if (bd.practice.rows[0].name !== "Alpha" || bd.practice.rows[0].subject !== "Subj") err("row naming wrong");
+  console.log("typeBreakdown: ok");
+}
+
+{
+  const mk = (id: string, topic: string, tags: string[] = [], subject?: string) => ({ id, topic, difficulty: "easy", type: "mcq", marks: 1, text: "t", answer: 0, explanation: "e", tags, subject }) as any;
+  const pk: any = { name: "T", subjects: { s1: "Maths", s2: "CS" }, topics: [{ id: "a", name: "Alpha", subject: "s1" }, { id: "b", name: "Beta", subject: "s2" }, { id: "c", name: "Gamma", subject: "s2" }], questions: [], mocks: [], mockTests: [], useBuiltinGenerators: false };
+  const qs = [mk("1", "a", ["trap"]), mk("2", "b", ["trap", "deep"]), mk("3", "c", ["deep"]), mk("4", "c", [], "s1")];
+  const f = facets(pk, qs);
+  if (f.subject.map((x) => x.label + x.count).join() !== "Maths2,CS2") err("subject facets wrong: " + f.subject.map((x) => x.label + x.count));
+  if (f.topic.length !== 3 || f.tag[0].label !== "deep" && f.tag[0].label !== "trap") err("topic/tag facets wrong");
+  const ids = (picked: string[]) => qs.filter(makeMatcher(pk, picked)).map((q) => q.id).join();
+  if (ids([]) !== "1,2,3,4") err("empty filter should keep all");
+  if (ids(["subject:s2"]) !== "2,3") err("subject filter wrong: " + ids(["subject:s2"]));
+  if (ids(["subject:s2", "tag:trap"]) !== "2") err("groups should AND: " + ids(["subject:s2", "tag:trap"]));
+  if (ids(["tag:trap", "tag:deep"]) !== "1,2,3") err("same group should OR");
+  if (ids(["topic:a", "topic:b"]) !== "1,2") err("topic filter wrong");
+  console.log("questionFilter: ok");
+}
+
+{
+  const base = { name: "D", subjects: { m: "Maths" }, topics: [{ id: "alg", subject: "m", name: "Algebra" }] };
+  const mq = (extra: object) => ({ id: "q1", topic: "alg", type: "nat", marks: 1, text: "t", answer: 1, explanation: "e", ...extra });
+  const none = parsePack({ ...base, questions: [mq({}), mq({ id: "q2" })] });
+  if (none.pack || !none.errors[0]?.includes("2 questions have no difficulty")) err("missing difficulty should fail with one summary: " + none.errors[0]);
+  const bad = parsePack({ ...base, questions: [mq({ difficulty: "brutal" })] });
+  if (bad.pack || !bad.errors.join().includes('"easy", "medium" or "hard"')) err("bad difficulty should fail");
+  const ok = parsePack({ ...base, questions: [mq({ difficulty: "Hard" })] });
+  if (ok.pack?.questions[0].difficulty !== "hard") err("difficulty should be accepted in any case");
+  const legacy = parsePack({ ...base, questions: [mq({ tags: ["easy", "trap"] })] });
+  if (legacy.pack?.questions[0].difficulty !== "easy" || legacy.pack?.questions[0].tags?.join() !== "trap") err("an easy/medium/hard tag should become the difficulty and leave the tags");
+  const inMock = parsePack({ ...base, questions: [], mockTests: [{ id: "m1", name: "M", minutes: 30, sections: [{ name: "S", questions: [mq({})] }] }] });
+  if (inMock.pack) err("mock-test questions need a difficulty too");
+  const f = facets(ok.pack!, ok.pack!.questions);
+  if (f.difficulty.map((x) => x.label).join() !== "Hard") err("difficulty facet wrong");
+  const old: any = { ...ok.pack!.questions[0], difficulty: undefined, tags: ["medium", "x"] };
+  if (!makeMatcher(ok.pack!, ["difficulty:medium"])(old) || facets(ok.pack!, [old]).tag.some((x) => x.label === "medium")) err("saved packs with a difficulty tag should still filter by difficulty");
+  const round = parsePack(JSON.parse(JSON.stringify(packToJson(ok.pack!))));
+  if (round.pack?.questions[0].difficulty !== "hard") err("difficulty should survive export and import");
+  console.log("difficulty: ok");
+}
+
+{
+  const pr = packPrompt();
+  for (const need of ['"difficulty"', '"tolerance"', '"mockTests"', '"mocks"', '"images"', '"status"', '"timeLimitMs"', '"setup"', '"hidden"', "at most 48", "5 to 600", "Python and JavaScript programs run inside the app"])
+    if (!pr.includes(need)) err("pack prompt should mention " + need);
+  const ex = pr.slice(pr.lastIndexOf("Here is a valid example"));
+  const json = ex.slice(ex.indexOf("{"));
+  const r = parsePack(JSON.parse(json));
+  if (!r.pack) err("the example inside the AI prompt must itself be a valid pack: " + r.errors.join(" | "));
+  console.log("prompt: ok");
+}
+
+{
+  const f = (name: string, data: object) => ({ name, text: JSON.stringify(data) });
+  const q = (extra: object) => ({ topic: "alg", difficulty: "easy", type: "nat", marks: 1, text: "t", answer: 1, explanation: "e", ...extra });
+  const a = f("a.json", { name: "A", subjects: { m: "Maths" }, topics: [{ id: "alg", subject: "m", name: "Algebra" }], questions: [q({}), q({ id: "keep", text: "old" })] });
+  const b = f("b.json", { name: "B", subjects: { c: "CS" }, topics: [{ id: "alg", subject: "m", name: "Algebra" }, { id: "sql", subject: "c", name: "SQL" }], questions: [q({}), q({ topic: "sql" }), q({ id: "keep", text: "new" })] });
+  const m = mergeFiles([a, b], new Date("2026-11-08T10:00:00Z"));
+  if (!m.json || !m.name?.startsWith("Merged pack · 2 files · ")) err("merged name wrong: " + m.name);
+  const r = parsePack(JSON.parse(m.json!));
+  if (!r.pack) err("merged pack should be valid: " + r.errors.join("|"));
+  else {
+    if (r.pack.questions.length !== 4) err("expected 4 questions after merging, got " + r.pack.questions.length);
+    if (new Set(r.pack.questions.map((x) => x.id)).size !== 4) err("merged ids should be unique (auto ids numbered once)");
+    if (r.pack.questions.find((x) => x.id === "keep")?.text !== "new") err("later file should win for a repeated id");
+    if (r.pack.topics.length !== 2 || Object.keys(r.pack.subjects).length !== 2) err("topics and subjects should be combined");
+  }
+  if (!m.notes.some((n) => n.includes("1 question, mock test or recipe id appears"))) err("should note the repeated id: " + m.notes.join("|"));
+  const bad = mergeFiles([a, { name: "broken.json", text: "{nope" }]);
+  if (bad.json || !bad.errors[0]?.startsWith("broken.json")) err("an unreadable file should name itself in the error");
+  const pic = mergeFiles([f("p1", { images: { x: "data:image/png;base64,AAAA" } }), f("p2", { images: { x: "data:image/png;base64,BBBB" } })]);
+  if (pic.json || !pic.errors[0]?.includes('"x"')) err("same picture name with different pictures should be refused");
+  console.log("mergeFiles: ok");
+}
+
+{
+  const base = { name: "T", subjects: { m: "Maths" }, topics: [{ id: "alg", subject: "m", name: "Algebra" }] };
+  const mk = (tags: string[], extra: object = {}) => ({ topic: "alg", difficulty: "easy", type: "nat", marks: 1, text: "t", answer: 1, explanation: "e", tags, ...extra });
+  const r1 = parsePack({ ...base, questions: [mk(["pw-swt-3"]), mk(["mst"]), mk(["formula"]), mk(["nptel-practice"]), mk(["week-4"]), mk(["wt01"])] });
+  if (r1.pack || !r1.errors[0]?.includes("pw-swt-3") || !r1.errors[0]?.includes("mst") || !r1.errors[0]?.includes("nptel-practice")) err("source tags should be refused in one summary: " + r1.errors[0]);
+  if (r1.errors[0]?.includes("formula")) err("a general tag must not be flagged");
+  const ok = parsePack({ ...base, questions: [mk(["formula", "calculation", "trap"]), mk(["hypothesis-test", "series", "set-theory"]), mk(["2nf"])] });
+  if (!ok.pack) err("general tags (even with digits like 2nf, or the words series/test/set) should pass: " + ok.errors.join("|"));
+  const many = parsePack({ ...base, questions: [mk(["a", "b", "c", "d"])] });
+  if (many.pack || !many.errors[0]?.includes("more than 3 tags")) err("more than 3 tags per question should be refused");
+  const wide = parsePack({ ...base, questions: Array.from({ length: 41 }, (_, i) => mk(["t" + "x".repeat(i % 5) + String.fromCharCode(97 + (i % 26)) + String.fromCharCode(97 + Math.floor(i / 26))])) });
+  if (wide.pack || !wide.errors.join().includes("41 different tags")) err("more than 40 distinct tags should be refused: " + wide.errors[0]);
+  const have = parsePack({ ...base, questions: Array.from({ length: 30 }, (_, i) => mk(["g" + String.fromCharCode(97 + i)])) });
+  const adding = parsePack({ ...base, questions: Array.from({ length: 15 }, (_, i) => mk(["n" + String.fromCharCode(97 + i)])) }, have.pack!);
+  if (!have.pack || adding.pack || !adding.errors.join().includes("counting the pack you are adding to")) err("tags should be counted together with the pack you are adding to");
+  const pr = packPrompt(have.pack!);
+  if (!pr.includes("Tags already in my pack (30)")) err("the adding prompt should list the pack's tags");
+  if (!packPrompt().includes("TAG") && !packPrompt().includes("tag vocabulary")) err("prompt should carry the tag rules");
+  console.log("tag rules: ok");
+}
 console.log(bad ? `${bad} PROBLEMS` : "ALL OK");
 
 // ---- statistics ----
@@ -412,7 +525,7 @@ console.log(bad ? `${bad} PROBLEMS` : "ALL OK");
   const sp = parsePack(JSON.parse(packTemplateJson())).pack!;
   if (sp.questions.some((q) => !q.subject)) err("every parsed question must carry its subject");
   if (!sp.questions[0].tags?.includes("linear-equation")) err("optional tags must be kept");
-  const clash = parsePack({ ...JSON.parse(packTemplateJson()), questions: [{ subject: "sci", topic: "algebra", type: "nat", marks: 1, text: "q", answer: 1 }] });
+  const clash = parsePack({ ...JSON.parse(packTemplateJson()), questions: [{ subject: "sci", topic: "algebra", difficulty: "easy", type: "nat", marks: 1, text: "q", answer: 1 }] });
   if (clash.pack || !clash.errors.some((e) => e.includes("does not match topic"))) err("subject that disagrees with the topic must fail");
   const T0 = Date.UTC(2026, 10, 1, 8, 0, 0), DAY = 86_400_000;
   const L = (q: string, topic: string, subject: string, out: "right" | "wrong" | "skip", at: number, tags: string[] = [], ms = 20_000): import("../lib/types").LogEntry => ({ q, topic, subject, tags, type: "mcq", marks: 1, out, at, ms });

@@ -977,3 +977,53 @@ pre.code code { background: none !important; border: none !important; padding: 0
   .brand { margin-bottom: 10px; }
   .rail a.item { padding-top: 7px; padding-bottom: 7px; gap: 3px; }
 }
+
+/* What is in this file: question types per topic */
+.bd-det { margin: 10px 0; } .bd-det > summary { cursor: pointer; font-weight: 700; padding: 4px 0; }
+.bd-wrap { display: grid; gap: 16px; margin-top: 8px; }
+.bd-block h3 { margin: 0 0 2px; font-size: 1rem; }
+.bd-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
+table.bd { border-collapse: collapse; width: 100%; font-size: 0.88rem; }
+table.bd th, table.bd td { padding: 7px 12px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line-2); }
+table.bd th:first-child, table.bd td:first-child { text-align: left; white-space: normal; min-width: 180px; }
+table.bd thead th { background: var(--sheet-2); font-size: 0.78rem; color: var(--ink-2); }
+table.bd tbody tr:last-child td { border-bottom: none; }
+table.bd tfoot td { font-weight: 800; background: var(--sheet-2); border-top: 1.5px solid var(--line); border-bottom: none; }
+.bd-zero { color: var(--gray); opacity: 0.5; }
+.bd-name { font-weight: 600; }
+
+/* One programming question on its own page */
+.pg-link { display: block; color: inherit; text-decoration: none; }
+.pg-link:hover .nm { text-decoration: underline; }
+.pq-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+.pq-meta { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+.pq-nav { display: flex; justify-content: space-between; margin-top: 16px; }
+
+/* Tag filter: a Filter button with a popover */
+.tf-wrap { position: relative; margin-left: auto; }
+.tf-btn.on { border-color: var(--accent); background: var(--accent-soft); }
+.tf-badge { margin-left: 6px; background: var(--accent); color: #fff; border-radius: 999px; padding: 0 7px; font-size: 0.75rem; font-weight: 800; }
+.tf-pop { position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; width: min(420px, 88vw); background: var(--sheet); border: 1px solid var(--line); border-radius: 14px; padding: 12px; box-shadow: 0 12px 36px rgba(0,0,0,.28); }
+.tf-find { width: 100%; box-sizing: border-box; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--sheet-2); color: var(--ink); font: inherit; }
+.tf-sel { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+.tf-groups { max-height: 300px; overflow-y: auto; margin-top: 4px; }
+.tf-group h4 { margin: 12px 0 0; font-size: 0.86rem; } .tf-group h4 small { color: var(--ink-2); font-weight: 500; }
+.tf-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.tf-chip { border: 1px solid var(--line); background: var(--sheet); color: var(--ink); border-radius: 999px; padding: 3px 11px; font: inherit; font-size: 0.82rem; cursor: pointer; }
+.tf-chip small { color: var(--ink-2); margin-left: 2px; }
+.tf-chip.on { background: var(--accent-soft); border-color: var(--accent); font-weight: 700; }
+.tf-clear { border: none; background: none; color: var(--accent); font: inherit; font-size: 0.82rem; cursor: pointer; text-decoration: underline; }
+.tf-btn { display: inline-flex; align-items: center; gap: 6px; }
+.tf-ico { flex-shrink: 0; }
+.tf-group + .tf-group { margin-top: 12px; padding-top: 2px; border-top: 1px solid var(--line); }
+.tf-group h4 { margin-top: 10px; }
+.tf-more { border-style: dashed; font-weight: 700; }
+.tf-group + .tf-group { margin-top: 16px; padding-top: 4px; border-top: 2px solid var(--accent); }
+.tf-group h4 { margin: 12px 0 0; font-size: 0.95rem; font-weight: 800; color: var(--accent); }
+.tf-group h4 small { color: var(--ink-2); font-weight: 600; margin-left: 4px; }
+.tg.diff-easy { background: #dcfce7; color: #166534; border-color: transparent; }
+.tg.diff-medium { background: #fef3c7; color: #92400e; border-color: transparent; }
+.tg.diff-hard { background: #fee2e2; color: #991b1b; border-color: transparent; }
+[data-theme="dark"] .tg.diff-easy { background: #12351f; color: #86efac; }
+[data-theme="dark"] .tg.diff-medium { background: #3a2c0c; color: #fcd34d; }
+[data-theme="dark"] .tg.diff-hard { background: #3d1616; color: #fca5a5; }

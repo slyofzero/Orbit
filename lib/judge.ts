@@ -2,6 +2,7 @@
 import type { Question } from "./types";
 import type { JudgeResponse } from "./runner";
 import type { CodeLanguage } from "./codeLanguages";
+import { runInBrowser } from "./browserRunner";
 
 /** Same answer when every line matches after ignoring spaces at the ends of lines and blank lines at the end. */
 export function sameOutput(expected: string, got: string): boolean {
@@ -25,12 +26,15 @@ export async function runtimeStatus(): Promise<{ languages?: RuntimeStatus; erro
 }
 
 /** Runs the learner's code on the visible tests, or on all of them. */
-export async function gradeCode(q: Question, code: string, scope: "visible" | "all", cwd?: string): Promise<Graded> {
+export async function gradeCode(q: Question, code: string, scope: "visible" | "all", cwd?: string, where: "server" | "browser" = "server"): Promise<Graded> {
   const spec = q.code!;
   const picked = spec.tests.map((t, index) => ({ t, index })).filter(({ t }) => scope === "all" || !t.hidden);
   const none: Graded = { outcomes: [], passed: 0, total: picked.length };
   let res: JudgeResponse;
-  try {
+  if (where === "browser") {
+    try { res = await runInBrowser(spec.language as CodeLanguage, code, picked.map(({ t }) => t.input), spec.timeLimitMs ?? 3000); }
+    catch { return { ...none, failure: "The browser could not run the code." }; }
+  } else try {
     const r = await fetch("/api/run", { method: "POST", headers: HEAD, body: JSON.stringify({ language: spec.language, code, inputs: picked.map(({ t }) => t.input), timeLimitMs: spec.timeLimitMs ?? 3000, cwd }) });
     const j = await r.json();
     if (!r.ok) return { ...none, failure: j.error ?? "The runner refused this request." };

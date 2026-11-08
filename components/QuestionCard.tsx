@@ -6,6 +6,7 @@ import { formatAnswer, isAttempted, isCorrect, negLabel } from "@/lib/scoring";
 import { logPractice, usePack } from "@/lib/store";
 import { announce } from "@/lib/outcome";
 import Rich from "./Rich";
+import { difficultyOf } from "@/lib/questionFilter";
 import CodeQuestion from "./CodeQuestion";
 
 const TYPE_LABEL = { mcq: "MCQ", msq: "MSQ", nat: "NAT", code: "CODE" } as const;
@@ -24,7 +25,7 @@ export default function QuestionCard({
   // every answer or skip is logged with its subject, topic and tags, so statistics can count each encounter
   const log = (out: "right" | "wrong" | "skip") =>
     logPractice({
-      q: q.id, topic: q.topic, subject: q.subject ?? TOPIC_BY_ID[q.topic]?.subject ?? "other", tags: q.tags, type: q.type, marks: q.marks,
+      q: q.id, topic: q.topic, subject: q.subject ?? TOPIC_BY_ID[q.topic]?.subject ?? "other", tags: [...(difficultyOf(q) ? [difficultyOf(q)!] : []), ...(q.tags ?? [])], type: q.type, marks: q.marks,
       out, at: Date.now(), ms: Math.min(Date.now() - shownAt.current, 600_000),
     });
 
@@ -61,11 +62,12 @@ export default function QuestionCard({
         )}
       </div>
       <div className="qtext"><Rich text={q.text} /></div>
-      {(TOPIC_BY_ID[q.topic] || q.tags?.length) && (
+      {(TOPIC_BY_ID[q.topic] || q.tags?.length || difficultyOf(q)) && (
         <div className="qtags">
           {(q.subject ?? TOPIC_BY_ID[q.topic]?.subject) && <span className="tg subj">{subjectName(q)}</span>}
           {TOPIC_BY_ID[q.topic] && <span className="tg tp">{TOPIC_BY_ID[q.topic].name}</span>}
-          {q.tags?.map((t) => <span key={t} className="tg">#{t}</span>)}
+          {difficultyOf(q) && <span className={`tg diff-${difficultyOf(q)}`}>{difficultyOf(q)}</span>}
+          {q.tags?.filter((t) => t !== difficultyOf(q)).map((t) => <span key={t} className="tg">#{t}</span>)}
         </div>
       )}
 

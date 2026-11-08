@@ -1,8 +1,11 @@
 "use client";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import CodeLangPill from "@/components/CodeLangPill";
+import PackImport from "@/components/PackImport";
 import PracticeTabs from "@/components/PracticeTabs";
-import QuestionCard from "@/components/QuestionCard";
+import TagFilter from "@/components/TagFilter";
+import { makeMatcher } from "@/lib/questionFilter";
 import { KEYS, usePack, usePersisted } from "@/lib/store";
 import { LANGUAGE_LABEL, type CodeLanguage } from "@/lib/codeLanguages";
 import { PracticeRec } from "@/lib/types";
@@ -11,16 +14,19 @@ const firstLine = (t: string) => t.replace(/!\[[^\]\n]*\]\([^)\s]+\)/g, "").repl
 
 export default function Programming() {
   const { pack, topicById, subjects, ready: packReady, custom } = usePack();
-  const [practice, setPractice, ready] = usePersisted<Record<string, PracticeRec>>(KEYS.practice, {});
-  const [, setFixed] = usePersisted<Record<string, boolean>>(KEYS.fixed, {});
+  const [practice, , ready] = usePersisted<Record<string, PracticeRec>>(KEYS.practice, {});
   const [lang, setLang] = useState("all");
   const [status, setStatus] = useState<"all" | "todo" | "solved">("all");
+  const [managing, setManaging] = useState(false);
+  const [done, setDone] = useState("");
+  const [picked, setPicked] = useState<string[]>([]);
   const [find, setFind] = useState("");
-  const [open, setOpen] = useState<string | null>(null);
 
   const all = useMemo(() => pack.questions.filter((q) => q.type === "code"), [pack]);
   const langs = useMemo(() => [...new Set(all.map((q) => q.code!.language))], [all]);
+  const passes = makeMatcher(pack, picked);
   const shown = all.filter((q) => {
+    if (!passes(q)) return false;
     if (lang !== "all" && q.code!.language !== lang) return false;
     const done = !!practice[q.id]?.correct;
     if (status === "solved" && !done) return false;
@@ -37,7 +43,12 @@ export default function Programming() {
       <div className="row" style={{ alignItems: "center", marginBottom: 18 }}>
         <h1>Practice</h1>
         <PracticeTabs active="programming" />
+        <button className="btn soft right" onClick={() => setManaging((m) => !m)}>{managing ? "Back to questions" : "Question pack"}</button>
       </div>
+      {managing ? (
+        <PackImport onDone={(m) => { setDone(m); setManaging(false); window.scrollTo({ top: 0 }); }} />
+      ) : <>
+      {done && <div className="pi-ok" role="status" style={{ marginBottom: 14 }}><span>✓ {done}</span><button className="btn soft" style={{ justifySelf: "start" }} onClick={() => setDone("")}>Dismiss</button></div>}
       {!custom || all.length === 0 ? (
         <div className="panel">
           <h2 style={{ marginTop: 0 }}>No programming questions yet</h2>
@@ -45,7 +56,7 @@ export default function Programming() {
         </div>
       ) : (
         <>
-          <p className="muted">{solved} of {all.length} solved. Your code runs on this computer against the question's tests.</p>
+          <p className="muted">{solved} of {all.length} solved. Pick one to open it on its own page. Your code runs on this computer against the question's tests.</p>
           <div className="pr-bar">
             <input type="search" className="pr-search" placeholder="Find a question" value={find} onChange={(e) => setFind(e.target.value)} aria-label="Find a question" />
             <div className="tabs" style={{ margin: 0 }}>
@@ -57,36 +68,28 @@ export default function Programming() {
                 {langs.map((l) => <button key={l} className={lang === l ? "on" : ""} onClick={() => setLang(l)}>{LANGUAGE_LABEL[l as CodeLanguage] ?? l}</button>)}
               </div>
             )}
+            <TagFilter pack={pack} qs={all} picked={picked} onChange={setPicked} />
           </div>
           <div className="pg-list">
             {shown.length === 0 && <p className="muted">No question matches. Clear the search or pick another filter.</p>}
             {shown.map((q) => {
               const rec = practice[q.id];
-              const isOpen = open === q.id;
               return (
-                <div key={q.id} className={`pg-item ${isOpen ? "open" : ""}`}>
-                  <button className="pg-head" onClick={() => setOpen(isOpen ? null : q.id)} aria-expanded={isOpen}>
+                <Link key={q.id} href={`/practice/programming/${encodeURIComponent(q.id)}`} className="pg-item pg-link">
+                  <span className="pg-head">
                     <span className={`pg-state ${rec?.correct ? "ok" : rec ? "tried" : ""}`} title={rec?.correct ? "Solved" : rec ? "Tried, not solved" : "Not tried"}>{rec?.correct ? "✓" : rec ? "•" : ""}</span>
                     <span className="nm">{firstLine(q.text)}</span>
                     <CodeLangPill language={q.code!.language} />
                     {q.code!.setup && <span className="pill">needs setup</span>}
                     <span className="small muted pg-meta">{q.marks} mark{q.marks > 1 ? "s" : ""} · {(() => { const sid = q.subject ?? topicById[q.topic]?.subject ?? ""; return subjects[sid] ?? sid; })()}{topicById[q.topic] ? `: ${topicById[q.topic].name}` : ""}</span>
-                  </button>
-                  {isOpen && (
-                    <QuestionCard
-                      q={q}
-                      onResult={(ok) => {
-                        setPractice((p) => ({ ...p, [q.id]: { correct: ok, at: Date.now(), topic: q.topic } }));
-                        setFixed((f) => ({ ...f, [q.id]: ok }));
-                      }}
-                    />
-                  )}
-                </div>
+                  </span>
+                </Link>
               );
             })}
           </div>
         </>
       )}
+      </>}
     </>
   );
 }

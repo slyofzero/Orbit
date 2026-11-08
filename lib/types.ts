@@ -14,7 +14,8 @@ export interface Question {
   id: string;
   topic: string; // topic id (mandatory tag): which topic this question tests
   subject?: string; // subject id (mandatory tag, always the subject of the topic): filled in when a pack is loaded
-  tags?: string[]; // optional extra tags, e.g. "formula", "trap", "hard"
+  difficulty?: Difficulty; // mandatory in uploaded packs; optional here so older saved packs still load
+  tags?: string[]; // optional extra tags, e.g. "formula", "trap"
   type: QType;
   marks: 1 | 2;
   text: string; // supports $math$, $$math$$ and ``` code blocks
@@ -58,6 +59,9 @@ export interface Settings {
   name: string;
   examDate: string; // YYYY-MM-DD
 }
+
+export type Difficulty = "easy" | "medium" | "hard";
+export const DIFFICULTIES: Difficulty[] = ["easy", "medium", "hard"];
 
 export interface PracticeRec {
   correct: boolean;
