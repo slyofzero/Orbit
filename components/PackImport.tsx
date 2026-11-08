@@ -130,7 +130,7 @@ export default function PackImport({ onDone }: { onDone?: (message: string) => v
                 <input className="ad-in" maxLength={60} value={newName} placeholder={p.name} onChange={(e) => setNewName(e.target.value)} />
               </label>
             )}
-            <p className="small" style={{ margin: "4px 0" }}>{p.topics.length} topics in {Object.keys(p.subjects).length} subject{Object.keys(p.subjects).length === 1 ? "" : "s"} · {p.questions.length} practice questions ({count("mcq")} MCQ, {count("msq")} MSQ, {count("nat")} NAT{count("code") ? `, ${count("code")} programming` : ""}) · {p.mockTests.length} mock test{p.mockTests.length === 1 ? "" : "s"} with {mockQs(p)} questions of their own{p.mockTests.length ? `: ${p.mockTests.map((m) => m.name).join(", ")}` : ""}{p.mocks.length ? ` · ${p.mocks.length} old-style recipe${p.mocks.length === 1 ? "" : "s"}` : ""}</p>
+            <p className="small" style={{ margin: "4px 0" }}>{p.topics.length} topics in {Object.keys(p.subjects).length} subject{Object.keys(p.subjects).length === 1 ? "" : "s"} · {p.questions.length} practice questions ({count("mcq")} MCQ, {count("msq")} MSQ, {count("nat")} NAT{count("str") ? `, ${count("str")} text` : ""}{count("code") ? `, ${count("code")} programming` : ""}) · {p.mockTests.length} mock test{p.mockTests.length === 1 ? "" : "s"} with {mockQs(p)} questions of their own{p.mockTests.length ? `: ${p.mockTests.map((m) => m.name).join(", ")}` : ""}{p.mocks.length ? ` · ${p.mocks.length} old-style recipe${p.mocks.length === 1 ? "" : "s"}` : ""}</p>
             <details className="bd-det" open>
               <summary>What is in this file</summary>
               <PackBreakdown pack={p} />

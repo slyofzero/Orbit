@@ -4,6 +4,7 @@ import { buildXlsx } from "../lib/xlsx";
 import { writeFileSync } from "node:fs";
 import { BANK } from "../lib/gateBank";
 import { GENERATORS, generate } from "../lib/generators";
+import { formatAnswer, isCorrect } from "../lib/scoring";
 import { buildFixedMock, buildMock } from "../lib/mock";
 import { TOPICS } from "../lib/topics";
 import { GATE_PLAN } from "../lib/gatePlan";
@@ -123,7 +124,7 @@ if (ov.plan?.milestones.length !== 1) err("exam days should become milestones wh
 // ---- imported packs ----
 const tp = parsePack(JSON.parse(packTemplateJson()));
 if (!tp.pack) err("pack template does not parse: " + tp.errors.join("; "));
-else if (tp.pack.questions.length !== 5 || tp.pack.mockTests.length !== 1) err("pack template shape changed");
+else if (tp.pack.questions.length !== 6 || tp.pack.mockTests.length !== 1) err("pack template shape changed");
 if (!packPrompt().includes('"mcq"')) err("pack prompt missing schema");
 // ---- export of the current pack / plan can be uploaded again ----
 const rt = parsePack(JSON.parse(JSON.stringify(packToJson(pack))));
@@ -529,6 +530,38 @@ if (ok.pack?.questions.map((q) => q.id).join() !== "a-1,a-2") err("auto ids shou
   if (!pr.includes("Tags already in my pack (30)")) err("the adding prompt should list the pack's tags");
   if (!packPrompt().includes("TAG") && !packPrompt().includes("tag vocabulary")) err("prompt should carry the tag rules");
   console.log("tag rules: ok");
+}
+
+{
+  const base = { name: "S", subjects: { cs: "CS" }, topics: [{ id: "ai", subject: "cs", name: "Search" }] };
+  const mk = (extra: object) => ({ topic: "ai", difficulty: "easy", type: "str", marks: 1, text: "List OPEN.", explanation: "e", ...extra });
+  const ok = parsePack({ ...base, questions: [mk({ match: "list", answer: "I,D,B" }), mk({ answer: ["E", "e2"] }), mk({ match: "set", answer: "NIL", caseSensitive: true })] });
+  if (!ok.pack) err("str questions should parse: " + ok.errors.join("|"));
+  const qs = ok.pack?.questions ?? [];
+  const okc = (i: number, given: string) => isCorrect(qs[i], given);
+  if (!okc(0, " i , d,b ") || okc(0, "I,B,D") || okc(0, "I,D") || okc(0, "")) err("ordered list grading wrong");
+  if (!okc(1, "E") || !okc(1, " e2 ") || okc(1, "F")) err("a list of accepted answers: any one should pass");
+  if (!okc(2, "nil") || !okc(2, "NIL") || okc(2, "A")) err("NIL should mean the empty list");
+  const setQ = parsePack({ ...base, questions: [mk({ match: "set", answer: "I,D,B" })] }).pack!.questions[0];
+  if (!isCorrect(setQ, "B, I,D") || !isCorrect(setQ, "d,b,i,i") || isCorrect(setQ, "I,D")) err("set grading wrong");
+  const caseQ = parsePack({ ...base, questions: [mk({ answer: "Ab", caseSensitive: true })] }).pack!.questions[0];
+  if (isCorrect(caseQ, "ab") || !isCorrect(caseQ, " A b ")) err("caseSensitive grading wrong");
+  if (formatAnswer(setQ) !== "I,D,B (any order)" || formatAnswer(qs[1]) !== "E  or  e2") err("formatAnswer for str wrong: " + formatAnswer(setQ));
+  // the scraper bug: a text list must never be accepted as a nat number
+  const asNat = parsePack({ ...base, questions: [mk({ type: "nat", answer: "I,D,B" })] });
+  if (asNat.pack) err("a text answer on a nat question must be refused");
+  for (const bad of [{ options: ["a", "b"] }, { answer: 5 }, { answer: [] }, { answer: "" }, { match: "fuzzy" }, { caseSensitive: "yes" }]) {
+    if (parsePack({ ...base, questions: [mk({ answer: "x", ...bad })] }).pack) err("bad str question accepted: " + JSON.stringify(bad));
+  }
+  const inMock = parsePack({ ...base, questions: [], mockTests: [{ id: "m", name: "M", minutes: 30, sections: [{ name: "S", questions: [mk({ answer: "x" })] }] }] });
+  if (inMock.pack || !inMock.errors.join().includes("str")) err("str questions must be refused in mock tests");
+  const back = parsePack(JSON.parse(JSON.stringify(packToJson(ok.pack!))));
+  if (JSON.stringify(back.pack?.questions.map((q) => [q.match, q.caseSensitive, q.answer])) !== JSON.stringify(qs.map((q) => [q.match, q.caseSensitive, q.answer]))) err("str should survive export and import");
+  const drawn = buildMock({ ...ok.pack!, questions: [...qs, ...qs.map((q, i) => ({ ...q, id: "z" + i }))] }, { kind: "subject", subject: "cs", seed: 5, seenIds: new Set() });
+  if (drawn.questions.some((q) => q.type === "str")) err("generated mocks must never contain str questions");
+  if (!packPrompt().includes('"str"') || !packPrompt().includes("NEVER use \"nat\" for a text answer")) err("prompt should describe str and warn against nat");
+  if (typeBreakdown(ok.pack!).practice.totals.counts.str !== 3) err("breakdown should count str");
+  console.log("str type: ok");
 }
 console.log(bad ? `${bad} PROBLEMS` : "ALL OK");
 

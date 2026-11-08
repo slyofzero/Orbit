@@ -1,4 +1,5 @@
 import { Answer, Question } from "./types";
+import { strAnswers, strCorrect } from "./strMatch";
 
 export function isAttempted(a: Answer | undefined): boolean {
   if (a === undefined || a === null) return false;
@@ -15,6 +16,7 @@ export function isCorrect(q: Question, a: Answer | undefined): boolean {
     const want = [...(q.answer as number[])].sort();
     return given.length === want.length && given.every((x, i) => x === want[i]);
   }
+  if (q.type === "str") return strCorrect(q, String(a));
   const { value, tol } = q.answer as { value: number; tol: number };
   const x = parseFloat(String(a));
   return !Number.isNaN(x) && Math.abs(x - value) <= tol + 1e-9;
@@ -34,6 +36,7 @@ export function formatAnswer(q: Question): string {
   if (q.type === "code") return "see the reference solution";
   if (q.type === "mcq") return String.fromCharCode(65 + (q.answer as number)) + (q.options ? `. ${q.options[q.answer as number]}` : "");
   if (q.type === "msq") return (q.answer as number[]).map((i) => String.fromCharCode(65 + i)).join(", ");
+  if (q.type === "str") return strAnswers(q).join("  or  ") + (q.match === "set" ? " (any order)" : "");
   const { value, tol } = q.answer as { value: number; tol: number };
   return tol > 0.0105 ? `${value} (range ${+(value - tol).toFixed(4)} to ${+(value + tol).toFixed(4)})` : `${value}`;
 }

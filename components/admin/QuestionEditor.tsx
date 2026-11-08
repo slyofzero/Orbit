@@ -26,6 +26,9 @@ export default function QuestionEditor({ profile, pack, loc, preset, onClose, on
   const [picked, setPicked] = useState<number[]>(q ? (q.type === "mcq" ? [q.answer as number] : q.type === "msq" ? (q.answer as number[]) : []) : [0]);
   const [natValue, setNatValue] = useState(q?.type === "nat" ? String((q.answer as { value: number }).value) : "");
   const [natTol, setNatTol] = useState(q?.type === "nat" ? String((q.answer as { tol: number }).tol) : "0");
+  const [strAnswer, setStrAnswer] = useState(q?.type === "str" ? (Array.isArray(q.answer) ? (q.answer as string[]).join("\n") : String(q.answer)) : "");
+  const [strMatch, setStrMatch] = useState<string>(q?.match ?? "exact");
+  const [strCase, setStrCase] = useState(q?.caseSensitive ?? false);
   const [language, setLanguage] = useState<string>(q?.code?.language ?? "python");
   const [starter, setStarter] = useState(q?.code?.starter ?? "");
   const [solution, setSolution] = useState(q?.code?.solution ?? "");
@@ -84,9 +87,14 @@ export default function QuestionEditor({ profile, pack, loc, preset, onClose, on
       let tests: unknown;
       try { tests = JSON.parse(testsJson); } catch (e) { errs.push(`The tests are not valid JSON: ${(e as Error).message}`); }
       Object.assign(raw, { language, tests, ...(starter ? { starter } : {}), ...(solution ? { solution } : {}), ...(setup.trim() ? { setup } : {}), ...(limit.trim() ? { timeLimitMs: Number(limit) } : {}) });
+    } else if (type === "str") {
+      const lines = strAnswer.split("\n").map((l) => l.trim()).filter(Boolean);
+      raw.answer = lines.length === 1 ? lines[0] : lines;
+      raw.match = strMatch; if (strCase) raw.caseSensitive = true;
+      if (where.startsWith("mock:")) errs.push("Text-answer questions can only go in Practice.");
     } else if (type === "nat") { raw.answer = natValue.trim() === "" ? undefined : Number(natValue); raw.tolerance = Number(natTol || 0); }
     else { raw.options = options; raw.answer = type === "mcq" ? (picked[0] ?? -1) : picked; }
-    const names = [...new Set([text, explanation, ...(type === "nat" || type === "code" ? [] : options)].flatMap(storedImageNames))];
+    const names = [...new Set([text, explanation, ...(type === "nat" || type === "str" || type === "code" ? [] : options)].flatMap(storedImageNames))];
     const images = names.length ? await loadImages(names, profile) : {};
     const res = checkQuestion(pack, raw, images);
     errs.push(...res.errors);
@@ -119,7 +127,7 @@ export default function QuestionEditor({ profile, pack, loc, preset, onClose, on
           )}
           <div className="ad-two">
             <label>Type<select value={type} onChange={(e) => { const t = e.target.value as QType; setType(t); setPicked(t === "mcq" ? picked.slice(0, 1).length ? picked.slice(0, 1) : [0] : picked); }}>
-              <option value="mcq">MCQ (one right option)</option><option value="msq">MSQ (several right options)</option><option value="nat">NAT (typed number)</option><option value="code">Programming (write code, Practice only)</option></select></label>
+              <option value="mcq">MCQ (one right option)</option><option value="msq">MSQ (several right options)</option><option value="nat">NAT (typed number)</option><option value="str">Text answer (typed text, Practice only)</option><option value="code">Programming (write code, Practice only)</option></select></label>
             <label>Marks<select value={marks} onChange={(e) => setMarks(Number(e.target.value) as 1 | 2)}><option value={1}>1</option><option value={2}>2</option></select></label>
           </div>
           <label>Question <span className="small muted">(LaTeX between $…$, pictures with the button below)</span>
@@ -137,6 +145,17 @@ export default function QuestionEditor({ profile, pack, loc, preset, onClose, on
               <label>Reference solution <span className="small muted">(shown after Submit or Skip)</span><textarea className="ad-ta" rows={5} value={solution} onChange={(e) => setSolution(e.target.value)} spellCheck={false} /></label>
               <label>Tests <span className="small muted">(JSON list of {"{"} "input", "output", "hidden"? {"}"}; at least one visible)</span><textarea className="ad-ta" rows={7} value={testsJson} onChange={(e) => setTestsJson(e.target.value)} spellCheck={false} /></label>
             </>
+          ) : type === "str" ? (
+            <div>
+              <label>Accepted answer(s) <span className="small muted">(one per line; any one is accepted. Write NIL for an empty list)</span>
+                <textarea className="ad-ta" rows={3} value={strAnswer} onChange={(e) => setStrAnswer(e.target.value)} spellCheck={false} placeholder="I,D,B" /></label>
+              <div className="ad-two">
+                <label>How it is compared<select value={strMatch} onChange={(e) => setStrMatch(e.target.value)}>
+                  <option value="exact">Exact text</option><option value="list">Ordered list (comma separated)</option><option value="set">Set, any order (comma separated)</option></select></label>
+                <label className="ad-check"><input type="checkbox" checked={strCase} onChange={(e) => setStrCase(e.target.checked)} /> Case matters</label>
+              </div>
+              <div className="small muted">Spaces are ignored and case is ignored (unless it matters). Never use NAT for a text answer.</div>
+            </div>
           ) : type === "nat" ? (
             <div className="ad-two">
               <label>Right answer (a number)<input className="ad-in" inputMode="decimal" value={natValue} onChange={(e) => setNatValue(e.target.value)} /></label>

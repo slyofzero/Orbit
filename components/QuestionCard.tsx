@@ -6,10 +6,11 @@ import { formatAnswer, isAttempted, isCorrect, negLabel } from "@/lib/scoring";
 import { logPractice, usePack } from "@/lib/store";
 import { announce } from "@/lib/outcome";
 import Rich from "./Rich";
+import { strHint } from "@/lib/strMatch";
 import { difficultyOf } from "@/lib/questionFilter";
 import CodeQuestion from "./CodeQuestion";
 
-const TYPE_LABEL = { mcq: "MCQ", msq: "MSQ", nat: "NAT", code: "CODE" } as const;
+const TYPE_LABEL = { mcq: "MCQ", msq: "MSQ", nat: "NAT", str: "TEXT", code: "CODE" } as const;
 
 export default function QuestionCard({
   q, index, onResult, showTopic,
@@ -93,9 +94,10 @@ export default function QuestionCard({
           );
         })}
 
-      {q.type === "nat" && (
+      {q.type === "str" && strHint(q) && <p className="small muted" style={{ margin: "8px 0 4px" }}>{strHint(q)}</p>}
+      {(q.type === "nat" || q.type === "str") && (
         <input
-          className="natinput" type="text" inputMode="decimal" placeholder="Type your answer"
+          className="natinput" type="text" inputMode={q.type === "nat" ? "decimal" : "text"} placeholder="Type your answer" autoCapitalize="off" autoCorrect="off" spellCheck={false}
           value={(sel as string | undefined) ?? ""} disabled={checked}
           onChange={(e) => setSel(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && check()}

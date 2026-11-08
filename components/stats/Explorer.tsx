@@ -98,7 +98,7 @@ export default function Explorer({ evs, pack, initialPath = [] }: { evs: Ev[]; p
       <div className="st-filters">
         <div className="st-seg" role="group" aria-label="Period">{PERIODS.map(([d, l]) => <button key={l} className={filters.days === d ? "on" : ""} onClick={() => setFilters((f) => ({ ...f, days: d }))}>{l}</button>)}</div>
         <div className="st-seg" role="group" aria-label="Source">{([["all", "Everything"], ["practice", "Practice"], ["mock", "Mocks"]] as const).map(([k, l]) => <button key={k} className={filters.src === k ? "on" : ""} onClick={() => setFilters((f) => ({ ...f, src: k }))}>{l}</button>)}</div>
-        <div className="st-seg" role="group" aria-label="Question type">{(["all", "mcq", "msq", "nat"] as const).map((k) => <button key={k} className={filters.type === k ? "on" : ""} onClick={() => setFilters((f) => ({ ...f, type: k }))}>{k === "all" ? "Any type" : k.toUpperCase()}</button>)}</div>
+        <div className="st-seg" role="group" aria-label="Question type">{(["all", "mcq", "msq", "nat", "str"] as const).map((k) => <button key={k} className={filters.type === k ? "on" : ""} onClick={() => setFilters((f) => ({ ...f, type: k }))}>{k === "all" ? "Any type" : k.toUpperCase()}</button>)}</div>
         {tags.length > 0 && (
           <select className="st-select" aria-label="Tag" value={filters.tag ?? ""} onChange={(e) => setFilters((f) => ({ ...f, tag: e.target.value || null }))}>
             <option value="">Any tag</option>{tags.map((t) => <option key={t} value={t}>#{t}</option>)}

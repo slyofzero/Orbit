@@ -3,13 +3,13 @@ import type { PackData } from "./packs";
 import type { Question, QType } from "./types";
 
 export const TYPE_COLS: { type: QType; label: string }[] = [
-  { type: "mcq", label: "MCQ" }, { type: "msq", label: "MSQ" }, { type: "nat", label: "NAT" }, { type: "code", label: "Programming" },
+  { type: "mcq", label: "MCQ" }, { type: "msq", label: "MSQ" }, { type: "nat", label: "NAT" }, { type: "str", label: "Text" }, { type: "code", label: "Programming" },
 ];
 export interface BdRow { key: string; name: string; subject: string; counts: Record<QType, number>; total: number; marks: number }
 export interface BdTable { rows: BdRow[]; totals: BdRow; topicsWithout: number }
 export interface MockRow { id: string; name: string; minutes: number; sections: number; counts: Record<QType, number>; total: number; marks: number }
 
-const zero = (): Record<QType, number> => ({ mcq: 0, msq: 0, nat: 0, code: 0 });
+const zero = (): Record<QType, number> => ({ mcq: 0, msq: 0, nat: 0, str: 0, code: 0 });
 const add = (r: { counts: Record<QType, number>; total: number; marks: number }, q: Question) => { r.counts[q.type]++; r.total++; r.marks += q.marks; };
 
 function table(pack: PackData, qs: Question[]): BdTable {

@@ -129,7 +129,8 @@ export function parsePack(input: unknown, existing?: PackData): PackResult {
     if (!isObj(raw)) { err(`${w} must be an object.`); return null; }
     if (typeof raw.topic !== "string" || !topicIds.has(raw.topic)) { err(`${w}.topic "${String(raw.topic)}" is not one of your topic ids.`); return null; }
     const type = raw.type;
-    if (type !== "mcq" && type !== "msq" && type !== "nat" && type !== "code") { err(`${w}.type must be "mcq", "msq", "nat" or "code".`); return null; }
+    if (type !== "mcq" && type !== "msq" && type !== "nat" && type !== "str" && type !== "code") { err(`${w}.type must be "mcq", "msq", "nat", "str" or "code".`); return null; }
+    if (type === "str" && autoPrefix) { err(`${w}: text-answer ("str") questions can only go in "questions" (the practice bank). GATE mock tests have no text-entry questions.`); return null; }
     if (type === "code" && autoPrefix) { err(`${w}: programming ("code") questions can only go in "questions" (the practice bank). The mock arena cannot run code.`); return null; }
     if (raw.marks !== 1 && raw.marks !== 2) { err(`${w}.marks must be 1 or 2.`); return null; }
     if (typeof raw.text !== "string" || !raw.text.trim()) { err(`${w} needs the question "text".`); return null; }
@@ -201,6 +202,14 @@ export function parsePack(input: unknown, existing?: PackData): PackResult {
         if (prob) { err(`${w}.setup ${prob}`); return null; }
       }
       q = { id, topic: raw.topic, type, marks: raw.marks, text, answer: 0, explanation, ...tagged, code: { language, ...(starter ? { starter } : {}), ...(solution ? { solution } : {}), tests, ...(lim ? { timeLimitMs: lim } : {}), ...(setup ? { setup } : {}) } };
+    } else if (type === "str") {
+      if (raw.options !== undefined) { err(`${w}: a "str" question has no "options". The learner types the answer.`); return null; }
+      const list = Array.isArray(raw.answer) ? raw.answer : [raw.answer];
+      if (list.length === 0 || list.length > 20 || list.some((a) => typeof a !== "string" || !a.trim() || a.length > 200)) { err(`${w}.answer for a "str" question must be a text like "I,D,B" (write "NIL" for an empty list), or a list of accepted texts. Never use a number or a "nat" question for this.`); return null; }
+      if (raw.match !== undefined && raw.match !== "exact" && raw.match !== "list" && raw.match !== "set") { err(`${w}.match must be "exact", "list" (ordered) or "set" (any order).`); return null; }
+      if (raw.caseSensitive !== undefined && typeof raw.caseSensitive !== "boolean") { err(`${w}.caseSensitive must be true or false.`); return null; }
+      const answer = Array.isArray(raw.answer) ? (raw.answer as string[]).map((a) => a.trim()) : (raw.answer as string).trim();
+      q = { id, topic: raw.topic, type, marks: raw.marks, text, answer, explanation, ...(raw.match && raw.match !== "exact" ? { match: raw.match as "list" | "set" } : {}), ...(raw.caseSensitive === true ? { caseSensitive: true } : {}), ...tagged };
     } else if (type === "nat") {
       let value: number, tol: number;
       if (typeof raw.answer === "number") { value = raw.answer; tol = typeof raw.tolerance === "number" ? raw.tolerance : 0.01; }
@@ -313,7 +322,7 @@ export function parsePack(input: unknown, existing?: PackData): PackResult {
   return { pack: { name, subjects, topics, questions, mocks, mockTests, useBuiltinGenerators: input.useBuiltinGenerators === true }, errors, warnings, autoIds, images };
 }
 
-const qJson = (pack: { topics: Topic[] }, q: Question) => ({ id: q.id, subject: q.subject ?? pack.topics.find((t) => t.id === q.topic)?.subject, topic: q.topic, ...(q.difficulty ? { difficulty: q.difficulty } : {}), ...(q.tags?.length ? { tags: q.tags } : {}), type: q.type, marks: q.marks, text: q.text, ...(q.options ? { options: q.options } : {}), ...(q.code ? { language: q.code.language, ...(q.code.starter ? { starter: q.code.starter } : {}), ...(q.code.solution ? { solution: q.code.solution } : {}), tests: q.code.tests, ...(q.code.timeLimitMs ? { timeLimitMs: q.code.timeLimitMs } : {}), ...(q.code.setup ? { setup: q.code.setup } : {}) } : { answer: q.answer }), explanation: q.explanation });
+const qJson = (pack: { topics: Topic[] }, q: Question) => ({ id: q.id, subject: q.subject ?? pack.topics.find((t) => t.id === q.topic)?.subject, topic: q.topic, ...(q.difficulty ? { difficulty: q.difficulty } : {}), ...(q.tags?.length ? { tags: q.tags } : {}), type: q.type, marks: q.marks, text: q.text, ...(q.options ? { options: q.options } : {}), ...(q.match ? { match: q.match } : {}), ...(q.caseSensitive ? { caseSensitive: true } : {}), ...(q.code ? { language: q.code.language, ...(q.code.starter ? { starter: q.code.starter } : {}), ...(q.code.solution ? { solution: q.code.solution } : {}), tests: q.code.tests, ...(q.code.timeLimitMs ? { timeLimitMs: q.code.timeLimitMs } : {}), ...(q.code.setup ? { setup: q.code.setup } : {}) } : { answer: q.answer }), explanation: q.explanation });
 
 /** Every question in the pack: the practice bank plus all mock tests. */
 export const bankSize = (p: PackData) => p.questions.length + (p.mockTests ?? []).reduce((n, m) => n + m.sections.reduce((k, x) => k + x.questions.length, 0), 0);
@@ -433,6 +442,7 @@ export const packTemplateJson = (): string => JSON.stringify({
     { subject: "maths", topic: "algebra", tags: ["series", "calculation"], difficulty: "hard", type: "nat", marks: 2, text: "Evaluate the sum:\n$$\\sum_{k=1}^{4} k^2$$", answer: 30, tolerance: 0, explanation: "$1 + 4 + 9 + 16 = 30$." },
     { subject: "sci", topic: "motion", tags: ["units", "formula"], difficulty: "medium", type: "nat", marks: 1, text: "A car moves at $20\\ \\text{m/s}$ for $5\\ \\text{s}$. How many metres does it cover?", answer: 100, tolerance: 0.5, explanation: "$d = v \\times t = 100\\ \\text{m}$." },
     { subject: "maths", topic: "algebra", tags: ["programming"], difficulty: "easy", type: "code", marks: 2, text: "Read an integer $n$ and print the sum $1 + 2 + \\dots + n$.\nInput: one line with $n$. Output: one number.", language: "python", starter: "n = int(input())\n", solution: "n = int(input())\nprint(n * (n + 1) // 2)", tests: [{ input: "4", output: "10" }, { input: "100", output: "5050", hidden: true }], explanation: "The sum is $n(n+1)/2$." },
+    { subject: "maths", topic: "algebra", tags: ["calculation"], difficulty: "easy", type: "str", match: "list", marks: 1, text: "List the roots of $x^2 - 5x + 6 = 0$ in increasing order, separated by commas.", answer: "2,3", explanation: "$(x-2)(x-3)=0$, so the roots are 2 and 3." },
   ],
   mockTests: [
     { id: "mock1", name: "Mock test 1", minutes: 30, note: "Optional line shown on the card", sections: [
@@ -489,7 +499,7 @@ Use exactly this format. The reply is ONE JSON object with these top-level keys:
   - "subject": a subject id, and it must be the subject the topic belongs to.
   - "topic": a topic id declared in "topics". "subject" and "topic" are mandatory tags: the app shows statistics and filters per subject and per topic.
   - "difficulty": exactly one of "easy", "medium" or "hard". Judge it for a typical learner preparing for this exam. The app groups, filters and badges by it. A question without it is rejected.
-  - "type": "mcq", "msq", "nat" or "code" (details below).
+  - "type": "mcq", "msq", "nat", "str" or "code" (details below).
   - "marks": 1 or 2.
   - "text": the question itself.
   - "explanation": why the answer is right, with the working. Make the numbers add up.
@@ -507,6 +517,13 @@ Use exactly this format. The reply is ONE JSON object with these top-level keys:
   - "mcq": exactly one correct option. Add "options" (2 to 8 texts) and "answer" = the number of the right option, counting from 0.
   - "msq": one or more correct options. Add "options" (2 to 8 texts) and "answer" = a list of the right option numbers, counting from 0, with no repeats.
   - "nat": the answer is a number typed in. Add "answer" = the number and "tolerance" = the allowed error (an absolute amount; 0 means exact; 0.01 if left out). An answer of the form { "value": 4.5, "tol": 0.01 } is also accepted.
+  - "str": a short TEXT answer that is typed in, such as a list of labels ("I,D,B"), a single label ("E"), a word, or "NIL" for an empty list. Practice bank only, NEVER inside a mock test (GATE has no text-entry questions). Do NOT add "options" or "tolerance".
+      🛑 NEVER use "nat" for a text answer. A "nat" answer is ONE NUMBER. Turning "I,D,B" into a number grades wrong answers as right.
+      "answer": the accepted text, or a list of texts where any one is accepted (for example "E" or ["I,D,B", "I,B,D"]).
+      "match": optional. "exact" (default, the typed text must equal the answer), "list" (comma-separated items, order matters, like "I,D,B") or "set" (comma-separated items, order does not matter).
+      "caseSensitive": optional, true or false (default false).
+      Before comparing, the app trims the text, removes all spaces, ignores case (unless "caseSensitive"), and treats "NIL" or empty as the empty list. So write the answer in its plainest form, for example "I,D,B", not "I, D, B".
+      Use "str" only when the question can be answered from its text alone. If it needs a figure, graph or state-space diagram that I have not given you as a picture, leave the question out.
   - "code": a programming question where I write my own program (practice bank only, never inside a mock test, and only if I ask for programming questions). The program reads standard input and prints to standard output, and the app runs it against your tests. Do NOT add "options" or "answer". Add:
       "language": one of python, c, cpp, java, javascript.
       "tests": 3 to 8 tests (at most 40), each { "input": "text given to the program", "output": "exact text it must print", "hidden": true (optional) }. At least one test must be visible. The first 1 or 2 tests are examples I can see; mark the tricky edge cases and larger cases "hidden": true. "input" is what would be typed in, with \n between lines; "output" is exactly what a correct program prints. Keep the output format unambiguous (one value per line, fixed decimal places for decimals).

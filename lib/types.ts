@@ -1,4 +1,4 @@
-export type QType = "mcq" | "msq" | "nat" | "code";
+export type QType = "mcq" | "msq" | "nat" | "str" | "code";
 
 /** A programming question: you write a program, the app runs it on the tests (stdin in, stdout out). */
 export interface CodeSpec {
@@ -20,13 +20,16 @@ export interface Question {
   marks: 1 | 2;
   text: string; // supports $math$, $$math$$ and ``` code blocks
   options?: string[];
-  // mcq: index, msq: array of indices, nat: {value, tol}
-  answer: number | number[] | { value: number; tol: number };
+  // mcq: index, msq: array of indices, nat: {value, tol}, str: string or list of strings
+  // str: the accepted text, or a list of accepted texts (see lib/strMatch.ts)
+  answer: number | number[] | { value: number; tol: number } | string | string[];
+  match?: "exact" | "list" | "set"; // only for type "str": how the typed text is compared (default "exact")
+  caseSensitive?: boolean; // only for type "str": default false
   explanation: string;
   code?: CodeSpec; // only for type "code"; `answer` is not used then
 }
 
-export type Answer = number | number[] | string; // nat answers are typed as strings
+export type Answer = number | number[] | string; // nat and str answers are typed as strings
 
 export interface Resp {
   ans?: Answer;
