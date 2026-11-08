@@ -3,6 +3,7 @@
 // Pure functions, tested by scripts/check.ts.
 import type { PackData } from "./packs";
 import type { PlanData } from "./plan";
+import { difficultyOf } from "./questionFilter";
 
 export interface DayLink { q: string[]; mock?: string; note?: string }
 export type Links = Record<string, DayLink>; // date -> what to do that day
@@ -10,19 +11,11 @@ export type Links = Record<string, DayLink>; // date -> what to do that day
 const clip = (s: string, n: number) => { const t = s.replace(/!\[[^\]\n]*\]\([^)\s]+\)/g, "[picture]").replace(/```[\s\S]*?```/g, "[code]").replace(/\s+/g, " ").trim(); return t.length > n ? `${t.slice(0, n - 1)}…` : t; };
 
 export interface PromptOptions { withText: boolean; textChars?: number }
+/** Past this many characters a prompt is too long to paste into most AI chats, so the app offers two files instead. */
+export const PROMPT_LIMIT = 100_000;
+export const isTooLong = (text: string): boolean => text.length > PROMPT_LIMIT;
 
-/** One piece of text to paste into an AI: the instructions, your plan and your question bank. */
-export function linkPrompt(plan: PlanData, pack: PackData, opts: PromptOptions = { withText: true }, current: Links = {}): string {
-  const chars = opts.textChars ?? 90;
-  const days = plan.days.map((d) => ({ date: d.date, kind: d.kind, hours: d.hours, title: d.title, topics: d.topics, targetQs: d.targetQs }));
-  const topics = pack.topics.map((t) => `${t.id} | ${t.name} | subject: ${pack.subjects[t.subject] ?? t.subject} | I feel: ${t.status === "noidea" ? "no idea" : t.status}`);
-  const questions = pack.questions.map((q) => [q.id, q.topic, q.type, `${q.marks}m`, q.tags?.length ? q.tags.join(",") : "-", ...(opts.withText ? [clip(q.text, chars)] : [])].join(" | "));
-  const mocks = (pack.mockTests ?? []).map((m) => `${m.id} | ${m.name} | ${m.sections.reduce((n, s) => n + s.questions.length, 0)} questions | ${m.minutes} minutes`);
-  const have = new Set([...pack.questions.map((q) => q.id), ...(pack.mockTests ?? []).map((m) => m.id)]);
-  const cur = Object.entries(current).map(([date, l]) => ({ date, practice: l.q.filter((id) => have.has(id)), ...(l.mock && have.has(l.mock) ? { mock: l.mock } : {}), ...(l.note ? { note: l.note } : {}) })).filter((d) => d.practice.length || d.mock || d.note).sort((a, b) => a.date.localeCompare(b.date));
-  const improving = cur.length > 0;
-  return `I have a study plan and a question bank. Match them: give every study day specific practice questions, and every mock day a specific mock test. The result becomes my day-by-day actionable plan.${improving ? `\n\nI ALREADY HAVE LINKS (see MY CURRENT LINKS below). Improve them instead of starting over: keep what is good, fix what is weak, and fill days that have nothing. Your reply is the COMPLETE new list and replaces my current links, so include every day that should keep its questions, even if unchanged.` : ""}\n
-RULES
+const RULES = `RULES
 1. Use only dates that appear in MY PLAN and only ids that appear in MY QUESTIONS and MY MOCK TESTS. Never invent an id or a date.
 2. A practice question may appear on more than one day (for revision), but never twice on the same day. Repeat only when it helps: for example, bring back a question you gave earlier on a later revision day.
 3. For a study day, choose questions whose topic matches the day's "topics" or its title. Aim for the day's "targetQs"; if that is 0, aim for about 3 questions per planned hour. Give fewer if there are not enough matching questions. Never pad with unrelated topics.
@@ -31,19 +24,71 @@ RULES
 6. Leave exam days and light "taper" days without questions.
 7. Reply with ONLY one JSON object (no explanation, no markdown fence) in exactly this shape. List only days that get something:
 { "days": [ { "date": "YYYY-MM-DD", "practice": ["question-id", "question-id"], "mock": "mock-test-id", "note": "optional, under 80 characters, for example: Start with the 1-mark questions" } ] }
-"mock" and "note" are optional; "practice" may be an empty list.
+"mock" and "note" are optional; "practice" may be an empty list.`;
+
+/** One piece of text to paste into an AI: the instructions, your plan and your question bank. */
+export function linkPrompt(plan: PlanData, pack: PackData, opts: PromptOptions = { withText: true }, current: Links = {}): string {
+  const chars = opts.textChars ?? 90;
+  const days = plan.days.map((d) => ({ date: d.date, kind: d.kind, hours: d.hours, title: d.title, topics: d.topics, targetQs: d.targetQs }));
+  const topics = pack.topics.map((t) => `${t.id} | ${t.name} | subject: ${pack.subjects[t.subject] ?? t.subject} | I feel: ${t.status === "noidea" ? "no idea" : t.status}`);
+  const questions = pack.questions.map((q) => [q.id, q.topic, q.type, `${q.marks}m`, difficultyOf(q) ?? "-", q.tags?.length ? q.tags.join(",") : "-", ...(opts.withText ? [clip(q.text, chars)] : [])].join(" | "));
+  const mocks = (pack.mockTests ?? []).map((m) => `${m.id} | ${m.name} | ${m.sections.reduce((n, s) => n + s.questions.length, 0)} questions | ${m.minutes} minutes`);
+  const cur = currentLinks(pack, current);
+  return `${INTRO(cur.length > 0)}
+${RULES}
 
 MY PLAN (${days.length} days, JSON)
 ${JSON.stringify(days)}
-${improving ? `\nMY CURRENT LINKS (${cur.length} days, JSON)\n${JSON.stringify(cur)}\n` : ""}
+${cur.length ? `\nMY CURRENT LINKS (${cur.length} days, JSON)\n${JSON.stringify(cur)}\n` : ""}
 MY TOPICS (id | name | subject | how I feel)
 ${topics.join("\n")}
 
-MY QUESTIONS (${pack.questions.length}; id | topic id | type | marks | tags${opts.withText ? " | start of the question" : ""})
+MY QUESTIONS (${pack.questions.length}; id | topic id | type | marks | difficulty | tags${opts.withText ? " | start of the question" : ""})
 ${questions.join("\n") || "(none)"}
 
 MY MOCK TESTS (id | name | size | time)
 ${mocks.join("\n") || "(none)"}
+`;
+}
+
+const INTRO = (improving: boolean) => `I have a study plan and a question bank. Match them: give every study day specific practice questions, and every mock day a specific mock test. The result becomes my day-by-day actionable plan.${improving ? `\n\nI ALREADY HAVE LINKS (see MY CURRENT LINKS). Improve them instead of starting over: keep what is good, fix what is weak, and fill days that have nothing. Your reply is the COMPLETE new list and replaces my current links, so include every day that should keep its questions, even if unchanged.` : ""}
+`;
+
+/** The links that still point at something real, in the shape the AI should send back. */
+function currentLinks(pack: PackData, current: Links) {
+  const have = new Set([...pack.questions.map((q) => q.id), ...(pack.mockTests ?? []).map((m) => m.id)]);
+  return Object.entries(current).map(([date, l]) => ({ date, practice: l.q.filter((id) => have.has(id)), ...(l.mock && have.has(l.mock) ? { mock: l.mock } : {}), ...(l.note ? { note: l.note } : {}) })).filter((d) => d.practice.length || d.mock || d.note);
+}
+
+// ---------- the two-files route, for banks too big to paste ----------
+/** File 1: the plan (and any links already made). */
+export function planFile(plan: PlanData, current: Links = {}, pack?: PackData) {
+  return {
+    file: "plan",
+    name: plan.name,
+    days: plan.days.map((d) => ({ date: d.date, kind: d.kind, hours: d.hours, title: d.title, topics: d.topics, targetQs: d.targetQs })),
+    ...(pack ? { currentLinks: currentLinks(pack, current) } : {}),
+  };
+}
+/** File 2: the question bank, with the full question text but no options, answers or explanations. */
+export function bankFile(pack: PackData) {
+  return {
+    file: "question-bank",
+    questionCount: pack.questions.length,
+    mockTestCount: (pack.mockTests ?? []).length,
+    topics: pack.topics.map((t) => ({ id: t.id, name: t.name, subject: pack.subjects[t.subject] ?? t.subject, feel: t.status === "noidea" ? "no idea" : t.status })),
+    questions: pack.questions.map((q) => ({ id: q.id, topic: q.topic, type: q.type, marks: q.marks, difficulty: difficultyOf(q) ?? null, tags: q.tags ?? [], text: q.text })),
+    mockTests: (pack.mockTests ?? []).map((m) => ({ id: m.id, name: m.name, questions: m.sections.reduce((n, s) => n + s.questions.length, 0), minutes: m.minutes })),
+  };
+}
+/** The short prompt that goes with the two files. Same rules, same reply shape as the long prompt. */
+export function filesPrompt(improving = false): string {
+  return `${INTRO(improving)}
+I have attached two JSON files:
+- plan.json: MY PLAN (a "days" list${improving ? ", plus my current links in \"currentLinks\"" : ""}).
+- question-bank.json: MY TOPICS ("topics"), MY QUESTIONS ("questions": id, topic, type, marks, difficulty, tags, text) and MY MOCK TESTS ("mockTests").
+Read both files completely before you answer. question-bank.json starts with "questionCount": the "questions" list must have exactly that many entries, so use all of them, not just the first part of the file. If you cannot read the whole file, say so instead of guessing. In the rules below, "MY PLAN", "MY TOPICS", "MY QUESTIONS" and "MY MOCK TESTS" mean those parts of the files.
+${RULES}
 `;
 }
 

@@ -1,7 +1,8 @@
 "use client";
 import { useMemo, useState } from "react";
 import { downloadText, fileSafe } from "@/lib/download";
-import { linkPrompt, parseLinks, readAnswer, Links } from "@/lib/links";
+import { isTooLong, linkPrompt, parseLinks, readAnswer, Links } from "@/lib/links";
+import { ExportButtons, FilesRoute } from "./LinkFiles";
 import { KEYS, usePack, usePersisted, usePlan } from "@/lib/store";
 
 // Export plan + question bank for an AI, paste its answer back, and every plan day points at real questions.
@@ -13,6 +14,7 @@ export default function LinkPlan({ onDone }: { onDone?: () => void }) {
   const [text, setText] = useState("");
   const [note, setNote] = useState("");
   const prompt = useMemo(() => (custom && hasPack ? linkPrompt(plan, pack, { withText }, links) : ""), [plan, pack, custom, hasPack, withText, links]);
+  const tooLong = isTooLong(prompt);
   const result = useMemo(() => {
     if (!text.trim()) return null;
     const r = readAnswer(text);
@@ -26,7 +28,6 @@ export default function LinkPlan({ onDone }: { onDone?: () => void }) {
     return <div className="panel"><h2 style={{ marginTop: 0 }}>Link with AI</h2><p className="muted" style={{ margin: 0 }}>Upload a plan and a question pack first. Then an AI can match them.</p></div>;
   }
   const copy = async () => { try { await navigator.clipboard.writeText(prompt); setNote("Copied. Paste it into your AI."); } catch { setNote("Copy was blocked. Use Download instead."); } };
-  const big = prompt.length > 150000;
 
   return (
     <div className="pi">
@@ -39,14 +40,21 @@ export default function LinkPlan({ onDone }: { onDone?: () => void }) {
 
       <section className="panel">
         <h2 style={{ marginTop: 0 }}>1. Give this to an AI</h2>
-        <p className="muted small">It holds the instructions, your plan and your question bank ({pack.questions.length} questions, {pack.mockTests.length} mock tests).</p>
-        <label className="small"><input type="checkbox" checked={withText} onChange={(e) => setWithText(e.target.checked)} /> Include the start of each question (smarter matches, longer text)</label>
-        <div className="row" style={{ marginTop: 10 }}>
-          <button className="btn primary" onClick={copy}>Copy for AI</button>
-          <button className="btn" onClick={() => downloadText(`${fileSafe(plan.name)}-link-request.txt`, prompt)}>Download</button>
-          <span className="small muted">{Math.round(prompt.length / 1000)}k characters</span>
-        </div>
-        {big && <p className="small" style={{ color: "var(--bad, #c0392b)", marginTop: 8 }}>🔴 CAUTION: this is very long. Untick the box above or use an AI with a large context window.</p>}
+        {tooLong ? (
+          <FilesRoute plan={plan} pack={pack} links={links} size={prompt.length} onNote={setNote} />
+        ) : (
+          <>
+            <p className="muted small">It holds the instructions, your plan and your question bank ({pack.questions.length} questions, {pack.mockTests.length} mock tests).</p>
+            <label className="small"><input type="checkbox" checked={withText} onChange={(e) => setWithText(e.target.checked)} /> Include the start of each question (smarter matches, longer text)</label>
+            <div className="row" style={{ marginTop: 10 }}>
+              <button className="btn primary" onClick={copy}>Copy for AI</button>
+              <button className="btn" onClick={() => downloadText(`${fileSafe(plan.name)}-link-request.txt`, prompt)}>Download</button>
+              <span className="small muted">{Math.round(prompt.length / 1000)}k characters</span>
+            </div>
+            <p className="small muted" style={{ margin: "10px 0 4px" }}>Prefer files? Export them and attach both to any AI:</p>
+            <ExportButtons plan={plan} pack={pack} links={links} onNote={setNote} />
+          </>
+        )}
       </section>
 
       <section className="panel">

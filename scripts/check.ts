@@ -25,7 +25,7 @@ import { judge, commandFor } from "../lib/runner";
 import { sameOutput } from "../lib/judge";
 import { segments, texProblems, parseFence, mergeTickLines } from "../lib/tex";
 import { highlightCode, languageOf } from "../lib/highlight";
-import { linkPrompt, parseLinks, liveQuestionIds, readAnswer } from "../lib/links";
+import { bankFile, filesPrompt, isTooLong, planFile, PROMPT_LIMIT, linkPrompt, parseLinks, liveQuestionIds, readAnswer } from "../lib/links";
 
 let bad = 0;
 const err = (m: string) => { bad++; console.log("BAD:", m); };
@@ -562,6 +562,30 @@ if (ok.pack?.questions.map((q) => q.id).join() !== "a-1,a-2") err("auto ids shou
   if (!packPrompt().includes('"str"') || !packPrompt().includes("NEVER use \"nat\" for a text answer")) err("prompt should describe str and warn against nat");
   if (typeBreakdown(ok.pack!).practice.totals.counts.str !== 3) err("breakdown should count str");
   console.log("str type: ok");
+}
+
+{
+  // a huge question bank must never produce a prompt longer than the budget
+  const topics = Array.from({ length: 40 }, (_, i) => ({ id: "tp" + i, name: "Topic " + i, subject: "s", status: "shaky" }));
+  const qs = Array.from({ length: 5000 }, (_, i) => ({ id: `tp${i % 40}-${Math.floor(i / 40) + 1}`, topic: "tp" + (i % 40), difficulty: "easy", type: i % 3 ? "mcq" : "nat", marks: 1 + (i % 2), tags: ["conceptual", "formula"], text: "A fairly long question text number " + i + " that goes on for a while so that each line is heavy.", options: ["a", "b"], answer: 0 }));
+  const big = parsePack({ name: "Big", subjects: { s: "S" }, topics, questions: qs });
+  if (!big.pack) err("big fixture: " + big.errors.slice(0, 2).join("; "));
+  else {
+    const plan = parsePlan({ name: "P", phaseNames: { a: "A" }, days: [{ date: "2026-11-09", phase: "a", kind: "study", hours: 2, title: "Topic 3 day", topics: ["tp3"], tasks: ["x"], targetQs: 6 }] }).plan!;
+    const full = linkPrompt(plan, big.pack, { withText: true });
+    if (!isTooLong(full) || full.length <= PROMPT_LIMIT) err("5000 questions should be too long to paste");
+    if (!full.includes("tp39-125 |") || !full.includes("| easy |") || !full.includes("MY MOCK TESTS")) err("the long prompt must stay complete (every id, difficulty, mocks)");
+    const small = linkPrompt(plan, { ...big.pack, questions: big.pack.questions.slice(0, 20) }, { withText: true });
+    if (isTooLong(small) || !small.includes("start of the question")) err("a small bank should paste normally");
+    const bf = bankFile(big.pack), pf = planFile(plan, {}, big.pack);
+    if (bf.questions.length !== 5000 || bf.questions[0].difficulty !== "easy" || !bf.questions[0].text || "answer" in bf.questions[0]) err("bank file must hold every question with text, no answers");
+    if (bf.questionCount !== 5000) err("bank file must state its question count");
+    if (pf.days.length !== 1 || pf.days[0].date !== "2026-11-09") err("plan file must hold the plan days");
+    const fp = filesPrompt(false);
+    if (fp.length > 6000 || !fp.includes("RULES") || !fp.includes("question-bank.json") || fp.includes("tp3-")) err("files prompt should be short, with the rules");
+    if (!filesPrompt(true).includes("currentLinks")) err("files prompt should mention current links when improving");
+    console.log("prompt size: ok", full.length, fp.length);
+  }
 }
 console.log(bad ? `${bad} PROBLEMS` : "ALL OK");
 

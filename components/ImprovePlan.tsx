@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { linkPrompt, Links } from "@/lib/links";
+import { isTooLong, linkPrompt, Links } from "@/lib/links";
+import { ExportButtons, FilesRoute } from "./LinkFiles";
 import { KEYS, usePack, usePersisted, usePlan } from "@/lib/store";
 
 const APPS = [
@@ -22,6 +23,7 @@ export default function ImprovePlan({ onPaste }: { onPaste: () => void }) {
   const linked = Object.keys(links).length;
   const ready = custom && hasPack;
   const prompt = useMemo(() => (open && ready ? linkPrompt(plan, pack, { withText: true }, links) : ""), [open, ready, plan, pack, links]);
+  const tooLong = isTooLong(prompt);
 
   useEffect(() => {
     if (!open) return;
@@ -66,17 +68,28 @@ export default function ImprovePlan({ onPaste }: { onPaste: () => void }) {
                   <li>
                     <span className="ipm-n">1</span>
                     <div>
-                      <b>Pick an AI</b>
-                      <p>Your plan and {pack.questions.length} questions are copied for you{linked > 0 ? `, along with your ${linked} linked days so the AI can improve them` : ""}.</p>
-                      <div className="ipm-apps">
-                        {APPS.map((a) => <button key={a.name} onClick={() => go(a)}><i style={{ background: a.dot }} />{a.name}</button>)}
-                      </div>
-                      <button className="btn soft ipm-copy" onClick={copyOnly}>Or just copy the prompt</button>
+                      {tooLong ? (
+                        <>
+                          <b>Send two files to an AI</b>
+                          <FilesRoute plan={plan} pack={pack} links={links} size={prompt.length} onNote={setNote} />
+                        </>
+                      ) : (
+                        <>
+                          <b>Pick an AI</b>
+                          <p>Your plan and {pack.questions.length.toLocaleString()} questions are copied for you{linked > 0 ? `, along with your ${linked} linked days so the AI can improve them` : ""}. <span className="muted">({Math.round(prompt.length / 1000)}k characters)</span></p>
+                          <div className="ipm-apps">
+                            {APPS.map((a) => <button key={a.name} onClick={() => go(a)}><i style={{ background: a.dot }} />{a.name}</button>)}
+                          </div>
+                          <button className="btn soft ipm-copy" onClick={copyOnly}>Or just copy the prompt</button>
+                          <p className="small muted" style={{ margin: "10px 0 4px" }}>Prefer files? Export them and attach both to any AI:</p>
+                          <ExportButtons plan={plan} pack={pack} links={links} onNote={setNote} />
+                        </>
+                      )}
                     </div>
                   </li>
                   <li>
                     <span className="ipm-n">2</span>
-                    <div><b>Paste and send</b><p>Click the message box and press Ctrl+V. The AI replies with a short block of JSON.</p></div>
+                    <div><b>Paste and send</b><p>{tooLong ? "Attach both files, paste the short prompt and send." : "Click the message box and press Ctrl+V."} The AI replies with a short block of JSON.</p></div>
                   </li>
                   <li>
                     <span className="ipm-n">3</span>
