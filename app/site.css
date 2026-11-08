@@ -969,3 +969,11 @@ pre.code code { background: none !important; border: none !important; padding: 0
 .pg-state { display: grid; place-items: center; width: 24px; height: 24px; flex: none; border-radius: 50%; border: 1.5px solid var(--line); font-size: 0.8rem; }
 .pg-state.ok { background: var(--accent); border-color: var(--accent); color: #04211c; font-weight: 800; }
 .pg-state.tried { color: var(--ink-2); }
+
+/* sidebar fit: the buttons keep their size; spacing above is tighter so the mascot window does not have to shrink more */
+.rail > :not(.rail-stage) { flex-shrink: 0; }
+@media (min-width: 761px) {
+  .rail { padding-top: 16px; padding-bottom: 14px; gap: 4px; }
+  .brand { margin-bottom: 10px; }
+  .rail a.item { padding-top: 7px; padding-bottom: 7px; gap: 3px; }
+}
