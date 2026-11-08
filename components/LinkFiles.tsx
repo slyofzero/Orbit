@@ -15,6 +15,7 @@ export function ExportButtons({ plan, pack, links, onNote }: { plan: PlanData; p
 }
 
 export function FilesRoute({ plan, pack, links, size, onNote }: { plan: PlanData; pack: PackData; links: Links; size: number; onNote: (s: string) => void }) {
+  const count = pack.questions.length;
   const prompt = filesPrompt(Object.keys(links).length > 0);
   const copy = async () => { try { await navigator.clipboard.writeText(prompt); onNote("Prompt copied. Paste it into the AI chat after attaching both files."); } catch { onNote("Copy was blocked by the browser. Select the prompt text and copy it by hand."); } };
   return (
@@ -25,6 +26,7 @@ export function FilesRoute({ plan, pack, links, size, onNote }: { plan: PlanData
         <li>Open any AI that accepts file uploads and attach both files.</li>
         <li>Copy the short prompt and send it.</li>
       </ol>
+      <p className="small" style={{ margin: "0 0 10px", color: "var(--bad, #c0392b)" }}>🔴 CAUTION: some AIs cannot read a file this big (token limits) and may quietly read only the first part. Use an AI with a large context window, such as Gemini, Claude or ChatGPT on a paid plan. Before sending the prompt, ask it: "How many items are in the questions list of question-bank.json?" The answer must be {count.toLocaleString()}. If it gives another number, do NOT continue: start a new chat or try another AI.</p>
       <ExportButtons plan={plan} pack={pack} links={links} onNote={onNote} />
       <div className="row" style={{ marginTop: 8 }}><button className="btn primary" onClick={copy}>Copy the short prompt</button></div>
       <textarea readOnly className="pi-text" rows={4} value={prompt} onFocus={(e) => e.currentTarget.select()} style={{ marginTop: 8 }} />
