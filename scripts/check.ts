@@ -493,8 +493,20 @@ if (ok.pack?.questions.map((q) => q.id).join() !== "a-1,a-2") err("auto ids shou
   if (!m.notes.some((n) => n.includes("1 question, mock test or recipe id appears"))) err("should note the repeated id: " + m.notes.join("|"));
   const bad = mergeFiles([a, { name: "broken.json", text: "{nope" }]);
   if (bad.json || !bad.errors[0]?.startsWith("broken.json")) err("an unreadable file should name itself in the error");
-  const pic = mergeFiles([f("p1", { images: { x: "data:image/png;base64,AAAA" } }), f("p2", { images: { x: "data:image/png;base64,BBBB" } })]);
+  const tp = { subjects: { m: "Maths" }, topics: [{ id: "alg", subject: "m", name: "Algebra" }], questions: [] };
+  const pic = mergeFiles([f("p1", { ...tp, images: { x: "data:image/png;base64,AAAA" } }), f("p2", { ...tp, images: { x: "data:image/png;base64,BBBB" } })]);
   if (pic.json || !pic.errors[0]?.includes('"x"')) err("same picture name with different pictures should be refused");
+  // errors come grouped by the file they are in
+  const noDiff = f("no-difficulty.json", { ...tp, questions: [{ topic: "alg", type: "nat", marks: 1, text: "t", answer: 1, explanation: "e" }] });
+  const srcTag = f("source-tags.json", { ...tp, questions: [q({ tags: ["pw-dpp"] })] });
+  const fine = f("fine.json", { ...tp, questions: [q({ tags: ["formula"] })] });
+  const g = mergeFiles([noDiff, fine, srcTag]);
+  if (g.json || g.problems.map((x) => x.file).join() !== "no-difficulty.json,source-tags.json") err("problems should name exactly the broken files: " + g.problems.map((x) => x.file));
+  if (!g.problems[0].errors[0].includes("no difficulty") || !g.problems[1].errors[0].includes("pw-dpp")) err("each file should carry its own error");
+  // a file may rely on topics declared in another file
+  const lean = f("lean.json", { questions: [q({})] });
+  const ok2 = mergeFiles([fine, lean]);
+  if (!ok2.json) err("a file that uses topics declared in another file should still merge: " + ok2.errors.join("|"));
   console.log("mergeFiles: ok");
 }
 

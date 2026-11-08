@@ -3,7 +3,7 @@ import { useMemo, useRef, useState } from "react";
 import { mergeChanges, mergePack, packPrompt, packTemplateJson, parsePack, type PackData } from "@/lib/packs";
 import { exportPack } from "@/lib/imageStore";
 import { downloadJson, fileSafe } from "@/lib/download";
-import { mergeFiles } from "@/lib/packMerge";
+import { mergeFiles, type FileProblems } from "@/lib/packMerge";
 import PackBreakdown from "./PackBreakdown";
 import ExportFirstModal from "./ExportFirstModal";
 import { usePack } from "@/lib/store";
@@ -27,7 +27,7 @@ export default function PackImport({ onDone }: { onDone?: (message: string) => v
   const [note, setNote] = useState("");
   const [newName, setNewName] = useState(""); // a name typed for the file being loaded; empty means keep the name inside the file
   const [renaming, setRenaming] = useState<string | null>(null); // the draft while the current pack is being renamed
-  const [loadErrors, setLoadErrors] = useState<string[]>([]);
+  const [loadErrors, setLoadErrors] = useState<FileProblems[]>([]);
   const [mergeNotes, setMergeNotes] = useState<string[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -101,8 +101,8 @@ export default function PackImport({ onDone }: { onDone?: (message: string) => v
             if (list.length === 0) return;
             const files = await Promise.all(list.map(async (f) => ({ name: f.name, text: await f.text() })));
             if (files.length === 1) { setText(files[0].text); return; }
-            const m = mergeFiles(files);
-            if (m.errors.length || !m.json) { setText(""); setLoadErrors(m.errors); return; }
+            const m = mergeFiles(files, new Date(), adding ? pack : undefined);
+            if (m.problems.length || !m.json) { setText(""); setLoadErrors(m.problems); return; }
             setText(m.json); setMergeNotes(m.notes);
           }} />
           {text && <button className="btn soft" onClick={() => { setText(""); setMergeNotes([]); setLoadErrors([]); setNewName(""); }}>Clear</button>}
@@ -110,7 +110,12 @@ export default function PackImport({ onDone }: { onDone?: (message: string) => v
         </div>
         <textarea className="pi-text" spellCheck={false} placeholder='…or paste the JSON here, e.g. { "name": "My pack", "topics": [ … ], "questions": [ … ] }' value={text.length > 400_000 ? `(${(text.length / 1e6).toFixed(1)} MB file loaded, too big to show here. Check the preview below, then use it or press Clear.)` : text} readOnly={text.length > 400_000} onChange={(e) => setText(e.target.value)} />
 
-        {loadErrors.length > 0 && <div className="pi-err" role="alert"><b>🔴 Fix this first:</b><ul>{loadErrors.map((e, i) => <li key={i}>{e}</li>)}</ul></div>}
+        {loadErrors.length > 0 && (
+          <div className="pi-err" role="alert">
+            <b>🔴 Fix {loadErrors.length === 1 ? "this file" : `these ${loadErrors.length} files`} first. Nothing was loaded.</b>
+            {loadErrors.map((f) => <div key={f.file} className="pi-file"><b>{f.file}</b><ul>{f.errors.map((e, i) => <li key={i}>{e}</li>)}</ul></div>)}
+          </div>
+        )}
         {text && mergeNotes.length > 0 && <ul className="pi-warn">{mergeNotes.map((w, i) => <li key={i}>{w}</li>)}</ul>}
         {result && result.errors.length > 0 && (
           <div className="pi-err" role="alert"><b>🔴 Fix this first:</b><ul>{result.errors.map((e, i) => <li key={i}>{e}</li>)}</ul></div>

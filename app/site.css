@@ -1027,3 +1027,4 @@ table.bd tfoot td { font-weight: 800; background: var(--sheet-2); border-top: 1.
 [data-theme="dark"] .tg.diff-easy { background: #12351f; color: #86efac; }
 [data-theme="dark"] .tg.diff-medium { background: #3a2c0c; color: #fcd34d; }
 [data-theme="dark"] .tg.diff-hard { background: #3d1616; color: #fca5a5; }
+.pi-file { margin-top: 8px; } .pi-file > b { font-family: ui-monospace, monospace; font-size: 0.9rem; }

@@ -1,16 +1,19 @@
 // Combines several question-pack files into ONE pack before it is checked, so ids the system hands out are numbered once across all files.
 // Rules: the first file wins for subject names and topics; a question, mock test or recipe with the same id in a later file replaces the earlier one.
+import { parsePack, type PackData } from "./packs";
 type Obj = Record<string, unknown>;
 const isObj = (x: unknown): x is Obj => typeof x === "object" && x !== null && !Array.isArray(x);
 
-export interface MergedFiles { json?: string; errors: string[]; notes: string[]; name?: string }
+/** Problems grouped by the file they belong to, so you know exactly which file to fix. */
+export interface FileProblems { file: string; errors: string[] }
+export interface MergedFiles { json?: string; errors: string[]; problems: FileProblems[]; notes: string[]; name?: string }
 
 /** The system-generated name for a merged pack, like "Merged pack · 3 files · 8 Nov 2026". */
 export const mergedName = (files: number, today = new Date()) =>
   `Merged pack · ${files} files · ${today.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`;
 
-export function mergeFiles(files: { name: string; text: string }[], today = new Date()): MergedFiles {
-  const errors: string[] = [], notes: string[] = [];
+export function mergeFiles(files: { name: string; text: string }[], today = new Date(), existing?: PackData): MergedFiles {
+  const errors: string[] = [], notes: string[] = [], problems: FileProblems[] = [];
   const parsed: { name: string; data: Obj }[] = [];
   for (const f of files) {
     try {
@@ -19,7 +22,22 @@ export function mergeFiles(files: { name: string; text: string }[], today = new 
       else parsed.push({ name: f.name, data });
     } catch (e) { errors.push(`${f.name}: this is not valid JSON (${(e as Error).message}).`); }
   }
-  if (errors.length) return { errors, notes };
+  if (errors.length) return { errors, problems: errors.map((e) => { const i = e.indexOf(": "); return { file: e.slice(0, i), errors: [e.slice(i + 2)] }; }), notes };
+
+  // check every file on its own, so each problem is reported under the file it is in. Topics and subjects from the other files count as known,
+  // because files that are meant to be merged may share them.
+  const allTopics = new Map<string, unknown>(), allSubjects: Record<string, string> = {};
+  for (const { data } of parsed) {
+    if (Array.isArray(data.topics)) for (const t of data.topics) if (isObj(t) && typeof t.id === "string" && !allTopics.has(t.id)) allTopics.set(t.id, t);
+    if (isObj(data.subjects)) for (const [k, v] of Object.entries(data.subjects)) if (typeof v === "string" && !(k in allSubjects)) allSubjects[k] = v;
+  }
+  for (const { name, data } of parsed) {
+    const own = new Set(Array.isArray(data.topics) ? data.topics.map((t) => (isObj(t) ? t.id : null)) : []);
+    const topics = [...(Array.isArray(data.topics) ? data.topics : []), ...[...allTopics.values()].filter((t) => !own.has((t as Obj).id))];
+    const r = parsePack({ ...data, subjects: { ...allSubjects, ...(isObj(data.subjects) ? data.subjects : {}) }, topics }, existing);
+    if (!r.pack) problems.push({ file: name, errors: r.errors });
+  }
+  if (problems.length) return { errors: problems.flatMap((p) => p.errors.map((e) => `${p.file}: ${e}`)), problems, notes };
 
   const subjects: Record<string, string> = {};
   const topics = new Map<string, Obj>();
@@ -55,7 +73,7 @@ export function mergeFiles(files: { name: string; text: string }[], today = new 
     }
     if (data.useBuiltinGenerators === true) builtin = true;
   }
-  if (errors.length) return { errors, notes };
+  if (errors.length) return { errors, problems: errors.map((e) => { const i = e.indexOf(": "); return { file: e.slice(0, i), errors: [e.slice(i + 2)] }; }), notes };
 
   const name = mergedName(files.length, today);
   notes.push(`Merged ${files.length} files: ${parsed.map((p) => p.name).join(", ")}.`);
@@ -66,5 +84,5 @@ export function mergeFiles(files: { name: string; text: string }[], today = new 
   if (mocks.size) out.mocks = [...mocks.values()];
   if (Object.keys(images).length) out.images = images;
   if (builtin) out.useBuiltinGenerators = true;
-  return { json: JSON.stringify(out), errors, notes, name };
+  return { json: JSON.stringify(out), errors, problems, notes, name };
 }
