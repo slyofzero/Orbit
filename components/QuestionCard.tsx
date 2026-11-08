@@ -6,8 +6,9 @@ import { formatAnswer, isAttempted, isCorrect, negLabel } from "@/lib/scoring";
 import { logPractice, usePack } from "@/lib/store";
 import { announce } from "@/lib/outcome";
 import Rich from "./Rich";
+import CodeQuestion from "./CodeQuestion";
 
-const TYPE_LABEL = { mcq: "MCQ", msq: "MSQ", nat: "NAT" } as const;
+const TYPE_LABEL = { mcq: "MCQ", msq: "MSQ", nat: "NAT", code: "CODE" } as const;
 
 export default function QuestionCard({
   q, index, onResult, showTopic,
@@ -17,6 +18,7 @@ export default function QuestionCard({
   const [sel, setSel] = useState<Answer | undefined>(undefined);
   const [checked, setChecked] = useState(false);
   const [skipped, setSkipped] = useState(false);
+  const [tries, setTries] = useState(0);
   const ok = checked && isCorrect(q, sel);
   const shownAt = useRef(Date.now()); // when this question started waiting for an answer
   // every answer or skip is logged with its subject, topic and tags, so statistics can count each encounter
@@ -67,7 +69,16 @@ export default function QuestionCard({
         </div>
       )}
 
-      {q.type !== "nat" &&
+      {q.type === "code" && (
+        <CodeQuestion
+          q={q} key={`${q.id}-${tries}`}
+          onSubmit={(right) => { onResult?.(right); log(right ? "right" : "wrong"); announce(right ? "right" : "wrong"); }}
+          onSkip={() => { log("skip"); announce("skip"); }}
+          onReset={() => { shownAt.current = Date.now(); setTries((n) => n + 1); }}
+        />
+      )}
+
+      {(q.type === "mcq" || q.type === "msq") &&
         q.options!.map((o, i) => {
           const picked = q.type === "mcq" ? sel === i : ((sel as number[] | undefined) ?? []).includes(i);
           const isRight = q.type === "mcq" ? q.answer === i : (q.answer as number[]).includes(i);
@@ -89,7 +100,7 @@ export default function QuestionCard({
         />
       )}
 
-      <div className="row" style={{ marginTop: 10 }}>
+      {q.type !== "code" && <div className="row" style={{ marginTop: 10 }}>
         {!checked && !skipped ? (
           <>
             <button className="btn primary" onClick={check} disabled={!isAttempted(sel)}>Check answer</button>
@@ -98,7 +109,7 @@ export default function QuestionCard({
         ) : (
           <button className="btn" onClick={reset}>Try again</button>
         )}
-      </div>
+      </div>}
 
       {skipped && (
         <div className="verdict no">

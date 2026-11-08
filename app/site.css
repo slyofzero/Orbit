@@ -937,3 +937,20 @@ pre.code code.hljs { background: none; padding: 0; color: inherit; }
 .mk-sec { margin: 22px 0 8px; }
 .mk-h { margin: 0 0 2px; font-size: 1.3rem; letter-spacing: -0.01em; }
 .mk-sub { margin: 0 0 12px; }
+
+/* Programming questions */
+.cq { display: grid; gap: 10px; margin-top: 8px; }
+.cq-ex { display: grid; gap: 8px; }
+.cq-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cq-lab { display: block; margin-bottom: 3px; font: 700 0.74rem var(--font-body); color: var(--ink-2); }
+.cq-io { margin: 0 !important; white-space: pre-wrap; word-break: break-word; max-height: 220px; overflow: auto; }
+.cq-bar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; }
+.cq-ed { width: 100%; box-sizing: border-box; resize: vertical; tab-size: 4; white-space: pre; overflow: auto; padding: 14px 16px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--code-bg); color: var(--code-fg); font: 0.92rem/1.55 ui-monospace, "Cascadia Code", Consolas, monospace; }
+.cq-ed:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.cq-res { padding: 6px 0; border-top: 1px dashed var(--line); }
+.cq-res.pass { color: var(--ok, #2ea66a); }
+.cq-res.fail, .cq-res.error, .cq-res.timeout { color: var(--bad, #e5484d); }
+.cq-diff { display: grid; gap: 8px; margin-top: 6px; color: var(--ink); }
+@media (max-width: 640px) { .cq-pair { grid-template-columns: 1fr; } }
+pre.code code { background: none !important; border: none !important; padding: 0 !important; border-radius: 0 !important; box-shadow: none !important; }
+.cq-setup { display: grid; gap: 8px; padding: 12px 14px; border-radius: 14px; border: 1.5px dashed var(--accent); background: var(--accent-soft); }

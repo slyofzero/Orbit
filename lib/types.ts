@@ -1,4 +1,14 @@
-export type QType = "mcq" | "msq" | "nat";
+export type QType = "mcq" | "msq" | "nat" | "code";
+
+/** A programming question: you write a program, the app runs it on the tests (stdin in, stdout out). */
+export interface CodeSpec {
+  language: string; // python, c, cpp, java or javascript
+  starter?: string; // code the editor starts with
+  solution?: string; // a reference solution, shown after you submit or skip
+  tests: { input: string; output: string; hidden?: boolean }[]; // hidden tests only show pass or fail
+  timeLimitMs?: number; // per test, default 3000
+  setup?: string; // what must exist on the learner's computer first (files, folders, a database). Shown on the card, and used to write the "Copy setup prompt" for an AI
+}
 
 export interface Question {
   id: string;
@@ -12,6 +22,7 @@ export interface Question {
   // mcq: index, msq: array of indices, nat: {value, tol}
   answer: number | number[] | { value: number; tol: number };
   explanation: string;
+  code?: CodeSpec; // only for type "code"; `answer` is not used then
 }
 
 export type Answer = number | number[] | string; // nat answers are typed as strings

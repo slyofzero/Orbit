@@ -19,6 +19,7 @@ export const KEYS = {
   plan: "gate.plan", // PlanData (null = no plan yet)
   pack: "gate.pack", // PackData (null = no question pack yet)
   plog: "gate.plog", // LogEntry[]  (every practice answer / skip, for statistics)
+  drafts: "gate.drafts", // Record<qid, code you were writing>  (programming questions)
   links: "gate.links", // Record<date, {q, mock?, note?}>  (which questions go with which plan day)
 } as const;
 

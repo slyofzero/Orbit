@@ -6,6 +6,7 @@ import { DATA_IMG, MAX_IMAGE, hashData, storedImageNames } from "@/lib/images";
 import { Loc, PackData, allQuestions } from "@/lib/packs";
 import { Target, checkQuestion, freeId, upsertQuestion } from "@/lib/packEdit";
 import { QType } from "@/lib/types";
+import { CODE_LANGUAGES, LANGUAGE_LABEL } from "@/lib/codeLanguages";
 
 type Field = "text" | "explanation" | `opt${number}`;
 
@@ -24,6 +25,12 @@ export default function QuestionEditor({ profile, pack, loc, preset, onClose, on
   const [picked, setPicked] = useState<number[]>(q ? (q.type === "mcq" ? [q.answer as number] : q.type === "msq" ? (q.answer as number[]) : []) : [0]);
   const [natValue, setNatValue] = useState(q?.type === "nat" ? String((q.answer as { value: number }).value) : "");
   const [natTol, setNatTol] = useState(q?.type === "nat" ? String((q.answer as { tol: number }).tol) : "0");
+  const [language, setLanguage] = useState<string>(q?.code?.language ?? "python");
+  const [starter, setStarter] = useState(q?.code?.starter ?? "");
+  const [solution, setSolution] = useState(q?.code?.solution ?? "");
+  const [setup, setSetup] = useState(q?.code?.setup ?? "");
+  const [limit, setLimit] = useState(q?.code?.timeLimitMs ? String(q.code.timeLimitMs) : "");
+  const [testsJson, setTestsJson] = useState(JSON.stringify(q?.code?.tests ?? [{ input: "", output: "" }], null, 2));
   const [tags, setTags] = useState((q?.tags ?? []).join(", "));
   const [where, setWhere] = useState<string>(loc ? (loc.bank === "practice" ? "practice" : `mock:${loc.mockId}`) : preset ? `mock:${preset.mockId}` : "practice");
   const [section, setSection] = useState(loc?.section ?? preset?.section ?? "");
@@ -70,9 +77,13 @@ export default function QuestionEditor({ profile, pack, loc, preset, onClose, on
       id: cleanId, subject: pack.topics.find((t) => t.id === topic)?.subject, topic, type, marks, text, explanation,
       ...(tags.trim() ? { tags: tags.split(",").map((t) => t.trim()).filter(Boolean) } : {}),
     };
-    if (type === "nat") { raw.answer = natValue.trim() === "" ? undefined : Number(natValue); raw.tolerance = Number(natTol || 0); }
+    if (type === "code") {
+      let tests: unknown;
+      try { tests = JSON.parse(testsJson); } catch (e) { errs.push(`The tests are not valid JSON: ${(e as Error).message}`); }
+      Object.assign(raw, { language, tests, ...(starter ? { starter } : {}), ...(solution ? { solution } : {}), ...(setup.trim() ? { setup } : {}), ...(limit.trim() ? { timeLimitMs: Number(limit) } : {}) });
+    } else if (type === "nat") { raw.answer = natValue.trim() === "" ? undefined : Number(natValue); raw.tolerance = Number(natTol || 0); }
     else { raw.options = options; raw.answer = type === "mcq" ? (picked[0] ?? -1) : picked; }
-    const names = [...new Set([text, explanation, ...(type === "nat" ? [] : options)].flatMap(storedImageNames))];
+    const names = [...new Set([text, explanation, ...(type === "nat" || type === "code" ? [] : options)].flatMap(storedImageNames))];
     const images = names.length ? await loadImages(names, profile) : {};
     const res = checkQuestion(pack, raw, images);
     errs.push(...res.errors);
@@ -105,14 +116,25 @@ export default function QuestionEditor({ profile, pack, loc, preset, onClose, on
           )}
           <div className="ad-two">
             <label>Type<select value={type} onChange={(e) => { const t = e.target.value as QType; setType(t); setPicked(t === "mcq" ? picked.slice(0, 1).length ? picked.slice(0, 1) : [0] : picked); }}>
-              <option value="mcq">MCQ (one right option)</option><option value="msq">MSQ (several right options)</option><option value="nat">NAT (typed number)</option></select></label>
+              <option value="mcq">MCQ (one right option)</option><option value="msq">MSQ (several right options)</option><option value="nat">NAT (typed number)</option><option value="code">Programming (write code, Practice only)</option></select></label>
             <label>Marks<select value={marks} onChange={(e) => setMarks(Number(e.target.value) as 1 | 2)}><option value={1}>1</option><option value={2}>2</option></select></label>
           </div>
           <label>Question <span className="small muted">(LaTeX between $…$, pictures with the button below)</span>
             <textarea className="ad-ta" rows={5} value={text} onFocus={() => (last.current = "text")} onChange={(e) => setText(e.target.value)} spellCheck={false} /></label>
           {text.trim() && <div className="ad-prev"><Rich text={text} /></div>}
 
-          {type === "nat" ? (
+          {type === "code" ? (
+            <>
+              <div className="ad-two">
+                <label>Language<select value={language} onChange={(e) => setLanguage(e.target.value)}>{CODE_LANGUAGES.map((l) => <option key={l} value={l}>{LANGUAGE_LABEL[l]}</option>)}</select></label>
+                <label>Time limit per test (ms, optional)<input className="ad-in" inputMode="numeric" placeholder="3000" value={limit} onChange={(e) => setLimit(e.target.value)} /></label>
+              </div>
+              <label>Setup needed <span className="small muted">(optional: exact files, folders or tables that must exist; shows a "Copy setup prompt" button)</span><textarea className="ad-ta" rows={3} value={setup} onChange={(e) => setSetup(e.target.value)} spellCheck={false} /></label>
+              <label>Starter code <span className="small muted">(optional)</span><textarea className="ad-ta" rows={4} value={starter} onChange={(e) => setStarter(e.target.value)} spellCheck={false} /></label>
+              <label>Reference solution <span className="small muted">(shown after Submit or Skip)</span><textarea className="ad-ta" rows={5} value={solution} onChange={(e) => setSolution(e.target.value)} spellCheck={false} /></label>
+              <label>Tests <span className="small muted">(JSON list of {"{"} "input", "output", "hidden"? {"}"}; at least one visible)</span><textarea className="ad-ta" rows={7} value={testsJson} onChange={(e) => setTestsJson(e.target.value)} spellCheck={false} /></label>
+            </>
+          ) : type === "nat" ? (
             <div className="ad-two">
               <label>Right answer (a number)<input className="ad-in" inputMode="decimal" value={natValue} onChange={(e) => setNatValue(e.target.value)} /></label>
               <label>Allowed error (±)<input className="ad-in" inputMode="decimal" value={natTol} onChange={(e) => setNatTol(e.target.value)} /></label>

@@ -1,5 +1,6 @@
 // A "question pack" is what makes Practice and Mocks work: the topics, the practice questions, and separate mock tests that each own their questions.
 // Nothing is built in. Upload a pack (JSON) on the Practice page and the app uses it. Pure functions, tested by scripts/check.ts.
+import { CODE_LANGUAGES, languageName } from "./codeLanguages";
 import { Question, Topic, TopicStatus } from "./types";
 import { repairBackslashes, texProblems } from "./tex";
 import { DATA_IMG, IMG, MAX_IMAGE, MAX_IMAGES_TOTAL, MAX_IMAGE_COUNT, hashData } from "./images";
@@ -118,7 +119,8 @@ export function parsePack(input: unknown, existing?: PackData): PackResult {
     if (!isObj(raw)) { err(`${w} must be an object.`); return null; }
     if (typeof raw.topic !== "string" || !topicIds.has(raw.topic)) { err(`${w}.topic "${String(raw.topic)}" is not one of your topic ids.`); return null; }
     const type = raw.type;
-    if (type !== "mcq" && type !== "msq" && type !== "nat") { err(`${w}.type must be "mcq", "msq" or "nat".`); return null; }
+    if (type !== "mcq" && type !== "msq" && type !== "nat" && type !== "code") { err(`${w}.type must be "mcq", "msq", "nat" or "code".`); return null; }
+    if (type === "code" && autoPrefix) { err(`${w}: programming ("code") questions can only go in "questions" (the practice bank). The mock arena cannot run code.`); return null; }
     if (raw.marks !== 1 && raw.marks !== 2) { err(`${w}.marks must be 1 or 2.`); return null; }
     if (typeof raw.text !== "string" || !raw.text.trim()) { err(`${w} needs the question "text".`); return null; }
     const auto = autoPrefix ?? raw.topic;
@@ -154,7 +156,28 @@ export function parsePack(input: unknown, existing?: PackData): PackResult {
     }
     const tagged = { subject, ...(tags ? { tags } : {}) };
     let q: Question;
-    if (type === "nat") {
+    if (type === "code") {
+      const language = typeof raw.language === "string" ? languageName(raw.language) : null;
+      if (!language) { err(`${w}.language must be one of: ${CODE_LANGUAGES.join(", ")}.`); return null; }
+      if (!Array.isArray(raw.tests) || raw.tests.length === 0 || raw.tests.length > 40) { err(`${w}.tests must be a list of 1 to 40 tests like { "input": "3\\n1 2 3", "output": "6" }.`); return null; }
+      const tests: { input: string; output: string; hidden?: boolean }[] = [];
+      for (const [k, t] of raw.tests.entries()) {
+        if (!isObj(t) || typeof t.input !== "string" || (typeof t.output !== "string" && typeof t.output !== "number")) { err(`${w}.tests[${k}] needs "input" and "output" as text.`); return null; }
+        tests.push({ input: t.input, output: String(t.output), ...(t.hidden === true ? { hidden: true } : {}) });
+      }
+      if (tests.every((t) => t.hidden)) { err(`${w}: at least one test must be visible (leave out "hidden") so the learner can try the program.`); return null; }
+      const lim = typeof raw.timeLimitMs === "number" && raw.timeLimitMs >= 200 && raw.timeLimitMs <= 15000 ? Math.round(raw.timeLimitMs) : undefined;
+      const starter = typeof raw.starter === "string" ? raw.starter : undefined;
+      const solution = typeof raw.solution === "string" ? raw.solution : undefined;
+      let setup: string | undefined;
+      if (raw.setup !== undefined) {
+        if (typeof raw.setup !== "string" || raw.setup.length > 6000) { err(`${w}.setup must be text of at most 6000 characters describing what has to exist before the program can run.`); return null; }
+        setup = raw.setup.trim() || undefined;
+        const prob = setup ? texProblems(setup)[0] : undefined;
+        if (prob) { err(`${w}.setup ${prob}`); return null; }
+      }
+      q = { id, topic: raw.topic, type, marks: raw.marks, text, answer: 0, explanation, ...tagged, code: { language, ...(starter ? { starter } : {}), ...(solution ? { solution } : {}), tests, ...(lim ? { timeLimitMs: lim } : {}), ...(setup ? { setup } : {}) } };
+    } else if (type === "nat") {
       let value: number, tol: number;
       if (typeof raw.answer === "number") { value = raw.answer; tol = typeof raw.tolerance === "number" ? raw.tolerance : 0.01; }
       else if (isObj(raw.answer) && typeof raw.answer.value === "number" && typeof raw.answer.tol === "number") { value = raw.answer.value; tol = raw.answer.tol; }
@@ -258,7 +281,7 @@ export function parsePack(input: unknown, existing?: PackData): PackResult {
   return { pack: { name, subjects, topics, questions, mocks, mockTests, useBuiltinGenerators: input.useBuiltinGenerators === true }, errors, warnings, autoIds, images };
 }
 
-const qJson = (pack: { topics: Topic[] }, q: Question) => ({ id: q.id, subject: q.subject ?? pack.topics.find((t) => t.id === q.topic)?.subject, topic: q.topic, ...(q.tags?.length ? { tags: q.tags } : {}), type: q.type, marks: q.marks, text: q.text, ...(q.options ? { options: q.options } : {}), answer: q.answer, explanation: q.explanation });
+const qJson = (pack: { topics: Topic[] }, q: Question) => ({ id: q.id, subject: q.subject ?? pack.topics.find((t) => t.id === q.topic)?.subject, topic: q.topic, ...(q.tags?.length ? { tags: q.tags } : {}), type: q.type, marks: q.marks, text: q.text, ...(q.options ? { options: q.options } : {}), ...(q.code ? { language: q.code.language, ...(q.code.starter ? { starter: q.code.starter } : {}), ...(q.code.solution ? { solution: q.code.solution } : {}), tests: q.code.tests, ...(q.code.timeLimitMs ? { timeLimitMs: q.code.timeLimitMs } : {}), ...(q.code.setup ? { setup: q.code.setup } : {}) } : { answer: q.answer }), explanation: q.explanation });
 
 /** Every question in the pack: the practice bank plus all mock tests. */
 export const bankSize = (p: PackData) => p.questions.length + (p.mockTests ?? []).reduce((n, m) => n + m.sections.reduce((k, x) => k + x.questions.length, 0), 0);
@@ -377,6 +400,7 @@ export const packTemplateJson = (): string => JSON.stringify({
     { subject: "maths", topic: "algebra", tags: ["factorising", "roots"], type: "msq", marks: 2, text: "Which of these are roots of $x^2 - 5x + 6 = 0$?", options: ["$1$", "$2$", "$3$", "$6$"], answer: [1, 2], explanation: "It factors as $(x-2)(x-3)$, so $x \\in \\{2, 3\\}$." },
     { subject: "maths", topic: "algebra", tags: ["series", "calculation"], type: "nat", marks: 2, text: "Evaluate the sum:\n$$\\sum_{k=1}^{4} k^2$$", answer: 30, tolerance: 0, explanation: "$1 + 4 + 9 + 16 = 30$." },
     { subject: "sci", topic: "motion", tags: ["units", "formula"], type: "nat", marks: 1, text: "A car moves at $20\\ \\text{m/s}$ for $5\\ \\text{s}$. How many metres does it cover?", answer: 100, tolerance: 0.5, explanation: "$d = v \\times t = 100\\ \\text{m}$." },
+    { subject: "maths", topic: "algebra", tags: ["programming"], type: "code", marks: 2, text: "Read an integer $n$ and print the sum $1 + 2 + \\dots + n$.\nInput: one line with $n$. Output: one number.", language: "python", starter: "n = int(input())\n", solution: "n = int(input())\nprint(n * (n + 1) // 2)", tests: [{ input: "4", output: "10" }, { input: "100", output: "5050", hidden: true }], explanation: "The sum is $n(n+1)/2$." },
   ],
   mockTests: [
     { id: "mock1", name: "Mock test 1", minutes: 30, note: "Optional line shown on the card", sections: [
@@ -415,11 +439,32 @@ Use exactly this format:
   - "mcq": exactly one correct option. Add "options" (2 to 8 texts) and "answer" = number of the right option, counting from 0.
   - "msq": one or more correct options. Add "options" and "answer" = list of right option numbers, counting from 0.
   - "nat": the answer is a number typed in. Add "answer" = the number and "tolerance" = allowed error.
+  - "code": a programming question where I write my own program (practice bank only, never inside a mock test, and only if I ask for programming questions). The program reads standard input and prints to standard output, and the app runs it on my computer against your tests. Do NOT add "options" or "answer". Add:
+      "language": one of python, c, cpp, java, javascript.
+      "tests": 3 to 8 tests, each { "input": "text given to the program", "output": "exact text it must print", "hidden": true (optional) }. The first 1 or 2 tests are examples I can see; mark the tricky edge cases and larger cases "hidden": true. "input" is what would be typed in, with \n between lines; "output" is exactly what a correct program prints. Keep the output format unambiguous (one value per line, fixed decimal places for decimals).
+      "starter": optional code to start from, for example the reading of the input.
+      "solution": a correct, short reference program in the same language. Check it against every test by hand before you write the tests.
+      "timeLimitMs": optional, default 3000.
+      "setup": optional, ONLY for questions that need something to exist on my computer first (SQL tables, a folder tree, input files). Describe it EXACTLY and deterministically, because the tests depend on it: exact file and folder names, exact file contents (or an exact rule such as "file k contains the numbers 1..k"), exact table names, columns and rows. No randomness, no dates that change. The learner's program runs inside the folder that holds this data, so tell it which relative paths to use. Example: "A folder with data/a.txt (contents: 3 lines: 1, 2, 3) and data/sub/b.txt (contents: 10)." For SQL questions say the database file name and give the CREATE TABLE and INSERT statements. Questions without this need leave "setup" out.
+    In "text" describe the task, the input format and the output format, and put the examples in prose or in a code block. Java solutions use ${TICK}public class Main${TICK}.
 - "questions" is the PRACTICE bank. Mock tests have their own separate questions, so never put a mock-test question in "questions".
 - "mockTests": optional list of complete mock tests: { "id", "name", "minutes", "sections": [ { "name", "questions": [ ...questions written exactly like the ones above... ] } ] }. Every question inside a mock test belongs to that one mock test only: never reuse a question in two mocks or in "questions". Each question still needs "subject" and "topic" (declare any topic it uses in "topics").
 - Do NOT write an "id" on any question. The app gives every question its own unique id. Only add an "id" if I tell you to correct an existing question, and then use exactly the id I give you; that replaces the old question.
 - Pictures (only if I give you pictures, otherwise never use them): in "text", in an option, or in "explanation", write ![what the picture shows](img:name). Then add a top-level "images" object that holds each picture once: { "name": "data:image/png;base64,..." }. Use only the picture names I give you. Never make up picture data.
 - Make sure every answer is actually correct and the numbers in each explanation add up.
+
+PROGRAMMING QUESTIONS (only when I ask for them). The app runs my program on my own computer for Python, Java and JavaScript (C and C++ if I have a compiler). It feeds each test's "input" to the program's standard input and compares what it prints with the test's "output" (spaces at the ends of lines and blank lines at the end are ignored, everything else must match exactly).
+1. Write each task so ONE correct program prints ONE exact answer: say what the input looks like and the exact output format in "text". Prefer one value per line, and fix the number of decimals when you print decimals.
+2. Give 3 to 8 tests: 1 or 2 visible examples, then "hidden": true for edge cases and bigger cases. Work every output out by hand and check it against your "solution".
+3. Questions about SQL: use SQLite from Python ("language": "python", with the sqlite3 module), because it needs no installation. Put the database in "setup" as an exact file name plus the CREATE TABLE and INSERT statements, and tell the learner in "text" to open that file and print the query result, one row per line.
+4. Questions about files and folders (walking a directory tree, reading files, sizes, counting): put the exact tree and the exact contents of every file in "setup". The learner's program runs INSIDE the folder that holds this data, so "text" must say which relative paths to use, for example "walk the folder data".
+5. "setup" must be deterministic: exact names, exact contents or an exact rule, no randomness, no dates or times that change, no absolute paths. The app turns "setup" into a ready-made prompt that I give my own AI, which writes a script that builds the data, so the more exact it is the smoother my setup is. The tests' outputs must be right for exactly that data.
+6. Leave "setup" out when the program needs nothing but its standard input.
+7. Do not use libraries that need installing (pip or npm). Use the standard library only.
+Example of a question with setup (a folder tree):
+{ "subject": "cs", "topic": "files", "tags": ["filesystem"], "type": "code", "marks": 2, "text": "Print the total size in bytes of all .txt files under the folder data, including subfolders.\nOutput: one integer.", "language": "python", "setup": "A folder data containing: a.txt (the 5 characters hello), notes.md (the 3 characters abc), sub/b.txt (the 10 characters 0123456789) and sub/deep/c.txt (the 1 character x). No newline at the end of any file.", "tests": [ { "input": "", "output": "16" } ], "solution": "import os\nt = 0\nfor root, dirs, files in os.walk('data'):\n    for n in files:\n        if n.endswith('.txt'):\n            t += os.path.getsize(os.path.join(root, n))\nprint(t)", "explanation": "The .txt files hold 5 + 10 + 1 = 16 bytes; notes.md is skipped." }
+Example of a question with setup (SQL):
+{ "subject": "cs", "topic": "sql", "tags": ["sql"], "type": "code", "marks": 2, "text": "Open the SQLite database shop.db with Python's sqlite3 module and print each customer with the total of their orders, one line per customer in the form name total, sorted by name.", "language": "python", "setup": "A SQLite file shop.db with one table: CREATE TABLE orders(id INTEGER PRIMARY KEY, customer TEXT, amount INTEGER); and the rows (1,'asha',100), (2,'ravi',250), (3,'asha',50).", "tests": [ { "input": "", "output": "asha 150\nravi 250" } ], "solution": "import sqlite3\nc = sqlite3.connect('shop.db')\nfor n, t in c.execute('SELECT customer, SUM(amount) FROM orders GROUP BY customer ORDER BY customer'):\n    print(n, t)", "explanation": "asha has 100 + 50 and ravi has 250." }
 
 HOW TO WRITE MATHS (LaTeX). The app draws every question, option and explanation with KaTeX, so write ALL maths as LaTeX:
 1. Put inline maths between single dollar signs: $x^2 + 1$. Put big or important equations on their own line between double dollar signs: $$\int_0^1 x^2\,dx = \frac{1}{3}$$

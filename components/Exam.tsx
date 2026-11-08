@@ -14,7 +14,7 @@ const LEGEND: [Status, string][] = [
   ["nv", "Not Visited"], ["na", "Not Answered"], ["an", "Answered"],
   ["mr", "Marked for Review"], ["ma", "Answered & Marked for Review (will be evaluated)"],
 ];
-const TYPE_NAME = { mcq: "Multiple Choice Question (MCQ)", msq: "Multiple Select Question (MSQ)", nat: "Numerical Answer Type (NAT)" } as const;
+const TYPE_NAME = { mcq: "Multiple Choice Question (MCQ)", msq: "Multiple Select Question (MSQ)", nat: "Numerical Answer Type (NAT)", code: "Programming question" } as const;
 const pad = (n: number) => String(n).padStart(2, "0");
 const hms = (s: number) => `${pad(Math.floor(s / 3600))}:${pad(Math.floor((s % 3600) / 60))}:${pad(s % 60)}`;
 

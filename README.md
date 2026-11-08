@@ -79,3 +79,13 @@ A pack has two question banks. `questions` is the **practice bank**. `mockTests`
 Open the profile menu and choose **Admin: manage all profiles**. The admin profile has no plan or questions of its own. It lists every profile, and picking one opens that profile's questions (practice and mock), mock tests, topics, plan and an upload box. You can add, edit and delete questions, find any question by id (inside one profile or across all of them), edit the plan as JSON and upload a pack.
 
 Question ids are unique across Practice and every mock test. Uploading a pack with ids that already exist **replaces** those questions in place, which is also how you edit questions in bulk.
+
+## Programming questions
+
+A question with `"type": "code"` asks you to write a program. Orbit runs it on **your computer** (never on a server) against the question's tests: the program reads standard input and prints to standard output.
+
+- Languages: `python`, `c`, `cpp`, `java`, `javascript`. You need the interpreter or compiler installed (Python 3, Node.js, gcc/g++, JDK with `javac` and `java`).
+- Fields: `language`, `tests` (`[{ "input", "output", "hidden"? }]`, at least one visible), optional `starter`, `solution`, `timeLimitMs`. No `options` or `answer`.
+- Practice bank only. Code questions are never drawn into generated tests and are refused inside `mockTests`.
+- Your draft code is saved per question and is part of the progress backup.
+- Safety: the runner (`/api/run`) answers only requests that come from Orbit opened as `localhost`, and it is not a sandbox. The program runs with your own permissions, so only run code you wrote. Open Orbit as `http://localhost:3000`, not through a network address.

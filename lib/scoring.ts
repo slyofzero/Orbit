@@ -31,6 +31,7 @@ export function marksFor(q: Question, a: Answer | undefined): number {
 export const negLabel = (q: Question) => (q.type === "mcq" ? (q.marks === 1 ? "1/3" : "2/3") : "0");
 
 export function formatAnswer(q: Question): string {
+  if (q.type === "code") return "see the reference solution";
   if (q.type === "mcq") return String.fromCharCode(65 + (q.answer as number)) + (q.options ? `. ${q.options[q.answer as number]}` : "");
   if (q.type === "msq") return (q.answer as number[]).map((i) => String.fromCharCode(65 + i)).join(", ");
   const { value, tol } = q.answer as { value: number; tol: number };

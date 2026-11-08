@@ -13,6 +13,12 @@ import { aiPrompt, parsePlan, templateJson } from "../lib/customPlan";
 import { hashData as hashDataCheck } from "../lib/images";
 import { checkQuestion, deleteSection, freeId, moveQuestion, moveSection, removeQuestion, renameSection, searchIds, upsertQuestion } from "../lib/packEdit";
 import type { Attempt } from "../lib/types";
+import { setupPrompt } from "../lib/setupPrompt";
+import { mkdtempSync, mkdirSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { judge, commandFor } from "../lib/runner";
+import { sameOutput } from "../lib/judge";
 import { segments, texProblems, parseFence, mergeTickLines } from "../lib/tex";
 import { highlightCode, languageOf } from "../lib/highlight";
 import { linkPrompt, parseLinks, liveQuestionIds, readAnswer } from "../lib/links";
@@ -114,7 +120,7 @@ if (ov.plan?.milestones.length !== 1) err("exam days should become milestones wh
 // ---- imported packs ----
 const tp = parsePack(JSON.parse(packTemplateJson()));
 if (!tp.pack) err("pack template does not parse: " + tp.errors.join("; "));
-else if (tp.pack.questions.length !== 4 || tp.pack.mockTests.length !== 1) err("pack template shape changed");
+else if (tp.pack.questions.length !== 5 || tp.pack.mockTests.length !== 1) err("pack template shape changed");
 if (!packPrompt().includes('"mcq"')) err("pack prompt missing schema");
 // ---- export of the current pack / plan can be uploaded again ----
 const rt = parsePack(JSON.parse(JSON.stringify(packToJson(pack))));
@@ -333,6 +339,70 @@ if (ok.pack?.questions.map((q) => q.id).join() !== "a-1,a-2") err("auto ids shou
       if (!m.title.includes("Topic A")) err("topic test title");
     }
     console.log("topic test: ok");
+  {
+    const cq = (extra: Record<string, unknown>, ...rest: Record<string, unknown>[]) => ({ subject: "s", topic: "a", type: "code", marks: 2, text: "Print the sum.", explanation: "e", language: "python", tests: [{ input: "1 2", output: "3" }], ...extra, ...Object.assign({}, ...rest) });
+    const base = { name: "C", subjects: { s: "S" }, topics: [{ id: "a", name: "A", subject: "s", status: "shaky" }] };
+    const ok = parsePack({ ...base, questions: [cq({ language: "py", tests: [{ input: "1 2", output: 3 }, { input: "5 5", output: "10", hidden: true }], solution: "print(1)" })] });
+    if (!ok.pack || ok.pack.questions[0].code?.language !== "python" || ok.pack.questions[0].code?.tests[0].output !== "3") err("code question must parse (alias py, numeric output): " + ok.errors.join("; "));
+    const again = parsePack(packToJson(ok.pack!));
+    if (!again.pack || JSON.stringify(again.pack.questions[0].code) !== JSON.stringify(ok.pack!.questions[0].code)) err("code question must survive export and import");
+    for (const [name, bad] of [["no tests", { tests: [] }], ["bad language", { language: "cobol" }], ["only hidden", { tests: [{ input: "", output: "1", hidden: true }] }], ["test without output", { tests: [{ input: "1" }] }]] as const)
+      if (parsePack({ ...base, questions: [cq({}, bad)] }).pack) err(`code question with ${name} must be refused`);
+    if (parsePack({ ...base, questions: [], mockTests: [{ id: "m", name: "M", minutes: 30, sections: [{ name: "S", questions: [cq({})] }] }] }).pack) err("code questions must be refused inside mock tests");
+    // programming questions never leak into generated tests
+    const mixed = parsePack({ ...base, questions: [cq({ marks: 1 }), { subject: "s", topic: "a", type: "mcq", marks: 1, text: "q", options: ["a", "b"], answer: 0, explanation: "e" }] });
+    if (buildMock(mixed.pack!, { kind: "topic", topic: "a", seed: 3, seenIds: new Set() }).questions.some((q) => q.type === "code")) err("programming questions must not enter generated tests");
+    if (!sameOutput("1 2\r\n3  \n\n", "1 2\n3") || sameOutput("1", "2") || sameOutput("a b", "a  b")) err("output comparison rules");
+    // real runs on this computer, for every language that is installed here
+    const progs: Record<string, string> = {
+      python: "print(sum(map(int, input().split())))",
+      javascript: "const [a,b]=require('fs').readFileSync(0,'utf8').trim().split(' ').map(Number); console.log(a+b)",
+      c: '#include <stdio.h>\nint main(){int a,b;scanf("%d %d",&a,&b);printf("%d\\n",a+b);return 0;}',
+      cpp: "#include <iostream>\nint main(){int a,b;std::cin>>a>>b;std::cout<<a+b<<std::endl;}",
+      java: "import java.util.*;\npublic class Main{public static void main(String[] x){Scanner s=new Scanner(System.in);System.out.println(s.nextInt()+s.nextInt());}}",
+    };
+    for (const [lang, code] of Object.entries(progs)) {
+      if (!commandFor(lang as never)) { console.log(`  (skipped ${lang}: not installed here)`); continue; }
+      const r = await judge(lang as never, code, ["1 2", "40 2"], 5000);
+      if (r.compileError || r.results.map((x) => x.stdout.trim()).join() !== "3,42") err(`${lang} run failed: ` + JSON.stringify(r).slice(0, 300));
+    }
+    if (commandFor("python")) {
+      const loop = await judge("python", "while True: pass", [""], 700);
+      if (loop.results[0]?.status !== "timeout") err("an endless loop must time out: " + JSON.stringify(loop));
+      const crash = await judge("python", "print(1/0)", [""], 3000);
+      if (crash.results[0]?.status !== "runtime_error" || !crash.results[0].stderr.includes("ZeroDivision")) err("a crash must report the error");
+      const bad = await judge("c", "int main( {", [""], 3000);
+      if (commandFor("c") && !bad.compileError) err("a compile error must be reported");
+    }
+    {
+      // the two examples in the pack prompt must parse, and their solutions must pass on the data their "setup" describes
+      const pr = packPrompt();
+      const ex = [...pr.matchAll(/^\{ "subject": "cs".*$/gm)].map((m) => JSON.parse(m[0]));
+      if (ex.length !== 2) err("the prompt should hold two setup examples, found " + ex.length);
+      const parsed = parsePack({ name: "E", subjects: { cs: "CS" }, topics: [{ id: "files", name: "F", subject: "cs", status: "shaky" }, { id: "sql", name: "S", subject: "cs", status: "shaky" }], questions: ex });
+      if (!parsed.pack) err("prompt examples must parse: " + parsed.errors.join("; "));
+      else if (commandFor("python")) {
+        const root = mkdtempSync(join(tmpdir(), "orbit-ex-"));
+        mkdirSync(join(root, "data/sub/deep"), { recursive: true });
+        writeFileSync(join(root, "data/a.txt"), "hello"); writeFileSync(join(root, "data/notes.md"), "abc");
+        writeFileSync(join(root, "data/sub/b.txt"), "0123456789"); writeFileSync(join(root, "data/sub/deep/c.txt"), "x");
+        const fsq = parsed.pack.questions[0].code!;
+        const a = await judge("python", fsq.solution!, [""], 5000, root);
+        if (!sameOutput(fsq.tests[0].output, a.results[0]?.stdout ?? "")) err("files example: " + JSON.stringify(a));
+        const sqlRoot = mkdtempSync(join(tmpdir(), "orbit-ex-"));
+        const mk = await judge("python", "import sqlite3\nc = sqlite3.connect('shop.db')\nc.execute('CREATE TABLE orders(id INTEGER PRIMARY KEY, customer TEXT, amount INTEGER)')\nc.executemany('INSERT INTO orders VALUES (?,?,?)', [(1,'asha',100),(2,'ravi',250),(3,'asha',50)])\nc.commit()", [""], 5000, sqlRoot);
+        if (mk.results[0]?.status !== "ok") err("could not build the sql example data: " + JSON.stringify(mk));
+        const sq = parsed.pack.questions[1].code!;
+        const b = await judge("python", sq.solution!, [""], 5000, sqlRoot);
+        if (!sameOutput(sq.tests[0].output, b.results[0]?.stdout ?? "")) err("sql example: " + JSON.stringify(b));
+        const sp = setupPrompt(parsed.pack.questions[0]);
+        if (!sp.includes("EXACTLY") || !sp.includes("EXPECTED OUTPUT") || !sp.includes("a.txt") || !sp.includes("FULL path")) err("setup prompt is missing parts");
+        const lost = await judge("python", "print(open('data/a.txt').read())", [""], 3000);
+        if (lost.results[0]?.status === "ok") err("without a practice folder the data must not exist");
+      }
+    }
+    console.log("code questions: ok");
+  }
   }
 }
 console.log(bad ? `${bad} PROBLEMS` : "ALL OK");

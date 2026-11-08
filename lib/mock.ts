@@ -25,7 +25,7 @@ export function buildMock(pack: PackData, opts: MockOptions): BuiltMock {
   // unseen questions first, then fresh generated ones (GATE DA pack only), then ones you have already seen
   const pool = (subject: string, marks: 1 | 2, onlyTopics?: string[]): Question[] => {
     const inSubject = (t: string) => topicSubject.get(t) === subject && (!onlyTopics || onlyTopics.includes(t));
-    const stat = pack.questions.filter((q) => q.marks === marks && inSubject(q.topic));
+    const stat = pack.questions.filter((q) => q.type !== "code" && q.marks === marks && inSubject(q.topic)); // programming questions cannot run in the exam screen
     const gens = pack.useBuiltinGenerators ? GENERATORS.filter((g) => g.marks === marks && inSubject(g.topic)) : [];
     const fresh: Question[] = [];
     for (let i = 0; i < 40 && gens.length; i++) fresh.push(generate(gens[i % gens.length], Math.floor(r() * 1e9)));
