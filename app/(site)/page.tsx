@@ -143,12 +143,13 @@ export default function Dashboard() {
 
   return (
     <>
-      <div className="greet">
-        <h2 style={{ margin: 0 }}>{hello}{settings.name.trim() && <>, <span>{settings.name}</span></>}</h2>
-        <span className="date">{fmtLong(today)}</span>
+      <div className="top-row">
+        <div className="greet">
+          <h2 style={{ margin: 0 }}>{hello}{settings.name.trim() && <>, <span>{settings.name}</span></>}</h2>
+          <span className="date">{fmtLong(today)}</span>
+        </div>
+        <QuoteCard />
       </div>
-
-      <QuoteCard />
 
       {(!custom || !hasPack) && (
         <section className="panel welcome">
