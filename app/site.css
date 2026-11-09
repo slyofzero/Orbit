@@ -1054,3 +1054,8 @@ table.bd tfoot td { font-weight: 800; background: var(--sheet-2); border-top: 1.
   .flag, .flag.lv0, .flag.lv1 { top: 36px; }
   .flag b { font-size: 0.98rem; } .flag span { font-size: 0.78rem; }
 }
+
+/* calendar milestone label: one line, padded, cut with "…" when too long (full name on hover) */
+@media (min-width: 561px) {
+  .cal-cell .ms-tag { left: 6px; right: 6px; bottom: 6px; width: auto; box-sizing: border-box; padding: 3px 10px; line-height: 1.3; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}

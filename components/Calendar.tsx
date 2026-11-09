@@ -42,7 +42,7 @@ export default function Calendar({
           return (
             <button key={date} className={cls} onClick={() => onSelect(date)} aria-label={`${date}${ms ? `, ${ms.name}` : ""}${day ? `, ${day.title}` : ""}`} aria-pressed={date === selected}>
               <span className="n">{Number(date.slice(8))}</span>
-              {ms && <span className="ms-tag">{ms.short}</span>}
+              {ms && <span className="ms-tag" title={ms.name}>{ms.short}</span>}
               {day && isComplete(date) && day.kind !== "exam" && <span className="tick-done" aria-hidden="true">✓</span>}
               {day && <span className={`bar-kind k-${day.kind}`} />}
             </button>
