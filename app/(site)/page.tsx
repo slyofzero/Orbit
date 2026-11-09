@@ -6,6 +6,7 @@ import Runway from "@/components/Runway";
 import Milestones from "@/components/Milestones";
 import QuoteCard from "@/components/QuoteCard";
 import { burst } from "@/lib/fx";
+import { liveQuestionIds, Links } from "@/lib/links";
 import { KIND_LABEL, Milestone, WEEKDAY_NAMES, addDays, daysBetween, fmtDate, fmtLong, todayIST, weekday } from "@/lib/plan";
 import { DEFAULT_SETTINGS, KEYS, clearAll, exportAll, importAll, inspectBackup, useMilestones, usePack, usePersisted, usePlan } from "@/lib/store";
 import { Attempt, PracticeRec, Settings } from "@/lib/types";
@@ -27,6 +28,7 @@ export default function Dashboard() {
   const { plan, custom, ready: planReady } = usePlan();
   const { pack, custom: hasPack, ready: packReady } = usePack();
   const TOPICS = pack.topics;
+  const [links] = usePersisted<Links>(KEYS.links, {});
   const DAYS = plan.days;
   const PLAN_START = DAYS[0]?.date ?? today;
   const [toast, setToast] = useState<{ text: string; undo: Milestone[] } | null>(null);
@@ -89,6 +91,9 @@ export default function Dashboard() {
   const day = DAYS.find((d) => d.date === selected);
   const nextPlanned = DAYS.find((d) => d.date > selected);
   const upcoming = DAYS.filter((d) => d.date > today && d.date !== selected).slice(0, 4);
+  const link = day ? links[day.date] : undefined;
+  const lq = liveQuestionIds(link, pack).ids;
+  const lmock = link?.mock ? pack.mockTests.find((m) => m.id === link.mock) : undefined;
   const targetDone = day ? Math.min(answeredOn(selected), day.targetQs) : 0;
 
   // activity: ticked tasks + answered questions per day
@@ -189,6 +194,18 @@ export default function Dashboard() {
                   </label>
                 );
               })}
+              {(lq.length > 0 || lmock) && (
+                <div className="pl-main">
+                  <b className="pl-main-h">{lq.length ? "Main event: your questions for this day" : "Main event: the mock for this day"}</b>
+                  <div className="small">
+                    {lq.length > 0 && `${lq.filter((id) => practice[id]).length} of ${lq.length} answered, ${lq.filter((id) => practice[id]?.correct).length} correct`}
+                    {lmock && `${lq.length ? " · " : ""}Mock: ${lmock.name}`}
+                  </div>
+                  {link?.note && <div className="small pl-main-note">{link.note}</div>}
+                  {lq.length > 0 && <div className="bar"><div style={{ width: `${(lq.filter((id) => practice[id]).length / lq.length) * 100}%` }} /></div>}
+                  <div className="row" style={{ marginTop: 8 }}><Link className="btn pl-main-go" href={`/day/${day.date}`}>{lq.length ? "Practise these questions" : "Open this day"}</Link></div>
+                </div>
+              )}
               {day.targetQs > 0 && (
                 <div className="foot">
                   <div className="small muted">Practice target: {targetDone} of {day.targetQs} questions</div>
