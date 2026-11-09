@@ -28,6 +28,7 @@ import { judge, commandFor } from "../lib/runner";
 import { sameOutput } from "../lib/judge";
 import { segments, texProblems, parseFence, mergeTickLines } from "../lib/tex";
 import { highlightCode, languageOf } from "../lib/highlight";
+import { editPrompt, pictureList } from "../lib/editPrompt";
 import { checkImportedLinks, bankFile, filesPrompt, isTooLong, planFile, PROMPT_LIMIT, linkPrompt, parseLinks, liveQuestionIds, readAnswer } from "../lib/links";
 
 let bad = 0;
@@ -713,6 +714,26 @@ console.log(bad ? `${bad} PROBLEMS` : "ALL OK");
       if (planFile(pd).description !== "Final exam prep. Weak in DBMS." || !filesPrompt(false).includes('"description"')) err("the files route should carry the description");
       if (!dayHelpPrompt(plan2.days[0], sp, undefined, "P", [], "Final exam prep. Weak in DBMS.").includes("ABOUT MY PLAN (in my own words): Final exam prep. Weak in DBMS.")) err("the day prompt should carry the description");
       if (!aiPrompt("2026-11-02").includes('"description"') || !templateJson("2026-11-02").includes('"description"')) err("the plan-writing prompt and template should mention description");
+    }
+    { // question edit prompt
+      const mcq = editPrompt({ type: "mcq", text: "If x is 3 then x^2 = ?", options: ["6", "9"], picked: [1], explanation: "3 squared" });
+      for (const must of ["OPTION A\n6", "OPTION B\n9", "MARKED AS RIGHT: B", "Send exactly 4 code blocks", "1. QUESTION:", "2. OPTION A:", "3. OPTION B:", "4. EXPLANATION:", "OCR", "write each LaTeX backslash ONCE", "FOUR backticks", "MCQ: exactly ONE option"]) if (!mcq.includes(must)) err("edit prompt should contain: " + must);
+      const msq = editPrompt({ type: "msq", text: "t", options: ["a", "b", "c"], picked: [0, 2], explanation: "e" });
+      if (!msq.includes("MARKED AS RIGHT: A, C") || !msq.includes("Send exactly 5 code blocks") || !msq.includes("4. OPTION C:")) err("msq edit prompt: one box per option");
+      const nat = editPrompt({ type: "nat", text: "t", options: ["a", "b"], explanation: "", nat: { value: "4.5", tol: "0.01" } });
+      if (nat.includes("OPTION A") || !nat.includes("Send exactly 2 code blocks") || !nat.includes("MARKED ANSWER: 4.5 (allowed error ±0.01)") || !nat.includes("EXPLANATION\n(empty)")) err("nat edit prompt");
+      const str = editPrompt({ type: "str", text: "t", options: [], explanation: "e", str: { answers: "I,D,B", match: "list", caseSensitive: false } });
+      if (!str.includes("COMPARED AS: list") || !str.includes("Send exactly 2 code blocks")) err("str edit prompt");
+      const code = editPrompt({ type: "code", text: "t", options: [], explanation: "e", code: { language: "python", starter: "", solution: "print(1)", setup: "", tests: "[]" } });
+      if (!code.includes("Send exactly 5 code blocks") || !code.includes("STARTER CODE") || !code.includes("Do NOT change the tests")) err("code edit prompt");
+    }
+    { // pictures in the edit prompt
+      const pq = { type: "mcq" as const, text: "See ![fig](img:abc123) and ![web](https://x.org/a.png)", options: ["![a](img:abc123)", "![b](img:def456)"], picked: [0], explanation: "" };
+      const pl = pictureList(pq);
+      if (pl.length !== 3 || pl[0].ref !== "img:abc123" || pl[1].stored || pl[2].where !== "OPTION B") err("picture list should be in reading order, once each: " + JSON.stringify(pl));
+      const pp = editPrompt(pq);
+      if (!pp.includes("PICTURES") || !pp.includes("Picture 1: in QUESTION") || !pp.includes("Picture 2: in OPTION B") || !pp.includes("I am attaching the 2 stored pictures")) err("prompt should list the pictures");
+      if (editPrompt({ ...pq, text: "no picture", options: ["a", "b"] }).includes("PICTURES")) err("no pictures, no PICTURES section");
     }
     { // LaTeX in plans
       const tx = parsePlan({ name: "P", milestones: [{ name: "Exam", date: "2026-11-20", note: "see \u000crac{1}{2}" }], days: [{ date: "2026-11-02", title: "Project with $P = A(A^T A)^{-1}A^T$", tasks: ["Solve \u000crac{a}{b}", "Use \times here"] }] });

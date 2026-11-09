@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Rich from "@/components/Rich";
 import { loadImages, saveImages } from "@/lib/imageStore";
 import { DATA_IMG, MAX_IMAGE, hashData, storedImageNames } from "@/lib/images";
@@ -7,6 +7,8 @@ import { Loc, PackData, allQuestions } from "@/lib/packs";
 import { Target, checkQuestion, freeId, upsertQuestion } from "@/lib/packEdit";
 import { DIFFICULTIES, QType } from "@/lib/types";
 import { difficultyOf } from "@/lib/questionFilter";
+import { editPrompt, pictureList } from "@/lib/editPrompt";
+import { copyPicture, downloadPicture } from "@/lib/imageClip";
 import { CODE_LANGUAGES, LANGUAGE_LABEL } from "@/lib/codeLanguages";
 
 type Field = "text" | "explanation" | `opt${number}`;
@@ -44,6 +46,12 @@ export default function QuestionEditor({ profile, pack, loc, preset, onClose, on
   const id = q?.id ?? freeId(pack, where.startsWith("mock:") ? where.slice(5) : topic);
   const [errors, setErrors] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState("");
+  useEffect(() => {
+    const k = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", k);
+    return () => document.removeEventListener("keydown", k);
+  }, [onClose]);
   const last = useRef<Field>("text");
   const file = useRef<HTMLInputElement>(null);
 
@@ -69,6 +77,34 @@ export default function QuestionEditor({ profile, pack, loc, preset, onClose, on
     else if (field.startsWith("opt")) { const i = Number(field.slice(3)); setOptions((o) => o.map((x, k) => (k === i ? x + tag.trim() : x))); }
     else setText((v) => v + tag);
     setErrors([]);
+  };
+
+  const promptInput = { type, text, options, picked, explanation, nat: { value: natValue, tol: natTol }, str: { answers: strAnswer, match: strMatch, caseSensitive: strCase }, code: { language, starter, solution, setup, tests: testsJson } };
+  // the stored pictures this question uses, loaded so they can be copied next to the prompt
+  const pics = pictureList(promptInput).filter((p) => p.stored);
+  const picKey = pics.map((p) => p.ref).join("|");
+  const [picData, setPicData] = useState<Record<string, string>>({});
+  useEffect(() => {
+    const names = picKey ? picKey.split("|").map((r) => r.slice(4)) : [];
+    if (!names.length) { setPicData({}); return; }
+    let live = true;
+    loadImages(names, profile).then((d) => { if (live) setPicData(d); }).catch(() => {});
+    return () => { live = false; };
+  }, [picKey, profile]);
+  const picAct = async (i: number, how: "copy" | "save") => {
+    const data = picData[pics[i].ref.slice(4)];
+    if (!data) { setCopied("That picture could not be found."); setTimeout(() => setCopied(""), 4000); return; }
+    try {
+      if (how === "copy") { await copyPicture(data); setCopied(`Picture ${i + 1} copied. Paste it into the same AI chat.`); }
+      else { await downloadPicture(data, `${id}-picture-${i + 1}.png`); setCopied(`Picture ${i + 1} saved.`); }
+    } catch { setCopied("The browser blocked that. Use Save instead."); }
+    setTimeout(() => setCopied(""), 4000);
+  };
+
+  const copyPrompt = async () => {
+    try { await navigator.clipboard.writeText(editPrompt(promptInput)); setCopied(pics.length ? `Prompt copied. Now copy the ${pics.length === 1 ? "picture" : "pictures"} below and paste ${pics.length === 1 ? "it" : "them"} into the same AI chat.` : "Prompt copied. Paste it into any AI."); }
+    catch { setCopied("Copy was blocked by the browser."); }
+    setTimeout(() => setCopied(""), 4000);
   };
 
   const submit = async () => {
@@ -106,7 +142,22 @@ export default function QuestionEditor({ profile, pack, loc, preset, onClose, on
   return (
     <div className="ad-veil" role="dialog" aria-modal="true" aria-label={loc ? `Edit ${loc.q.id}` : "Add question"}>
       <div className="ad-modal">
-        <h2 style={{ marginTop: 0 }}>{loc ? <>Edit <code>{loc.q.id}</code></> : "Add a question"}</h2>
+        <div className="ad-head">
+          <h2 style={{ margin: 0 }}>{loc ? <>Edit <code>{loc.q.id}</code></> : "Add a question"}</h2>
+          <button className="btn invert" style={{ marginLeft: "auto" }} onClick={copyPrompt} title="Copies the question and exact rules for fixing how it is written, to paste into any AI">Copy prompt</button>
+        </div>
+        {pics.length > 0 && (
+          <div className="ad-pics">
+            <span className="small">This question has {pics.length} picture{pics.length === 1 ? "" : "s"}. The prompt can't carry {pics.length === 1 ? "it" : "them"}, so after Copy prompt, paste {pics.length === 1 ? "it" : "each one"} into the same AI chat:</span>
+            {pics.map((p, i) => (
+              <span key={p.ref} className="row" style={{ gap: 6 }}>
+                <button className="btn soft" onClick={() => picAct(i, "copy")}>Copy picture {i + 1}</button>
+                <button className="btn soft" onClick={() => picAct(i, "save")} aria-label={`Save picture ${i + 1}`}>Save</button>
+                <span className="small muted">in {p.where.toLowerCase()}</span>
+              </span>
+            ))}
+          </div>
+        )}
         <div className="ad-form">
           <label>Id <span className="small muted">({loc ? "fixed" : "assigned by the system"})</span><input className="ad-in" value={id} disabled spellCheck={false} />
             <span className="small muted">{loc ? "Saving changes overrides this question. Its id stays the same." : "Every question gets its own unique id automatically."}</span></label>
@@ -191,6 +242,7 @@ export default function QuestionEditor({ profile, pack, loc, preset, onClose, on
             <input ref={file} type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" hidden onChange={async (e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) await insertPicture(f); }} />
           </div>
         </div>
+        {copied && <div className="ad-toast" role="status">{copied}</div>}
         {errors.length > 0 && <div className="pi-err" role="alert"><b>🔴 Fix this first:</b><ul>{errors.map((e, i) => <li key={i}>{e}</li>)}</ul></div>}
         <div className="row" style={{ marginTop: 12 }}>
           <button className="btn primary" disabled={busy} onClick={submit}>{loc ? "Save changes" : "Add question"}</button>

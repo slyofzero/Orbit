@@ -1083,3 +1083,19 @@ table.bd tfoot td { font-weight: 800; background: var(--sheet-2); border-top: 1.
 .pl-nav .btn { padding: 6px 16px; }
 
 .pi-links { margin: 8px 0 4px; padding: 8px 12px; border: 1.5px dashed var(--line); border-radius: 12px; }
+
+.qid { font: 600 0.78rem ui-monospace, Consolas, monospace; color: var(--ink-2); background: var(--sheet-2); border: 1px solid var(--line); border-radius: 6px; padding: 1px 7px; user-select: all; }
+
+.ad-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; width: 100%; }
+.ad-head h2 { margin-right: auto; }
+
+/* inverse button: white in dark mode, black in light mode */
+.btn.invert { background: #000; color: #fff; border-color: #000; }
+.btn.invert:hover { background: #222; color: #fff; }
+html[data-theme="dark"] .btn.invert { background: #fff; color: #000; border-color: #fff; }
+html[data-theme="dark"] .btn.invert:hover { background: #e6e6e6; color: #000; }
+
+.ad-pics { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 0 0 12px; padding: 8px 12px; border: 1.5px dashed var(--line); border-radius: 12px; }
+
+.ad-head h2 { white-space: nowrap; } .ad-head .btn { flex: none; white-space: nowrap; }
+.ad-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 400; max-width: min(520px, 92vw); padding: 10px 16px; border-radius: 12px; background: var(--ink); color: var(--sheet); font-weight: 700; font-size: 0.9rem; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35); }

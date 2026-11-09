@@ -88,6 +88,7 @@ export default function Results() {
             <b>Q{r.i + 1}.</b>
             <span className="pill">{r.q.type.toUpperCase()}</span>
             <span className="pill">{r.q.marks} mark{r.q.marks > 1 ? "s" : ""}</span>
+            <code className="qid" title="Question ID">{r.q.id}</code>
             <span className={`pill ${r.correct ? "know" : r.attempted ? "noidea" : ""}`}>
               {r.correct ? `+${r.q.marks}` : r.attempted ? (r.marks < 0 ? r.marks.toFixed(2) : "0") : "skipped"}
             </span>

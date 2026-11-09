@@ -243,7 +243,7 @@ export default function Exam({ id }: { id: string }) {
           <div className="ex-qhead">
             <span className="qno">Question No. {cur + 1}</span>
             <span className="qinfo">
-              Question Type: <b>{TYPE_NAME[q.type]}</b> &nbsp;|&nbsp; Marks for correct answer: <b>{q.marks}</b> &nbsp;|&nbsp; Negative Marks: <b>{negLabel(q)}</b>
+              Question Type: <b>{TYPE_NAME[q.type]}</b> &nbsp;|&nbsp; Marks for correct answer: <b>{q.marks}</b> &nbsp;|&nbsp; Negative Marks: <b>{negLabel(q)}</b> &nbsp;|&nbsp; ID: <b>{q.id}</b>
             </span>
           </div>
           <div className="ex-qarea">
