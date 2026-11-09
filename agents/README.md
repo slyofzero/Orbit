@@ -14,5 +14,7 @@ Start with `../AGENTS.md`, then read the file that matches your task.
 10. `10-ui-and-styling.md`: CSS structure, themes, components, LaTeX rendering, accessibility habits
 11. `11-testing-and-workflow.md`: tests, browser checks, shipping to the owner's machine
 12. `12-owner-and-history.md`: owner preferences and the log of decisions
+13. `13-cosmic-events.md`: how the sky events work, how to add, edit and retime them
+14. `14-study-buddies.md`: the mascots, their lines and backdrops, how to add or edit them
 
 Keep these files current: when you change behaviour, update the matching file in the same change.

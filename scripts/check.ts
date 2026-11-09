@@ -28,6 +28,9 @@ import { judge, commandFor } from "../lib/runner";
 import { sameOutput } from "../lib/judge";
 import { segments, texProblems, parseFence, mergeTickLines } from "../lib/tex";
 import { highlightCode, languageOf } from "../lib/highlight";
+import { BUDDIES } from "../components/mascots";
+import { OUTCOME_LINES } from "../components/outcomes";
+import { ADMIN_LINES } from "../components/adminLines";
 import { editPrompt, pictureList } from "../lib/editPrompt";
 import { dayFinished, linkedDone, checkImportedLinks, bankFile, filesPrompt, isTooLong, planFile, PROMPT_LIMIT, linkPrompt, parseLinks, liveQuestionIds, readAnswer } from "../lib/links";
 
@@ -728,6 +731,19 @@ console.log(bad ? `${bad} PROBLEMS` : "ALL OK");
       if (planFile(pd).description !== "Final exam prep. Weak in DBMS." || !filesPrompt(false).includes('"description"')) err("the files route should carry the description");
       if (!dayHelpPrompt(plan2.days[0], sp, undefined, "P", [], "Final exam prep. Weak in DBMS.").includes("ABOUT MY PLAN (in my own words): Final exam prep. Weak in DBMS.")) err("the day prompt should carry the description");
       if (!aiPrompt("2026-11-02").includes('"description"') || !templateJson("2026-11-02").includes('"description"')) err("the plan-writing prompt and template should mention description");
+    }
+    { // study buddies: every buddy must have every line the app can ask for (see agents/14-study-buddies.md)
+      const REACTIONS = ["supernova", "nebula", "shooting", "comet", "cluster", "aurora", "saturn", "asteroid", "impact", "rings"];
+      const OUTCOMES = ["right", "wrong", "skip", "giveup", "quit"];
+      if (new Set(BUDDIES.map((b) => b.id)).size !== BUDDIES.length) err("buddy ids must be unique");
+      for (const b of BUDDIES) {
+        if (!b.name || !b.sleep || b.chat.length < 6 || typeof b.art !== "function") err(`buddy ${b.id}: needs a name, a sleep line, at least 6 chat lines and art`);
+        for (const r of REACTIONS) if (!b.react[r as keyof typeof b.react]) err(`buddy ${b.id}: missing react line "${r}"`);
+        for (const o of OUTCOMES) if (!(OUTCOME_LINES[b.id]?.[o as "right"]?.length)) err(`buddy ${b.id}: missing outcome lines "${o}" in components/outcomes.ts`);
+        const al = ADMIN_LINES[b.id];
+        if (!al || !al.hello || !al.sleep || !al.react || al.chat.length < 4) err(`buddy ${b.id}: missing or thin ADMIN_LINES entry in components/adminLines.ts`);
+        for (const l of [...b.chat, ...Object.values(b.react), b.sleep]) if (/\bGATE\b/.test(l)) err(`buddy ${b.id}: no exam names in buddy lines: ${l}`);
+      }
     }
     { // question edit prompt
       const mcq = editPrompt({ type: "mcq", text: "If x is 3 then x^2 = ?", options: ["6", "9"], picked: [1], explanation: "3 squared" });

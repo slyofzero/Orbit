@@ -6,7 +6,7 @@ const KINDS: Kind[] = ["supernova", "nebula", "shooting", "comet", "cluster", "a
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
 const calm = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-// Something happens in the sky behind the pages every minute or two. Konami code for the finale.
+// Something happens in the sky behind the pages every 15 to 25 minutes (random). Konami code for the finale.
 export default function Cosmos() {
   const layer = useRef<HTMLDivElement>(null);
 
@@ -173,9 +173,9 @@ export default function Cosmos() {
       window.dispatchEvent(new CustomEvent("gate-cosmos", { detail: kind }));
     };
 
-    // schedule: first one after ~25 s, then one every 70-160 s while the tab is visible
+    // schedule: first one after ~25 s, then one every 15-25 minutes (random) while the tab is visible
     let t: ReturnType<typeof setTimeout>;
-    const loop = (ms: number) => { t = setTimeout(() => { if (!document.hidden) run(); loop(rand(70_000, 160_000)); }, ms); };
+    const loop = (ms: number) => { t = setTimeout(() => { if (!document.hidden) run(); loop(rand(15 * 60_000, 25 * 60_000)); }, ms); };
     loop(25_000);
 
     const manual = (e: Event) => run((e as CustomEvent).detail as Kind | undefined);

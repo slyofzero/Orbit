@@ -37,4 +37,4 @@ Pick a profile, then panels: Questions (add/edit/delete, search by id within a p
 - `PlanImport.tsx` (Planner → Upload plan): see `06`.
 
 ## Study buddy and quotes
-`Companion.tsx` reacts to outcomes (`lib/outcome.ts` → `components/outcomes.ts`), shows quotes from `lib/quotes.ts`; mascots in `mascots.tsx`; admin has its own lines (`adminLines.ts`). Effects in `lib/fx.ts` respect reduced motion.
+`Companion.tsx` reacts to outcomes (`lib/outcome.ts` → `components/outcomes.ts`), shows quotes from `lib/quotes.ts`; mascots in `mascots.tsx`; admin has its own lines (`adminLines.ts`). Effects in `lib/fx.ts` respect reduced motion. The sky events (`Cosmos.tsx`, one every 15–25 minutes) and the buddies are documented in `13-cosmic-events.md` and `14-study-buddies.md`.

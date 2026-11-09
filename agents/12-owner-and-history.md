@@ -31,6 +31,8 @@ Ishan, a student preparing for an exam in February 2027 (originally GATE Data Sc
 
 - **Finished-day focus**: a day whose tasks are ticked and linked questions answered dims its Main event box and moves the highlight/agenda to tomorrow (planner and Today).
 
+- **Cosmic events** now fire every 15 to 25 minutes (random). Cosmic events and buddies each have a guide (`13`, `14`). A test checks every buddy has all its lines; a leftover exam name in a buddy line was removed.
+
 ## Open ideas the owner has not decided on
 - A one-paste "prompt + picture" clipboard button (works only in some AI chat UIs).
 - A "Copy picture as base64" button (only useful for API/code tools).

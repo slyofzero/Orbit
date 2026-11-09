@@ -45,3 +45,5 @@ The owner prefers: short, plain final replies; paste-ready code; the **problem e
 | `agents/10-ui-and-styling.md` | You touch CSS, modals, buttons, themes, LaTeX rendering |
 | `agents/11-testing-and-workflow.md` | You want to test, verify in a browser, or ship |
 | `agents/12-owner-and-history.md` | You want the owner's preferences and the decisions made so far |
+| `agents/13-cosmic-events.md` | You add, edit or retime the sky events (supernova, comet…) |
+| `agents/14-study-buddies.md` | You add or edit a mascot, its lines, or its backdrop scene |

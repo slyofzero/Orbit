@@ -20,3 +20,4 @@ Reduced-motion is respected (`prefers-reduced-motion`, `lib/fx.ts`). Interactive
 
 ## Layout notes
 Sidebar rail (`--rail: 96px`), `.shell` + `.page`. Dashboard top row (`.top-row`: greeting + quote) and compact runway are desktop-only rules (`@media (min-width:761px)`); calendar milestone labels truncate with ellipsis (`@media (min-width:561px)`). Planner cards use `.pl-focus` / `.pl-wrap`; the Prev/Today/Next row is `.pl-nav` (centred below the cards).
+- The Today agenda card (`.d-agenda`) is deliberately locked to the calendar's height and **scrolls inside itself** (`height: 0; min-height: 100%; overflow-y: auto`, desktop only), so browsing months or days never moves the page. Content below the fold (for example "Coming up") is reached by scrolling the card. This is intended; do not "fix" it.
