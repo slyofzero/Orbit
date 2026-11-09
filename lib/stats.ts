@@ -3,26 +3,28 @@
 import { Attempt, LogEntry, PracticeRec, QType, Question } from "./types";
 import { PackData } from "./packs";
 import { isAttempted, isCorrect, marksFor } from "./scoring";
+import { difficultyOf } from "./questionFilter";
 
 export type Out = "right" | "wrong" | "skip";
 export interface Ev {
   q: string; topic: string; subject: string; tags: string[]; type: QType; marks: 1 | 2;
-  out: Out; at: number; ms?: number; src: "practice" | "mock"; got?: number; mock?: string;
+  out: Out; at: number; ms?: number; src: "practice" | "mock"; got?: number; mock?: string; pick?: number | number[];
 }
 
 const day = (t: number) => new Date(t).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
 
-/** Every encounter with a question: practice answers and skips, plus every question of every finished (not failed) mock. */
+/** Every encounter with a question: practice answers and skips (views that were not answered), plus every question of every finished (not failed) mock. */
 export function buildEvents(input: {
   log: LogEntry[]; practice: Record<string, PracticeRec>; attempts: Attempt[]; pack: PackData; find: (id: string) => Question | undefined;
+  views?: { q: string; at: number }[];
 }): Ev[] {
-  const { log, practice, attempts, pack, find } = input;
+  const { log, practice, attempts, pack, find, views = [] } = input;
   const subjectOf = (topic: string, q?: Question) => q?.subject ?? pack.topics.find((t) => t.id === topic)?.subject ?? "other";
   const evs: Ev[] = [];
   const logged = new Set<string>();
   for (const e of log) {
     logged.add(e.q);
-    evs.push({ q: e.q, topic: e.topic, subject: e.subject, tags: e.tags ?? [], type: e.type, marks: e.marks, out: e.out, at: e.at, ms: e.ms, src: "practice" });
+    evs.push({ q: e.q, topic: e.topic, subject: e.subject, tags: e.tags ?? [], type: e.type, marks: e.marks, out: e.out, at: e.at, ms: e.ms, src: "practice", pick: e.pick });
   }
   // answers saved before the log existed: one encounter each, from the latest result
   for (const [id, rec] of Object.entries(practice)) {
@@ -30,12 +32,24 @@ export function buildEvents(input: {
     const q = find(id);
     evs.push({ q: id, topic: rec.topic, subject: subjectOf(rec.topic, q), tags: q?.tags ?? [], type: q?.type ?? "mcq", marks: q?.marks ?? 1, out: rec.correct ? "right" : "wrong", at: rec.at, src: "practice" });
   }
+  // A practice skip is never clicked: it is a view that did not end in an answer, so skips = views - answers (per question).
+  const answers = new Map<string, number>(), seen = new Map<string, number[]>();
+  for (const e of log) if (e.out !== "skip") answers.set(e.q, (answers.get(e.q) ?? 0) + 1);
+  for (const id of Object.keys(practice)) if (!logged.has(id)) answers.set(id, (answers.get(id) ?? 0) + 1);
+  for (const v of views) (seen.get(v.q) ?? seen.set(v.q, []).get(v.q)!).push(v.at);
+  for (const [id, ats] of seen) {
+    const skips = ats.length - (answers.get(id) ?? 0);
+    const q = skips > 0 ? find(id) : undefined;
+    if (!q) continue;
+    const tags = [...(difficultyOf(q) ? [difficultyOf(q)!] : []), ...(q.tags ?? [])];
+    for (const at of [...ats].sort((a, b) => a - b).slice(-skips)) evs.push({ q: id, topic: q.topic, subject: subjectOf(q.topic, q), tags, type: q.type, marks: q.marks, out: "skip", at, src: "practice" });
+  }
   for (const a of attempts) {
     if (!a.submittedAt || a.failed) continue;
     a.questions.forEach((q, i) => {
       const ans = a.responses[i]?.ans;
       const out: Out = !isAttempted(ans) ? "skip" : isCorrect(q, ans) ? "right" : "wrong";
-      evs.push({ q: q.id, topic: q.topic, subject: subjectOf(q.topic, q), tags: q.tags ?? [], type: q.type, marks: q.marks, out, at: a.submittedAt!, src: "mock", got: marksFor(q, ans), mock: a.id });
+      evs.push({ q: q.id, topic: q.topic, subject: subjectOf(q.topic, q), tags: q.tags ?? [], type: q.type, marks: q.marks, out, at: a.submittedAt!, src: "mock", got: marksFor(q, ans), mock: a.id, pick: (q.type === "mcq" || q.type === "msq") && isAttempted(ans) ? (ans as number | number[]) : undefined });
     });
   }
   return evs.sort((a, b) => a.at - b.at);

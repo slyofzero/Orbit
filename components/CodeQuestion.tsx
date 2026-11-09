@@ -20,8 +20,8 @@ let cached: Promise<{ languages?: RuntimeStatus; error?: string }> | null = null
 const setup = () => (cached ??= runtimeStatus());
 
 // The body of a programming question: examples, a code editor, Run examples and Submit.
-export default function CodeQuestion({ q, onSubmit, onSkip, onReset }: {
-  q: Question; onSubmit: (right: boolean) => void; onSkip: () => void; onReset: () => void;
+export default function CodeQuestion({ q, onSubmit, onReset }: {
+  q: Question; onSubmit: (right: boolean) => void; onReset: () => void;
 }) {
   const spec = q.code!;
   const lang = spec.language as CodeLanguage;
@@ -30,7 +30,7 @@ export default function CodeQuestion({ q, onSubmit, onSkip, onReset }: {
   const [env, setEnv] = useState<{ languages?: RuntimeStatus; error?: string } | null>(null);
   const [busy, setBusy] = useState<"run" | "submit" | null>(null);
   const [res, setRes] = useState<{ what: "run" | "submit"; g: Graded } | null>(null);
-  const [state, setState] = useState<"open" | "done" | "skipped">("open");
+  const [state, setState] = useState<"open" | "done">("open");
   const first = useRef(true);
   const [copied, setCopied] = useState("");
   const dir = drafts[`dir:${q.id}`] ?? "";
@@ -123,7 +123,6 @@ export default function CodeQuestion({ q, onSubmit, onSkip, onReset }: {
             <button className="btn" onClick={() => go("run")} disabled={!!busy || !!blocked || code === null}>{busy === "run" ? "Running…" : "Run examples"}</button>
             <button className="btn primary" onClick={() => go("submit")} disabled={!!busy || !!blocked || code === null}>{busy === "submit" ? "Checking…" : "Submit"}</button>
             <button className="btn soft" onClick={() => setCode(spec.starter ?? SKELETON[lang])} disabled={!!busy}>Reset code</button>
-            <button className="btn soft" onClick={() => { setState("skipped"); onSkip(); }}>Skip</button>
           </>
         ) : <button className="btn" onClick={reset}>Try again</button>}
       </div>

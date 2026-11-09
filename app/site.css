@@ -1059,3 +1059,18 @@ table.bd tfoot td { font-weight: 800; background: var(--sheet-2); border-top: 1.
 @media (min-width: 561px) {
   .cal-cell .ms-tag { left: 6px; right: 6px; bottom: 6px; width: auto; box-sizing: border-box; padding: 3px 10px; line-height: 1.3; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 }
+
+/* statistics: progress tab */
+.sp-mbar { display: flex; height: 14px; border-radius: 99px; overflow: hidden; background: var(--sheet-2); min-width: 120px; }
+.sp-mbar i { display: block; height: 100%; }
+.sp-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 10px 0 4px; font-size: 0.88rem; }
+.sp-legend span { display: inline-flex; align-items: center; gap: 6px; cursor: help; } .sp-legend i { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+.sp-mbar .m-mastered, .sp-legend .m-mastered { background: #22c55e; } .sp-mbar .m-learning, .sp-legend .m-learning { background: #2dd4bf; }
+.sp-mbar .m-slipped, .sp-legend .m-slipped { background: #f59e0b; } .sp-mbar .m-struggling, .sp-legend .m-struggling { background: #ef4444; }
+.sp-mbar .m-unanswered, .sp-legend .m-unanswered { background: #94a3b8; } .sp-mbar .m-unseen, .sp-legend .m-unseen { background: color-mix(in srgb, var(--ink) 16%, transparent); }
+.sp-topics td { vertical-align: middle; }
+.sp-bars { display: flex; align-items: flex-end; gap: 4px; height: 150px; padding-top: 18px; }
+.sp-bars > div { flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 2px; position: relative; }
+.sp-bars i { display: block; width: 100%; max-width: 26px; border-radius: 5px 5px 2px 2px; background: var(--accent); min-height: 0; }
+.sp-bars small { font-size: 0.68rem; color: var(--gray); } .sp-bars em { font-style: normal; font-size: 0.66rem; color: var(--gray); height: 12px; white-space: nowrap; }
+.sp-bars.hours { gap: 2px; }

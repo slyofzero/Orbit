@@ -1,5 +1,6 @@
 import { activity, applyFilters, breakdown, buildEvents, insights, metrics, NO_FILTER, rank, tagStats } from "../lib/stats";
 import { statsSheets } from "../lib/statsSheets";
+import { adherenceSummary, linkProgress, linkTotals, byDifficulty, byHour, headline, masteryByTopic, netMarks, planAdherence, questionDetails, revisionQueue, traps, weekly } from "../lib/statsMore";
 import { buildXlsx } from "../lib/xlsx";
 import { writeFileSync } from "node:fs";
 import { BANK } from "../lib/gateBank";
@@ -605,6 +606,18 @@ console.log(bad ? `${bad} PROBLEMS` : "ALL OK");
   ];
   const evs = buildEvents({ log, practice: { "legacy-1": { correct: false, at: T0, topic: "motion" } }, attempts: [], pack: sp, find: () => undefined });
   if (evs.length !== 21) err("events should be 20 logged + 1 legacy, got " + evs.length);
+  { // skips are views minus answers: nothing is clicked
+    const qq = { id: "algebra-1", topic: "algebra", subject: "maths", type: "mcq", marks: 1, text: "t", options: ["a", "b"], answer: 0, explanation: "e" } as import("../lib/types").Question;
+    const v = (n: number) => Array.from({ length: n }, (_, i) => ({ q: "algebra-1", at: T0 + 10 * DAY + i * 1000 }));
+    const base = log.filter((e) => e.q === "algebra-1"); // 8 answers
+    const ev = (n: number) => buildEvents({ log: base, practice: {}, attempts: [], pack: sp, find: (id) => (id === "algebra-1" ? qq : undefined), views: v(n) }).filter((e) => e.out === "skip");
+    if (ev(8).length !== 0) err("8 views and 8 answers means no skips");
+    if (ev(11).length !== 3) err("11 views and 8 answers means 3 skips, got " + ev(11).length);
+    if (ev(3).length !== 0) err("fewer views than answers must never go negative");
+    if (ev(11)[0].at < T0 + 10 * DAY) err("derived skips should carry the latest view times");
+    const gone = buildEvents({ log: [], practice: {}, attempts: [], pack: sp, find: () => undefined, views: v(4) });
+    if (gone.length !== 0) err("views of a question that left the pack should be ignored");
+  }
   const now = T0 + 3 * DAY;
   const bd = breakdown(evs, sp, now);
   const alg = bd.topics.find((t) => t.id === "algebra")!, sci = bd.subjects.find((s) => s.id === "sci")!;
@@ -622,6 +635,51 @@ console.log(bad ? `${bad} PROBLEMS` : "ALL OK");
   if (applyFilters(evs, { ...NO_FILTER, days: 1 }, now).length !== 6) err("period filter wrong");
   if (!insights(evs, bd, now).some((t) => t.includes("Weakest topic"))) err("insights should name the weakest topic");
   if (metrics([], 3).strength !== 0.5) err("no data should rank neutral");
+  { // more statistics
+    const ids = sp.questions.slice(0, 5).map((q) => q.id);
+    const E = (q: string, out: "right" | "wrong", at: number, pick?: number, ms = 30_000) => ({ q, topic: "algebra", subject: "maths", tags: ["easy"], type: "mcq" as const, marks: 1 as const, out, at, ms, pick });
+    const t = Date.UTC(2026, 10, 1, 8, 0, 0), D = 86_400_000;
+    const lg = [
+      E(ids[0], "wrong", t, 1, 5_000), E(ids[0], "wrong", t + D, 1), E(ids[0], "right", t + 2 * D, 0), E(ids[0], "right", t + 3 * D, 0), E(ids[0], "right", t + 4 * D, 0),
+      E(ids[1], "right", t, 0), E(ids[1], "wrong", t + D, 2),
+      E(ids[2], "wrong", t, 3),
+    ];
+    const evs2 = buildEvents({ log: lg, practice: {}, attempts: [], pack: sp, find: () => undefined, views: [] });
+    const vw = [{ q: ids[3], at: t }];
+    const dt = (now: number) => Object.fromEntries(questionDetails(sp, evs2, vw, now).map((d) => [d.id, d]));
+    const d = dt(t + 4 * D + D / 2);
+    if (d[ids[0]].mastery !== "mastered" || d[ids[0]].streak !== 3 || d[ids[0]].firstTry !== "wrong" || d[ids[0]].triesToFirstRight !== 3) err("mastered question wrong: " + JSON.stringify(d[ids[0]]));
+    if (d[ids[0]].trap !== "B" || d[ids[0]].trapCount !== 2) err("repeated wrong option not found");
+    if (d[ids[1]].mastery !== "slipped" || d[ids[2]].mastery !== "struggling") err("slipped/struggling wrong");
+    if (d[ids[3]].mastery !== "unanswered" || d[ids[4]].mastery !== "unseen") err("unanswered/unseen wrong");
+    if (d[ids[0]].due || dt(t + 4 * D + 15 * D)[ids[0]].due !== true) err("mastered question should be due after 14 days, not before");
+    if (!d[ids[1]].due || d[ids[1]].daysOverdue !== 2) err("a wrong answer is due a day later (2 whole days overdue after 2.5): " + d[ids[1]].daysOverdue);
+    if (revisionQueue(Object.values(dt(t + 10 * D))).length !== 2) err("revision queue too short");
+    if (traps(Object.values(d)).length !== 1) err("traps should list the one repeated wrong option");
+    if (Math.abs(netMarks({ out: "wrong", type: "mcq", marks: 1 }) + 1 / 3) > 1e-9 || netMarks({ out: "wrong", type: "nat", marks: 2 }) !== 0 || netMarks({ out: "right", type: "mcq", marks: 2 }) !== 2) err("net marks wrong");
+    const h = headline(evs2, vw, Object.values(d));
+    if (h.views !== 1 || h.answered !== 8 || h.right !== 4 || h.wrong !== 4) err("headline counts wrong: " + JSON.stringify(h));
+    if (h.firstTryAcc !== 1 / 3) err("first-try accuracy should be 1 of 3 questions: " + h.firstTryAcc);
+    if (h.recovery !== 1 / 3) err("recovery: only the first of three questions that went wrong was later fixed, got " + h.recovery);
+    if (h.guessN !== 1) err("one wrong answer under 10 s should count as a guess: " + h.guessN);
+    if (Math.abs(h.net - (4 - 4 / 3)) > 0.01) err("net marks total wrong: " + h.net);
+    if (h.mastery.mastered !== 1 || h.mastery.unseen < 1) err("mastery counts wrong");
+    const wk = weekly(evs2); if (!wk.length || wk.reduce((s, w) => s + w.n, 0) !== 8) err("weekly totals wrong");
+    if (byHour(evs2).reduce((s, x) => s + x.n, 0) !== 8) err("hourly totals wrong");
+    if (byDifficulty(evs2)[0].key !== "easy" || byDifficulty(evs2)[0].m.n !== 8) err("difficulty cut wrong");
+    if (masteryByTopic(sp, Object.values(d)).some((x) => x.total === 0)) err("topics without questions should be left out");
+    const plan2 = parsePlan({ name: "P", phaseNames: { a: "A" }, days: [{ date: "2026-11-02", phase: "a", kind: "study", hours: 2, title: "x", topics: ["algebra"], tasks: ["a", "b"], targetQs: 1 }, { date: "2026-11-03", phase: "a", kind: "study", hours: 2, title: "y", topics: ["algebra"], tasks: ["a"], targetQs: 5 }] }).plan!;
+    const ad = planAdherence(plan2, { "2026-11-02:0": true }, { "2026-11-02": { q: [ids[0]] } }, evs2, "2026-11-03");
+    if (ad.length !== 2 || ad[0].answered !== 2 || ad[0].met !== true || ad[1].met !== false || ad[0].ticked !== 1 || ad[0].linkedAnswered !== 1) err("plan adherence wrong: " + JSON.stringify(ad));
+    if (adherenceSummary(ad).targetRate !== 0.5) err("adherence summary wrong");
+    const lk = linkProgress(plan2, { "2026-11-02": { q: [ids[0], ids[1], ids[2], ids[4]] }, "2026-11-03": { q: [ids[0]] }, "2026-11-20": { q: [ids[3]] } }, evs2, "2026-11-03");
+    if (lk.length !== 3 || lk[0].total !== 4 || lk[0].right !== 1 || lk[0].wrong !== 2 || lk[0].left !== 1 || lk[0].answered !== 3) err("link progress wrong: " + JSON.stringify(lk[0]));
+    if (lk[0].onDay !== 2 || lk[2].past !== false || lk[2].left !== 1) err("link progress days wrong");
+    if (linkTotals(lk).total !== 6 || linkTotals(lk).pastLeft !== 1) err("link totals wrong: " + JSON.stringify(linkTotals(lk)));
+    const names = statsSheets({ evs: evs2, pack: sp, attempts: [], profile: "Main", now: t + 5 * D, views: vw, plan: plan2, done: {}, links: { "2026-11-02": { q: [ids[0]] } } }).map((x) => x.name);
+    for (const n of ["Question detail", "Mastery by topic", "Revision queue", "Difficulty, type, marks", "Weekly trend", "Time of day", "Plan adherence", "Linked questions"]) if (!names.includes(n)) err("missing sheet " + n);
+    console.log("more stats: ok,", names.length, "sheets");
+  }
   const sheets = statsSheets({ evs, pack: sp, attempts: [], profile: "Main", now });
   const bytes = buildXlsx(sheets);
   if (bytes[0] !== 0x50 || bytes[1] !== 0x4b) err("xlsx must be a zip");

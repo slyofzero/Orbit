@@ -1,9 +1,9 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Answer, Question } from "@/lib/types";
 import { formatAnswer, isAttempted, isCorrect, negLabel } from "@/lib/scoring";
-import { logPractice, usePack } from "@/lib/store";
+import { logPractice, logView, usePack } from "@/lib/store";
 import { announce } from "@/lib/outcome";
 import Rich from "./Rich";
 import { strHint } from "@/lib/strMatch";
@@ -19,19 +19,34 @@ export default function QuestionCard({
   const subjectName = (x: Question) => { const id = x.subject ?? TOPIC_BY_ID[x.topic]?.subject ?? ""; return SUBJECTS[id] ?? id; };
   const [sel, setSel] = useState<Answer | undefined>(undefined);
   const [checked, setChecked] = useState(false);
-  const [skipped, setSkipped] = useState(false);
   const [tries, setTries] = useState(0);
   const ok = checked && isCorrect(q, sel);
   const shownAt = useRef(Date.now()); // when this question started waiting for an answer
-  // every answer or skip is logged with its subject, topic and tags, so statistics can count each encounter
-  const log = (out: "right" | "wrong" | "skip") =>
+  const root = useRef<HTMLDivElement>(null);
+  // A view is counted once the card has been at least half on screen for a second. Skips are never clicked: they are views minus answers.
+  useEffect(() => {
+    const el = root.current;
+    if (!el) return;
+    let timer: ReturnType<typeof setTimeout> | undefined, counted = false;
+    const count = () => { if (!counted) { counted = true; logView(q.id); } };
+    if (typeof IntersectionObserver === "undefined") { count(); return; }
+    const io = new IntersectionObserver(([e]) => {
+      if (counted) return;
+      if (e.isIntersecting) timer = setTimeout(count, 1000); else clearTimeout(timer);
+    }, { threshold: 0.5 });
+    io.observe(el);
+    return () => { io.disconnect(); clearTimeout(timer); };
+  }, [q.id]);
+  // every answer is logged with its subject, topic and tags, so statistics can count each encounter
+  const log = (out: "right" | "wrong") =>
     logPractice({
+      ...((q.type === "mcq" || q.type === "msq") && isAttempted(sel) ? { pick: sel as number | number[] } : {}),
       q: q.id, topic: q.topic, subject: q.subject ?? TOPIC_BY_ID[q.topic]?.subject ?? "other", tags: [...(difficultyOf(q) ? [difficultyOf(q)!] : []), ...(q.tags ?? [])], type: q.type, marks: q.marks,
       out, at: Date.now(), ms: Math.min(Date.now() - shownAt.current, 600_000),
     });
 
   const toggle = (i: number) => {
-    if (checked || skipped) return;
+    if (checked) return;
     if (q.type === "mcq") setSel(i);
     else {
       const cur = (sel as number[] | undefined) ?? [];
@@ -48,11 +63,10 @@ export default function QuestionCard({
     announce(right ? "right" : "wrong");
   };
 
-  const skip = () => { setSkipped(true); log("skip"); announce("skip"); };
-  const reset = () => { setSel(undefined); setChecked(false); setSkipped(false); shownAt.current = Date.now(); };
+  const reset = () => { setSel(undefined); setChecked(false); shownAt.current = Date.now(); };
 
   return (
-    <div className="qcard">
+    <div className="qcard" ref={root}>
       <div className="qmeta">
         {index !== undefined && <b>Q{index}.</b>}
         <span className="pill">{TYPE_LABEL[q.type]}</span>
@@ -76,7 +90,6 @@ export default function QuestionCard({
         <CodeQuestion
           q={q} key={`${q.id}-${tries}`}
           onSubmit={(right) => { onResult?.(right); log(right ? "right" : "wrong"); announce(right ? "right" : "wrong"); }}
-          onSkip={() => { log("skip"); announce("skip"); }}
           onReset={() => { shownAt.current = Date.now(); setTries((n) => n + 1); }}
         />
       )}
@@ -105,23 +118,12 @@ export default function QuestionCard({
       )}
 
       {q.type !== "code" && <div className="row" style={{ marginTop: 10 }}>
-        {!checked && !skipped ? (
-          <>
-            <button className="btn primary" onClick={check} disabled={!isAttempted(sel)}>Check answer</button>
-            <button className="btn" onClick={skip}>Skip</button>
-          </>
+        {!checked ? (
+          <button className="btn primary" onClick={check} disabled={!isAttempted(sel)}>Check answer</button>
         ) : (
           <button className="btn" onClick={reset}>Try again</button>
         )}
       </div>}
-
-      {skipped && (
-        <div className="verdict no">
-          <b>Skipped</b>
-          <div>Correct answer: <b>{formatAnswer(q)}</b></div>
-          <div style={{ marginTop: 6 }}><Rich text={q.explanation} /></div>
-        </div>
-      )}
 
       {checked && (
         <div className={`verdict ${ok ? "ok" : "no"}`}>

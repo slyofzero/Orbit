@@ -20,6 +20,7 @@ export const KEYS = {
   pack: "gate.pack", // PackData (null = no question pack yet)
   plog: "gate.plog", // LogEntry[]  (every practice answer / skip, for statistics)
   drafts: "gate.drafts", // Record<qid, code you were writing>  (programming questions)
+  views: "gate.views", // {q, at}[]  (every time a practice question was on screen; skips = views minus answers)
   links: "gate.links", // Record<date, {q, mock?, note?}>  (which questions go with which plan day)
 } as const;
 
@@ -30,6 +31,17 @@ export function logPractice(e: LogEntry) {
   try {
     const list = JSON.parse(localStorage.getItem(key) ?? "[]") as LogEntry[];
     list.push(e);
+    localStorage.setItem(key, JSON.stringify(list.length > LOG_MAX ? list.slice(-LOG_MAX) : list));
+    window.dispatchEvent(new CustomEvent("gate-store", { detail: key }));
+  } catch { /* storage full or blocked */ }
+}
+
+/** Records that a practice question was looked at. A skip is never recorded: skips are worked out later as views minus answers. */
+export function logView(q: string) {
+  const key = scope(KEYS.views);
+  try {
+    const list = JSON.parse(localStorage.getItem(key) ?? "[]") as { q: string; at: number }[];
+    list.push({ q, at: Date.now() });
     localStorage.setItem(key, JSON.stringify(list.length > LOG_MAX ? list.slice(-LOG_MAX) : list));
     window.dispatchEvent(new CustomEvent("gate-store", { detail: key }));
   } catch { /* storage full or blocked */ }
@@ -194,7 +206,8 @@ export function usePack() {
     byId: new Map([...pack.questions, ...pack.mockTests.flatMap((m) => m.sections.flatMap((x) => x.questions))].map((q) => [q.id, q])),
   }), [pack]);
   const [, setLog] = usePersisted<unknown[]>(KEYS.plog, []);
-  const clearHistory = () => { setPractice({}); setExtra({}); setFixed({}); setLog([]); };
+  const [, setViews] = usePersisted<unknown[]>(KEYS.views, []);
+  const clearHistory = () => { setPractice({}); setExtra({}); setFixed({}); setLog([]); setViews([]); };
   return {
     pack,
     ...derived,

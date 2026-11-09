@@ -83,6 +83,7 @@ export interface LogEntry {
   out: "right" | "wrong" | "skip";
   at: number;
   ms?: number; // seconds on the question, in milliseconds
+  pick?: number | number[]; // the option(s) chosen, for MCQ and MSQ, so wrong picks that keep repeating can be found
 }
 
 export type TopicStatus = "know" | "shaky" | "noidea";
