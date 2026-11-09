@@ -29,6 +29,8 @@ Ishan, a student preparing for an exam in February 2027 (originally GATE Data Sc
 - **Esc closes every dialog** (except the exam arena, where Esc ends the test).
 - **Question editor prompt**: "Copy prompt" (top right of the dialog, inverse-coloured button) builds an OCR clean-up prompt with strict one-code-block-per-field output; pictures can be copied separately (clipboard cannot carry prompt + picture together).
 
+- **Finished-day focus**: a day whose tasks are ticked and linked questions answered dims its Main event box and moves the highlight/agenda to tomorrow (planner and Today).
+
 ## Open ideas the owner has not decided on
 - A one-paste "prompt + picture" clipboard button (works only in some AI chat UIs).
 - A "Copy picture as base64" button (only useful for API/code tools).

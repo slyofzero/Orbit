@@ -7,7 +7,7 @@ import ImprovePlan from "@/components/ImprovePlan";
 import PlanEdit from "@/components/PlanEdit";
 import LinkPlan from "@/components/LinkPlan";
 import PlanImport from "@/components/PlanImport";
-import { liveQuestionIds, Links } from "@/lib/links";
+import { dayFinished, linkedDone, liveQuestionIds, Links } from "@/lib/links";
 import { KIND_LABEL, WEEKDAY_NAMES, addDays, daysBetween, fmtDate, fmtLong, todayIST, weekday } from "@/lib/plan";
 import { KEYS, usePack, usePersisted, usePlan } from "@/lib/store";
 import { burst } from "@/lib/fx";
@@ -43,10 +43,11 @@ function DayBody({ d, done, setDone, qs }: { d: Day; done: Done; setDone: (u: (p
         </label>
       ))}
       {(lq.length > 0 || lmock) && (
-        <div className="pl-main">
-          <b className="pl-main-h">{lq.length ? "Main event: your questions for this day" : "Main event: the mock for this day"}</b>
+        <div className={`pl-main ${linkedDone(link, pack, prac) ? "is-done" : ""}`}>
+          <b className="pl-main-h">{lq.length ? `${linkedDone(link, pack, prac) ? "Done: " : "Main event: "}your questions for this day` : "Main event: the mock for this day"}</b>
           <div className="small">
             {lq.length > 0 && `${lq.filter((id) => prac[id]).length} of ${lq.length} answered, ${lq.filter((id) => prac[id]?.correct).length} correct`}
+            {link?.finished && `${lq.length ? " · " : ""}marked as finished`}
             {lmock && `${lq.length ? " · " : ""}Mock: ${lmock.name}`}
           </div>
           {link?.note && <div className="small pl-main-note"><Rich text={link.note} /></div>}
@@ -65,7 +66,11 @@ function DayBody({ d, done, setDone, qs }: { d: Day; done: Done; setDone: (u: (p
           <Link key={t} href={`/practice/${t}`} className={`pill ${TOPIC_BY_ID[t]?.status}`}>{TOPIC_BY_ID[t]?.name.split("(")[0].trim()}</Link>
         ))}
         {d.kind === "mock" && <Link className="btn primary" href="/mocks">Start the mock</Link>}
-        <button className="btn soft right" onClick={() => setDone((p) => { const n = { ...p }; d.tasks.forEach((_, i) => (n[`${d.date}:${i}`] = !complete)); return n; })}>
+        <button className="btn soft right" onClick={() => {
+          setDone((p) => { const n = { ...p }; d.tasks.forEach((_, i) => (n[`${d.date}:${i}`] = !complete)); return n; });
+          // the linked questions of that day count as finished too (or not, when un-ticking); no answers are recorded
+          if (links[d.date]) setLinks((p) => ({ ...p, [d.date]: { ...p[d.date], finished: !complete || undefined } }));
+        }}>
           {complete ? "Untick all" : "Tick all"}
         </button>
       </div>
@@ -75,6 +80,7 @@ function DayBody({ d, done, setDone, qs }: { d: Day; done: Done; setDone: (u: (p
 
 export default function Planner() {
   const { plan, ready: planReady } = usePlan();
+  const { pack } = usePack();
   const DAYS = plan.days;
   const PHASE_NAMES = plan.phaseNames;
   const [done, setDone, ready] = usePersisted<Done>(KEYS.done, {});
@@ -121,11 +127,14 @@ export default function Planner() {
   });
   const phaseOpen = (ph: string, current: boolean) => (openPhase ? !!openPhase[ph] : current);
 
+  // the card that gets the highlight: today, or tomorrow once today's tasks and linked questions are all done
+  const focus = dayFinished(DAYS.find((x) => x.date === today), done, links[today], pack, practice) ? addDays(today, 1) : today;
+
   const DayCard = ({ date }: { date: string }) => {
     const d = DAYS.find((x) => x.date === date);
     const n = daysBetween(today, date);
     return (
-      <section className={`panel pl-card ${n === 0 ? "now" : ""}`}>
+      <section className={`panel pl-card ${date === focus ? "now" : ""}`}>
         <div className="pl-top">
           <span className="pl-date"><b>{Number(date.slice(8))}</b><small>{WEEKDAY_NAMES[weekday(date)]}</small></span>
           <div>

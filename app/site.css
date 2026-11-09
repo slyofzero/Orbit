@@ -1099,3 +1099,6 @@ html[data-theme="dark"] .btn.invert:hover { background: #e6e6e6; color: #000; }
 
 .ad-head h2 { white-space: nowrap; } .ad-head .btn { flex: none; white-space: nowrap; }
 .ad-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 400; max-width: min(520px, 92vw); padding: 10px 16px; border-radius: 12px; background: var(--ink); color: var(--sheet); font-weight: 700; font-size: 0.9rem; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35); }
+
+.pl-main.is-done { opacity: 0.5; filter: saturate(0.35); }
+.pl-main.is-done:hover { opacity: 0.85; filter: none; }

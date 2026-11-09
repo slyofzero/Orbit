@@ -29,7 +29,7 @@ import { sameOutput } from "../lib/judge";
 import { segments, texProblems, parseFence, mergeTickLines } from "../lib/tex";
 import { highlightCode, languageOf } from "../lib/highlight";
 import { editPrompt, pictureList } from "../lib/editPrompt";
-import { checkImportedLinks, bankFile, filesPrompt, isTooLong, planFile, PROMPT_LIMIT, linkPrompt, parseLinks, liveQuestionIds, readAnswer } from "../lib/links";
+import { dayFinished, linkedDone, checkImportedLinks, bankFile, filesPrompt, isTooLong, planFile, PROMPT_LIMIT, linkPrompt, parseLinks, liveQuestionIds, readAnswer } from "../lib/links";
 
 let bad = 0;
 const err = (m: string) => { bad++; console.log("BAD:", m); };
@@ -311,6 +311,20 @@ if (ok.pack?.questions.map((q) => q.id).join() !== "a-1,a-2") err("auto ids shou
       if (r.warnings.length !== 3) err("expected warnings for unknown id, mock id, bad date only (repeats across days are allowed): " + r.warnings.join(" | "));
       if (parseLinks({ days: [{ date: "2030-01-01", practice: ["x"] }] }, plan, lp.pack).links) err("nothing valid must be an error");
       if (parseLinks("nope", plan, lp.pack).links) err("non-object must fail");
+      { // finished days
+        const day = { date: "2026-11-08", tasks: ["a", "b"] };
+        const lk = { q: ["t1-1", "t1-2"] };
+        const ticked = { "2026-11-08:0": true, "2026-11-08:1": true };
+        if (linkedDone(lk, lp.pack, { "t1-1": 1 }) || !linkedDone(lk, lp.pack, { "t1-1": 1, "t1-2": 1 })) err("linkedDone needs every linked question answered");
+        if (linkedDone(undefined, lp.pack, {}) || linkedDone({ q: ["gone"] }, lp.pack, { gone: 1 })) err("no live linked questions means not linkedDone");
+        if (!dayFinished(day, ticked, undefined, lp.pack, {})) err("ticked tasks and no links: finished");
+        if (dayFinished(day, { "2026-11-08:0": true }, undefined, lp.pack, {})) err("an unticked task: not finished");
+        if (dayFinished(day, ticked, lk, lp.pack, { "t1-1": 1 })) err("a linked question left: not finished");
+        if (!dayFinished(day, ticked, lk, lp.pack, { "t1-1": 1, "t1-2": 1 })) err("tasks ticked and links answered: finished");
+        if (!linkedDone({ q: ["t1-1", "t1-2"], finished: true }, lp.pack, {}) || !dayFinished(day, ticked, { q: ["t1-1"], finished: true }, lp.pack, {})) err("a link marked finished (Tick all) counts as done with no answers");
+        if (linkedDone({ q: ["t1-1"], finished: undefined }, lp.pack, {})) err("an unset finished flag changes nothing");
+        if (dayFinished({ date: "2026-11-08", tasks: [] }, {}, undefined, lp.pack, {}) || dayFinished(undefined, {}, undefined, lp.pack, {})) err("an empty or missing day is never finished");
+      }
       { // links travel with the plan
         const L = { "2026-11-08": { q: ["t1-1", "t1-2"], note: "start easy" }, "2026-11-09": { q: [], mock: "m1" } };
         const out = planToJson(plan, L) as { links?: { date: string; practice: string[]; mock?: string }[] };

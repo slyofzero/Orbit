@@ -6,6 +6,7 @@ Sidebar (`components/Nav.tsx`): Today, Planner, Practice, Mocks, Stats, plus pro
 - Greeting + a quote card in one row. A compact **runway** timeline (`Runway.tsx`) toward the next milestone, a calendar (`Calendar.tsx`) with milestone tags (labels truncate, full name in the tooltip).
 - "Today" agenda: the day's title, tasks (tickable), a **Go to planner** button and **Copy AI prompt** (`CopyDayPrompt`).
 - If the plan day has links: a **Main event** box shows the linked questions (answered/correct counts, the note), a **Practise these questions** button and **Unlink this day**.
+- **Finished days**: when every task is ticked and every linked question answered (`dayFinished` in `lib/links.ts`), the agenda switches to tomorrow ("Tomorrow" + a "Today is done" pill + "Show today"), unless the person picked a day. The Main event box dims as soon as its linked questions are all answered (`linkedDone`, `.pl-main.is-done`). The planner moves its highlight (`.pl-card.now`) to tomorrow's card the same way.
 - Countdown to milestones, settings (name, exam date), backup export/restore, wipe-all.
 - Titles, tasks and notes render LaTeX through `Rich`.
 

@@ -8,7 +8,7 @@ import Runway from "@/components/Runway";
 import Milestones from "@/components/Milestones";
 import QuoteCard from "@/components/QuoteCard";
 import { burst } from "@/lib/fx";
-import { liveQuestionIds, Links } from "@/lib/links";
+import { dayFinished, linkedDone, liveQuestionIds, Links } from "@/lib/links";
 import { KIND_LABEL, Milestone, WEEKDAY_NAMES, addDays, daysBetween, fmtDate, fmtLong, todayIST, weekday } from "@/lib/plan";
 import { DEFAULT_SETTINGS, KEYS, clearAll, exportAll, importAll, inspectBackup, useMilestones, usePack, usePersisted, usePlan } from "@/lib/store";
 import { Attempt, PracticeRec, Settings } from "@/lib/types";
@@ -22,7 +22,7 @@ export default function Dashboard() {
   const [practice] = usePersisted<Record<string, PracticeRec>>(KEYS.practice, {});
   const [attempts] = usePersisted<Attempt[]>(KEYS.attempts, []);
   const today = todayIST();
-  const [selected, setSelected] = useState(today);
+  const [picked, setPicked] = useState<string | null>(null); // a day the person chose; until then the agenda follows the focus day
   const [wipe, setWipe] = useState(false);
   const [restore, setRestore] = useState<null | { text: string; when?: string } | { error: string }>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -89,6 +89,11 @@ export default function Dashboard() {
         : "The plan is finished. Keep revising your mistake log.";
   const runwayStart = today < PLAN_START ? today : PLAN_START;
 
+  // the agenda follows today, or tomorrow once today's tasks and linked questions are all done; picking a day yourself overrides it
+  const todayFinished = dayFinished(DAYS.find((d) => d.date === today), done, links[today], pack, practice);
+  const focus = todayFinished && DAYS.some((d) => d.date === addDays(today, 1)) ? addDays(today, 1) : today;
+  const selected = picked ?? focus;
+  const setSelected = (d: string) => setPicked(d);
   // agenda for the selected date
   const day = DAYS.find((d) => d.date === selected);
   const nextPlanned = DAYS.find((d) => d.date > selected);
@@ -178,17 +183,18 @@ export default function Dashboard() {
 
         <section className="agenda d-agenda" aria-live="polite" style={stag()}>
           <div className="d-agenda-head">
-            <div className="when">{selected === today ? "Today" : fmtLong(selected)}</div>
+            <div className="when">{selected === today ? "Today" : selected === addDays(today, 1) ? "Tomorrow" : fmtLong(selected)}</div>
             <span className="row" style={{ gap: 8 }}>
               {day && <CopyDayPrompt day={day} />}
               <Link className="btn soft" href="/planner">Go to planner</Link>
             </span>
           </div>
           <div className="meta row">
-            {selected === today && <span className="muted">{fmtLong(today)}</span>}
+            {(selected === today || selected === addDays(today, 1)) && <span className="muted">{fmtLong(selected)}</span>}
+            {selected === addDays(today, 1) && picked === null && <span className="pill k-light">Today is done</span>}
             {day && <span className={`pill k-${day.kind}`}>{KIND_LABEL[day.kind]}</span>}
             {day && day.hours > 0 && <span className="muted small">{day.hours} h planned</span>}
-            {selected !== today && <button className="btn soft" onClick={() => setSelected(today)}>Back to today</button>}
+            {selected !== today && <button className="btn soft" onClick={() => setSelected(today)}>{selected === addDays(today, 1) && picked === null ? "Show today" : "Back to today"}</button>}
           </div>
 
           {day ? (
@@ -204,10 +210,11 @@ export default function Dashboard() {
                 );
               })}
               {(lq.length > 0 || lmock) && (
-                <div className="pl-main">
-                  <b className="pl-main-h">{lq.length ? "Main event: your questions for this day" : "Main event: the mock for this day"}</b>
+                <div className={`pl-main ${linkedDone(link, pack, practice) ? "is-done" : ""}`}>
+                  <b className="pl-main-h">{lq.length ? `${linkedDone(link, pack, practice) ? "Done: " : "Main event: "}your questions for this day` : "Main event: the mock for this day"}</b>
                   <div className="small">
                     {lq.length > 0 && `${lq.filter((id) => practice[id]).length} of ${lq.length} answered, ${lq.filter((id) => practice[id]?.correct).length} correct`}
+                    {link?.finished && `${lq.length ? " · " : ""}marked as finished`}
                     {lmock && `${lq.length ? " · " : ""}Mock: ${lmock.name}`}
                   </div>
                   {link?.note && <div className="small pl-main-note"><Rich text={link.note} /></div>}
