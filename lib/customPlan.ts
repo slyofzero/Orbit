@@ -1,7 +1,9 @@
 // Turns a plan someone wrote (or an AI wrote for them) as JSON into the PlanData the app runs on.
 // Pure functions only, so scripts/check.ts can test them.
 import { Day, DayKind } from "./types";
-import { Milestone, PlanData, addDays, daysBetween, weekday } from "./plan";
+import { repairBackslashes } from "./tex";
+import type { Links } from "./links";
+import { Milestone, PLAN_DESCRIPTION_MAX, PlanData, addDays, daysBetween, weekday } from "./plan";
 
 export const KINDS: DayKind[] = ["study", "crunch", "light", "mock", "buffer", "exam", "taper"];
 const MAX_DAYS = 800;
@@ -27,7 +29,9 @@ const defaultTasks = (kind: DayKind, title: string): string[] => {
 };
 const defaultHours: Record<DayKind, number> = { study: 2, crunch: 1, light: 1, mock: 3, buffer: 2, exam: 0, taper: 1 };
 
-export interface ParseResult { plan: PlanData | null; errors: string[]; warnings: string[] }
+/** One day's links as written in a plan file. Not checked against any question bank yet. */
+export interface RawLink { date: string; practice: string[]; mock?: string; note?: string }
+export interface ParseResult { plan: PlanData | null; errors: string[]; warnings: string[]; links?: RawLink[] }
 
 export function parsePlan(input: unknown): ParseResult {
   const errors: string[] = [];
@@ -37,9 +41,16 @@ export function parsePlan(input: unknown): ParseResult {
 
   if (typeof input !== "object" || input === null || Array.isArray(input)) { err("The file must be one JSON object, like { \"name\": …, \"days\": […] }."); return fail(); }
   const o = input as Record<string, unknown>;
+  // JSON turns "\\frac" into a form feed and "\\times" into a tab; put those backslashes back so the maths draws
+  let fixedSlashes = 0;
+  const fx = (s: string) => { const r = repairBackslashes(s); fixedSlashes += r.fixed; return r.text; };
 
   const name = typeof o.name === "string" && o.name.trim() ? o.name.trim().slice(0, 60) : "My plan";
   if (o.name !== undefined && typeof o.name !== "string") err('"name" must be text.');
+
+  if (o.description !== undefined && typeof o.description !== "string") err('"description" must be text.');
+  const description = typeof o.description === "string" && o.description.trim() ? fx(o.description).trim().slice(0, PLAN_DESCRIPTION_MAX) : undefined;
+  if (typeof o.description === "string" && o.description.trim().length > PLAN_DESCRIPTION_MAX) warnings.push(`"description" was longer than ${PLAN_DESCRIPTION_MAX} characters, so it was cut.`);
 
   // ----- phases (optional) -----
   const phaseList: { id: string; name: string; from?: string }[] = [];
@@ -71,7 +82,7 @@ export function parsePlan(input: unknown): ParseResult {
     if (typeof r.title !== "string" || !r.title.trim()) { err(`${w} needs a "title".`); return; }
     const kind = (r.kind ?? "study") as DayKind;
     if (!KINDS.includes(kind)) { err(`${w}.kind "${String(r.kind)}" is not one of: ${KINDS.join(", ")}.`); return; }
-    const title = r.title.trim().slice(0, 120);
+    const title = fx(r.title).trim().slice(0, 120);
     let hours = defaultHours[kind];
     if (r.hours !== undefined) {
       if (typeof r.hours !== "number" || !isFinite(r.hours) || r.hours < 0 || r.hours > 16) { err(`${w}.hours must be a number from 0 to 16.`); return; }
@@ -80,7 +91,7 @@ export function parsePlan(input: unknown): ParseResult {
     let tasks = defaultTasks(kind, title);
     if (r.tasks !== undefined) {
       if (!Array.isArray(r.tasks) || r.tasks.length === 0 || r.tasks.length > 12 || r.tasks.some((t) => typeof t !== "string" || !t.trim())) { err(`${w}.tasks must be a list of 1 to 12 non-empty texts.`); return; }
-      tasks = (r.tasks as string[]).map((t) => t.trim().slice(0, 200));
+      tasks = (r.tasks as string[]).map((t) => fx(t).trim().slice(0, 200));
     }
     let topics: string[] = [];
     if (r.topics !== undefined) {
@@ -146,7 +157,7 @@ export function parsePlan(input: unknown): ParseResult {
       if (typeof q !== "object" || q === null || typeof q.name !== "string" || !q.name.trim()) { err(`milestones[${i}] needs a "name".`); return; }
       if (!isDate(q.date)) { err(`milestones[${i}].date "${String(q.date)}" is not a real date (use YYYY-MM-DD).`); return; }
       if (q.note !== undefined && typeof q.note !== "string") { err(`milestones[${i}].note must be text.`); return; }
-      milestones.push({ id: `p${i + 1}`, name: q.name.trim().slice(0, 40), short: q.name.trim().slice(0, 40), date: q.date, note: (q.note as string | undefined)?.slice(0, 160) });
+      milestones.push({ id: `p${i + 1}`, name: fx(q.name).trim().slice(0, 40), short: fx(q.name).trim().slice(0, 40), date: q.date, note: typeof q.note === "string" ? fx(q.note).slice(0, 160) : undefined });
     });
   } else {
     milestones = days.filter((d) => d.kind === "exam").map((d, i) => ({ id: `p${i + 1}`, name: d.title.slice(0, 40), short: d.title.slice(0, 40), date: d.date }));
@@ -156,21 +167,38 @@ export function parsePlan(input: unknown): ParseResult {
   if (errors.length) return fail();
   milestones.sort((a, b) => a.date.localeCompare(b.date));
 
-  return { plan: { name, days, phaseNames, milestones }, errors, warnings };
+  // ----- links (optional): which questions go with which day. Checked against the question bank when the plan is imported. -----
+  const links: RawLink[] = [];
+  if (o.links !== undefined) {
+    if (!Array.isArray(o.links)) warnings.push('"links" must be a list, so it was ignored.');
+    else o.links.forEach((raw, i) => {
+      const r = raw as Record<string, unknown>;
+      if (typeof r !== "object" || r === null || Array.isArray(r) || typeof r.date !== "string") { warnings.push(`links[${i}] needs a "date", so it was skipped.`); return; }
+      const practice = Array.isArray(r.practice) ? r.practice.filter((x): x is string => typeof x === "string") : [];
+      const mock = typeof r.mock === "string" && r.mock ? r.mock : undefined;
+      const note = typeof r.note === "string" && r.note.trim() ? fx(r.note).trim().slice(0, 100) : undefined;
+      links.push({ date: r.date, practice, ...(mock ? { mock } : {}), ...(note ? { note } : {}) });
+    });
+  }
+  if (fixedSlashes > 0) warnings.push(`Put back ${fixedSlashes} LaTeX backslash${fixedSlashes === 1 ? "" : "es"} that JSON had turned into tabs or form feeds. In JSON, write each LaTeX backslash twice, like "$\\\\frac{1}{2}$".`);
+  return { plan: { name, ...(description ? { description } : {}), days, phaseNames, milestones }, errors, warnings, ...(links.length ? { links } : {}) };
 }
 
 // The reverse of parsePlan: the plan as a JSON object you can upload again (used to export a plan before replacing it).
-export function planToJson(plan: PlanData) {
+/** `links` (optional) are the plan's question links; they travel with the plan so an import can restore them. */
+export function planToJson(plan: PlanData, links: Links = {}) {
   const phaseStart: Record<string, string> = {};
   for (const d of plan.days) phaseStart[d.phase] ??= d.date;
   return {
     name: plan.name,
+    ...(plan.description ? { description: plan.description } : {}),
     phases: Object.entries(plan.phaseNames).map(([id, name]) => ({ id, name, from: phaseStart[id] })),
     milestones: plan.milestones.map(({ name, date, note }) => ({ name, date, ...(note ? { note } : {}) })),
     days: plan.days.map((d) => ({
       date: d.date, title: d.title, kind: d.kind, hours: d.hours, phase: d.phase, tasks: d.tasks,
       ...(d.topics.length ? { topics: d.topics } : {}), ...(d.targetQs ? { questions: d.targetQs } : {}),
     })),
+    ...(Object.keys(links).length ? { links: Object.entries(links).filter(([, l]) => l.q.length || l.mock || l.note).sort(([a], [b]) => a.localeCompare(b)).map(([date, l]) => ({ date, practice: l.q, ...(l.mock ? { mock: l.mock } : {}), ...(l.note ? { note: l.note } : {}) })) } : {}),
   };
 }
 
@@ -179,6 +207,7 @@ export const templateJson = (start: string): string => {
   const a = (n: number) => addDays(start, n);
   return JSON.stringify({
     name: "My study plan",
+    description: "Preparing for my final exam. Strong in algebra, weak in statistics. I study best in the evening.",
     phases: [
       { id: "A", name: "Learn the basics", from: a(0) },
       { id: "B", name: "Practice and revise", from: a(14) },
@@ -213,11 +242,13 @@ About me (fill this in before sending):
 
 Use exactly this format:
 - "name": short plan name.
+- "description": 1 to 4 sentences about the goal, the exam, who the plan is for, how I like to study and what to stress (up to 1500 characters). I will paste it into other AI chats later so they understand the plan, so write it from my details above.
 - "phases": optional list of { "id": "A", "name": "…", "from": "YYYY-MM-DD" }.
 - "milestones": list of { "name": "…", "date": "YYYY-MM-DD", "note": "optional" } for exams, tests and deadlines.
 - "days": list of day entries. Each is either { "date": "YYYY-MM-DD", … } or a range { "from": "YYYY-MM-DD", "to": "YYYY-MM-DD", "weekdays": [1,2,3,4,5], … } (weekdays optional, 0 = Sunday). A single "date" entry overrides a range on the same day.
   Fields: "title" (required), "kind" (one of: study, crunch, light, mock, buffer, exam, taper), "hours" (0-16), "tasks" (optional list of 1-12 short checklist items for that day), "questions" (optional practice-question target).
   Kinds: study = full study day, crunch = short day, light = light revision, mock = practice test, buffer = catch-up, exam = exam day, taper = rest before an exam.
+- Titles, tasks and notes may contain maths written as LaTeX between dollar signs, like $P = A(A^T A)^{-1}A^T$. Because this is JSON, write every LaTeX backslash twice: "$\\\\frac{1}{2}$". A real dollar sign is written \\$.
 - All dates are YYYY-MM-DD and real calendar dates. Give "tasks" for every day so each day has a clear checklist.
 
 Here is a valid example to copy the shape from:

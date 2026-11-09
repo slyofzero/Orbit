@@ -1,6 +1,8 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import CopyDayPrompt from "@/components/CopyDayPrompt";
+import Rich from "@/components/Rich";
 import ImprovePlan from "@/components/ImprovePlan";
 import PlanEdit from "@/components/PlanEdit";
 import LinkPlan from "@/components/LinkPlan";
@@ -37,7 +39,7 @@ function DayBody({ d, done, setDone, qs }: { d: Day; done: Done; setDone: (u: (p
       {d.tasks.map((t, i) => (
         <label key={i} className={`task ${done[`${d.date}:${i}`] ? "done" : ""}`}>
           <input type="checkbox" checked={!!done[`${d.date}:${i}`]} onChange={(e) => tick(i, e.target.checked, e.currentTarget)} />
-          <span>{t}</span>
+          <span><Rich text={t} /></span>
         </label>
       ))}
       {(lq.length > 0 || lmock) && (
@@ -47,7 +49,7 @@ function DayBody({ d, done, setDone, qs }: { d: Day; done: Done; setDone: (u: (p
             {lq.length > 0 && `${lq.filter((id) => prac[id]).length} of ${lq.length} answered, ${lq.filter((id) => prac[id]?.correct).length} correct`}
             {lmock && `${lq.length ? " · " : ""}Mock: ${lmock.name}`}
           </div>
-          {link?.note && <div className="small pl-main-note">{link.note}</div>}
+          {link?.note && <div className="small pl-main-note"><Rich text={link.note} /></div>}
           {lq.length > 0 && <div className="bar"><div style={{ width: `${(lq.filter((id) => prac[id]).length / lq.length) * 100}%` }} /></div>}
           <div className="row" style={{ marginTop: 8 }}><Link className="btn pl-main-go" href={`/day/${d.date}`}>{lq.length ? "Practise these questions" : "Open this day"}</Link><button className="btn soft" onClick={() => setLinks((p) => { const n = { ...p }; delete n[d.date]; return n; })}>Unlink this day</button></div>
         </div>
@@ -80,6 +82,7 @@ export default function Planner() {
   const [links, setLinks] = usePersisted<Links>(KEYS.links, {});
   const [askUnlink, setAskUnlink] = useState(false);
   const [view, setView] = useState<View>("next");
+  const [off, setOff] = useState(0); // how many days the 3-day window is shifted from today
   const [openDay, setOpenDay] = useState<Record<string, boolean>>({});
   const [openPhase, setOpenPhase] = useState<Record<string, boolean> | null>(null);
   const today = todayIST();
@@ -107,8 +110,8 @@ export default function Planner() {
   const missed = DAYS.filter((d) => d.date < today && !complete(d) && d.kind !== "exam");
 
   // three calendar days: today and the next two
-  const three = [0, 1, 2].map((i) => addDays(today, i));
-  const labelFor = (date: string) => (date === today ? "Today" : date === addDays(today, 1) ? "Tomorrow" : WEEKDAY_NAMES[weekday(date)] === "Sun" ? "Sunday" : fmtLong(date).split(" ")[0]);
+  const three = [0, 1, 2].map((i) => addDays(today, off + i));
+  const labelFor = (date: string) => (date === today ? "Today" : date === addDays(today, 1) ? "Tomorrow" : date === addDays(today, -1) ? "Yesterday" : WEEKDAY_NAMES[weekday(date)] === "Sun" ? "Sunday" : fmtLong(date).split(" ")[0]);
 
   const phases = Object.keys(PHASE_NAMES).map((ph, pi) => {
     const ds = DAYS.filter((d) => d.phase === ph);
@@ -129,11 +132,11 @@ export default function Planner() {
             <h2>{labelFor(date)}</h2>
             <span className="muted small">{fmtLong(date)}</span>
           </div>
-          {d && <span className={`pill k-${d.kind} right`}>{KIND_LABEL[d.kind]}</span>}
+          {d && <span className="right row" style={{ gap: 8 }}><CopyDayPrompt day={d} /><span className={`pill k-${d.kind}`}>{KIND_LABEL[d.kind]}</span></span>}
         </div>
         {d ? (
           <>
-            <p className="pl-title">{d.title}{d.hours > 0 && <span className="muted small"> · {d.hours} h</span>}</p>
+            <p className="pl-title"><Rich text={d.title} />{d.hours > 0 && <span className="muted small"> · {d.hours} h</span>}</p>
             <DayBody d={d} done={done} setDone={setDone} qs={answeredOn(date)} />
           </>
         ) : (
@@ -154,7 +157,7 @@ export default function Planner() {
       <div className={`drow ${d.date === today ? "today" : ""} ${miss ? "miss" : ""} ${isOpen ? "open" : ""}`}>
         <button className="drow-head" onClick={() => setOpenDay((p) => ({ ...p, [d.date]: !isOpen }))} aria-expanded={isOpen}>
           <span className="pl-date sm"><b>{Number(d.date.slice(8))}</b><small>{WEEKDAY_NAMES[weekday(d.date)]}</small></span>
-          <span className="nm">{d.title}</span>
+          <span className="nm"><Rich text={d.title} /></span>
           <span className={`pill k-${d.kind}`}>{KIND_LABEL[d.kind]}</span>
           <span className="small muted st">{c ? "✓" : `${nDone(d)}/${d.tasks.length}`}</span>
         </button>
@@ -190,9 +193,16 @@ export default function Planner() {
       {view === "link" && <LinkPlan onDone={() => setView("next")} />}
 
       {view === "next" && (
+        <>
         <div className="pl-focus">
           {three.map((d, i) => <div key={d} className="pl-wrap" style={{ "--n": i } as React.CSSProperties}><DayCard date={d} /></div>)}
         </div>
+        <div className="pl-nav">
+          <button className="btn soft" onClick={() => setOff(off - 1)} aria-label="Previous day">‹ Prev</button>
+          <button className="btn soft" disabled={off === 0} onClick={() => setOff(0)}>Today</button>
+          <button className="btn soft" onClick={() => setOff(off + 1)} aria-label="Next day">Next ›</button>
+        </div>
+        </>
       )}
 
       {view === "missed" && (

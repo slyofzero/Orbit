@@ -225,7 +225,7 @@ export default function Exam({ id }: { id: string }) {
   return (
     <div className="arena">
       <div className="ex-top">
-        <span className="title">{attempt.title} · GATE 2027 Data Science &amp; AI (practice)</span>
+        <span className="title">{attempt.title}</span>
         <span className="spacer" />
         <button onClick={() => setCalc((c) => !c)}>🖩 Calculator</button>
         <button onClick={() => setModal("paper")}>Question Paper</button>

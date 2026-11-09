@@ -130,7 +130,7 @@ export function parsePack(input: unknown, existing?: PackData): PackResult {
     if (typeof raw.topic !== "string" || !topicIds.has(raw.topic)) { err(`${w}.topic "${String(raw.topic)}" is not one of your topic ids.`); return null; }
     const type = raw.type;
     if (type !== "mcq" && type !== "msq" && type !== "nat" && type !== "str" && type !== "code") { err(`${w}.type must be "mcq", "msq", "nat", "str" or "code".`); return null; }
-    if (type === "str" && autoPrefix) { err(`${w}: text-answer ("str") questions can only go in "questions" (the practice bank). GATE mock tests have no text-entry questions.`); return null; }
+    if (type === "str" && autoPrefix) { err(`${w}: text-answer ("str") questions can only go in "questions" (the practice bank). Mock tests have no text-entry questions.`); return null; }
     if (type === "code" && autoPrefix) { err(`${w}: programming ("code") questions can only go in "questions" (the practice bank). The mock arena cannot run code.`); return null; }
     if (raw.marks !== 1 && raw.marks !== 2) { err(`${w}.marks must be 1 or 2.`); return null; }
     if (typeof raw.text !== "string" || !raw.text.trim()) { err(`${w} needs the question "text".`); return null; }
@@ -517,7 +517,7 @@ Use exactly this format. The reply is ONE JSON object with these top-level keys:
   - "mcq": exactly one correct option. Add "options" (2 to 8 texts) and "answer" = the number of the right option, counting from 0.
   - "msq": one or more correct options. Add "options" (2 to 8 texts) and "answer" = a list of the right option numbers, counting from 0, with no repeats.
   - "nat": the answer is a number typed in. Add "answer" = the number and "tolerance" = the allowed error (an absolute amount; 0 means exact; 0.01 if left out). An answer of the form { "value": 4.5, "tol": 0.01 } is also accepted.
-  - "str": a short TEXT answer that is typed in, such as a list of labels ("I,D,B"), a single label ("E"), a word, or "NIL" for an empty list. Practice bank only, NEVER inside a mock test (GATE has no text-entry questions). Do NOT add "options" or "tolerance".
+  - "str": a short TEXT answer that is typed in, such as a list of labels ("I,D,B"), a single label ("E"), a word, or "NIL" for an empty list. Practice bank only, NEVER inside a mock test (mock tests have no text-entry questions). Do NOT add "options" or "tolerance".
       🛑 NEVER use "nat" for a text answer. A "nat" answer is ONE NUMBER. Turning "I,D,B" into a number grades wrong answers as right.
       "answer": the accepted text, or a list of texts where any one is accepted (for example "E" or ["I,D,B", "I,B,D"]).
       "match": optional. "exact" (default, the typed text must equal the answer), "list" (comma-separated items, order matters, like "I,D,B") or "set" (comma-separated items, order does not matter).

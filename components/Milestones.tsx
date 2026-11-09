@@ -1,6 +1,7 @@
 "use client";
 import { CSSProperties, useState } from "react";
 import { Milestone, daysBetween, fmtLong } from "@/lib/plan";
+import Rich from "@/components/Rich";
 
 const PALETTE = ["var(--accent)", "var(--red)", "var(--green)", "var(--amber)", "var(--blue)"];
 type Api = { add: (m: Omit<Milestone, "id" | "short">) => void; update: (id: string, p: Partial<Milestone>) => void; remove: (id: string) => void };
@@ -48,7 +49,7 @@ export default function Milestones({ today, milestones, api, onRemoved }: { toda
                 <button className="mini" aria-label={`Edit ${m.name}`} title="Edit" onClick={() => setForm({ id: m.id, name: m.name, date: m.date, note: m.note ?? "" })}>✎</button>
                 <button className="mini del" aria-label={`Remove ${m.name}`} title="Remove" onClick={() => { api.remove(m.id); onRemoved(m); }}>✕</button>
               </span>
-              <span className="small muted">{fmtLong(m.date)}{m.note ? `. ${m.note}` : ""}</span>
+              <span className="small muted">{fmtLong(m.date)}{m.note ? <>. <Rich text={m.note} /></> : ""}</span>
             </div>
           );
         })}

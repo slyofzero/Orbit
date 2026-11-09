@@ -12,8 +12,12 @@ const istHour = (t: number) => Number(new Date(t).toLocaleString("en-GB", { hour
 const shiftDay = (d: string, k: number) => new Date(Date.parse(d + "T00:00:00Z") + k * DAY).toISOString().slice(0, 10);
 const weekday = (d: string) => (new Date(Date.parse(d + "T00:00:00Z")).getUTCDay() + 6) % 7; // 0 = Monday
 
-/** GATE DA gives 180 minutes for 100 marks, about 108 seconds per mark. Used as a pace yardstick. */
-export const EXAM_SEC_PER_MARK = 108;
+/** Seconds per mark that your own mock tests allow (their total minutes over their total marks), or null when the pack has no mock tests. Used as a pace yardstick. */
+export function examPace(pack: PackData): number | null {
+  let sec = 0, marks = 0;
+  for (const m of pack.mockTests ?? []) { sec += m.minutes * 60; marks += m.sections.reduce((n, s) => n + s.questions.reduce((k, q) => k + q.marks, 0), 0); }
+  return marks > 0 ? Math.round(sec / marks) : null;
+}
 /** Wrong answers given faster than this are probably guesses. */
 export const GUESS_MS = 10_000;
 

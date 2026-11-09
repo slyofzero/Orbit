@@ -6,7 +6,7 @@ import { Attempt } from "./types";
 import { PlanData } from "./plan";
 import {
   DIFFICULTIES, MASTERY_HELP, MASTERY_LABEL, MASTERY_ORDER, adherenceSummary, byDifficulty, byHour, byMarks, bySource, byType, byWeekday, headline,
-  linkProgress, linkTotals, masteryByTopic, planAdherence, questionDetails, revisionQueue, weekly, EXAM_SEC_PER_MARK, GUESS_MS,
+  linkProgress, linkTotals, masteryByTopic, planAdherence, questionDetails, revisionQueue, weekly, examPace, GUESS_MS,
 } from "./statsMore";
 import { Sheet } from "./xlsx";
 
@@ -45,7 +45,7 @@ export function statsSheets(args: {
       ["Recovery rate (wrong once, right later)", `${pc(h.recovery)} of ${h.recoveryN} questions`],
       ["Average time on a right answer", sc(h.avgSecRight)], ["Average time on a wrong answer", sc(h.avgSecWrong)],
       [`Quick wrong answers (under ${GUESS_MS / 1000} s, likely guesses)`, `${pc(h.guessShare)} of wrong answers (${h.guessN})`],
-      ["Practice time (minutes)", Math.round(h.timeSec / 60)], [`Seconds per mark (exam pace is about ${EXAM_SEC_PER_MARK})`, h.avgSecPerMark === null ? "n/a" : Math.round(h.avgSecPerMark)],
+      ["Practice time (minutes)", Math.round(h.timeSec / 60)], [`Seconds per mark${examPace(pack) !== null ? ` (your mock tests allow about ${examPace(pack)})` : ""}`, h.avgSecPerMark === null ? "n/a" : Math.round(h.avgSecPerMark)],
       ["Marks earned", h.earned], ["Marks lost to negative marking", h.lost], ["Net marks", h.net],
       ["Answers per active day", h.perActiveDay === null ? "n/a" : Math.round(h.perActiveDay * 10) / 10],
       ...MASTERY_ORDER.map((m) => [`Questions: ${MASTERY_LABEL[m]}`, h.mastery[m]] as [string, number]),

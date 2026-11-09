@@ -5,7 +5,7 @@ import { PackData } from "@/lib/packs";
 import { PlanData } from "@/lib/plan";
 import { Ev, fmtPct } from "@/lib/stats";
 import {
-  EXAM_SEC_PER_MARK, GUESS_MS, MASTERY_HELP, MASTERY_LABEL, MASTERY_ORDER, adherenceSummary, byDifficulty, byHour, byMarks, byType, headline,
+  examPace, GUESS_MS, MASTERY_HELP, MASTERY_LABEL, MASTERY_ORDER, adherenceSummary, byDifficulty, byHour, byMarks, byType, headline,
   linkProgress, linkTotals, masteryByTopic, planAdherence, questionDetails, revisionQueue, traps, weekly, DIFFICULTIES, Group,
 } from "@/lib/statsMore";
 import { fmtDate, todayIST } from "@/lib/plan";
@@ -70,7 +70,7 @@ export default function Progress({ evs, pack, views, plan, done, links }: {
         <div><b>{fmtPct(h.recovery)}</b><span>of past mistakes later fixed ({h.recoveryN})</span></div>
         <div><b>{h.net}</b><span>net marks ({h.earned} earned, {h.lost} lost)</span></div>
         <div><b>{mins(h.timeSec)}</b><span>practice time</span></div>
-        <div><b>{pace === null ? "n/a" : `${Math.round(pace)}s`}<small> / mark</small></b><span>pace (exam allows about {EXAM_SEC_PER_MARK}s)</span></div>
+        <div><b>{pace === null ? "n/a" : `${Math.round(pace)}s`}<small> / mark</small></b><span>{examPace(pack) === null ? "pace per mark" : `pace (your mock tests allow about ${examPace(pack)}s)`}</span></div>
         <div><b>{sec(h.avgSecRight)} <small>vs</small> {sec(h.avgSecWrong)}</b><span>time on right vs wrong answers</span></div>
         <div><b>{fmtPct(h.guessShare)}</b><span>wrong answers under {GUESS_MS / 1000}s (guesses)</span></div>
       </div>

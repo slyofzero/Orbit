@@ -2,6 +2,8 @@
 import Link from "next/link";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import Calendar from "@/components/Calendar";
+import CopyDayPrompt from "@/components/CopyDayPrompt";
+import Rich from "@/components/Rich";
 import Runway from "@/components/Runway";
 import Milestones from "@/components/Milestones";
 import QuoteCard from "@/components/QuoteCard";
@@ -175,7 +177,13 @@ export default function Dashboard() {
       </div>
 
         <section className="agenda d-agenda" aria-live="polite" style={stag()}>
-          <div className="when">{selected === today ? "Today" : fmtLong(selected)}</div>
+          <div className="d-agenda-head">
+            <div className="when">{selected === today ? "Today" : fmtLong(selected)}</div>
+            <span className="row" style={{ gap: 8 }}>
+              {day && <CopyDayPrompt day={day} />}
+              <Link className="btn soft" href="/planner">Go to planner</Link>
+            </span>
+          </div>
           <div className="meta row">
             {selected === today && <span className="muted">{fmtLong(today)}</span>}
             {day && <span className={`pill k-${day.kind}`}>{KIND_LABEL[day.kind]}</span>}
@@ -185,13 +193,13 @@ export default function Dashboard() {
 
           {day ? (
             <>
-              <p style={{ fontWeight: 700, fontSize: "1.1rem" }}>{day.title}</p>
+              <p style={{ fontWeight: 700, fontSize: "1.1rem" }}><Rich text={day.title} /></p>
               {day.tasks.map((t, i) => {
                 const key = `${day.date}:${i}`;
                 return (
                   <label key={key} className={`task ${done[key] ? "done" : ""}`}>
                     <input type="checkbox" checked={!!done[key]} onChange={(e) => tick(key, e.target.checked, e.currentTarget)} />
-                    <span>{t}</span>
+                    <span><Rich text={t} /></span>
                   </label>
                 );
               })}
@@ -202,7 +210,7 @@ export default function Dashboard() {
                     {lq.length > 0 && `${lq.filter((id) => practice[id]).length} of ${lq.length} answered, ${lq.filter((id) => practice[id]?.correct).length} correct`}
                     {lmock && `${lq.length ? " · " : ""}Mock: ${lmock.name}`}
                   </div>
-                  {link?.note && <div className="small pl-main-note">{link.note}</div>}
+                  {link?.note && <div className="small pl-main-note"><Rich text={link.note} /></div>}
                   {lq.length > 0 && <div className="bar"><div style={{ width: `${(lq.filter((id) => practice[id]).length / lq.length) * 100}%` }} /></div>}
                   <div className="row" style={{ marginTop: 8 }}><Link className="btn pl-main-go" href={`/day/${day.date}`}>{lq.length ? "Practise these questions" : "Open this day"}</Link></div>
                 </div>
@@ -225,7 +233,7 @@ export default function Dashboard() {
               <p>Nothing is planned for this day.</p>
               {nextPlanned && (
                 <>
-                  <p className="muted">The next planned day is {fmtDate(nextPlanned.date)}: {nextPlanned.title}.</p>
+                  <p className="muted">The next planned day is {fmtDate(nextPlanned.date)}: <Rich text={nextPlanned.title} />.</p>
                   <button className="btn primary" onClick={() => setSelected(nextPlanned.date)}>Open {fmtDate(nextPlanned.date)}</button>
                 </>
               )}
@@ -237,7 +245,7 @@ export default function Dashboard() {
               {upcoming.map((u) => (
                 <button key={u.date} className="up-row" onClick={() => setSelected(u.date)}>
                   <span className="d"><b>{Number(u.date.slice(8))}</b><small>{WEEKDAY_NAMES[weekday(u.date)]}</small></span>
-                  <span className="t">{u.title}</span>
+                  <span className="t"><Rich text={u.title} /></span>
                   <span className={`pill k-${u.kind}`}>{KIND_LABEL[u.kind]}</span>
                 </button>
               ))}
@@ -340,7 +348,7 @@ export default function Dashboard() {
             const blob = new Blob([await exportAll()], { type: "application/json" });
             const a = document.createElement("a");
             a.href = URL.createObjectURL(blob);
-            a.download = `gate-progress-${todayIST()}.json`;
+            a.download = `orbit-progress-${todayIST()}.json`;
             a.click();
           }}>Export progress</button>
           <button className="btn soft" onClick={() => fileRef.current?.click()}>Import progress</button>

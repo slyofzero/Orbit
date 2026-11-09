@@ -37,7 +37,7 @@ export function linkPrompt(plan: PlanData, pack: PackData, opts: PromptOptions =
   return `${INTRO(cur.length > 0)}
 ${RULES}
 
-MY PLAN (${days.length} days, JSON)
+${plan.description ? `ABOUT MY PLAN (in my own words)\n${plan.description}\n\n` : ""}MY PLAN (${days.length} days, JSON)
 ${JSON.stringify(days)}
 ${cur.length ? `\nMY CURRENT LINKS (${cur.length} days, JSON)\n${JSON.stringify(cur)}\n` : ""}
 MY TOPICS (id | name | subject | how I feel)
@@ -66,6 +66,7 @@ export function planFile(plan: PlanData, current: Links = {}, pack?: PackData) {
   return {
     file: "plan",
     name: plan.name,
+    ...(plan.description ? { description: plan.description } : {}),
     days: plan.days.map((d) => ({ date: d.date, kind: d.kind, hours: d.hours, title: d.title, topics: d.topics, targetQs: d.targetQs })),
     ...(pack ? { currentLinks: currentLinks(pack, current) } : {}),
   };
@@ -85,7 +86,7 @@ export function bankFile(pack: PackData) {
 export function filesPrompt(improving = false): string {
   return `${INTRO(improving)}
 I have attached two JSON files:
-- plan.json: MY PLAN (a "days" list${improving ? ", plus my current links in \"currentLinks\"" : ""}).
+- plan.json: MY PLAN (a "days" list, and a "description" in my own words about what the plan is for${improving ? ", plus my current links in \"currentLinks\"" : ""}).
 - question-bank.json: MY TOPICS ("topics"), MY QUESTIONS ("questions": id, topic, type, marks, difficulty, tags, text) and MY MOCK TESTS ("mockTests").
 Read both files completely before you answer. question-bank.json starts with "questionCount": the "questions" list must have exactly that many entries, so use all of them, not just the first part of the file. If you cannot read the whole file, say so instead of guessing. In the rules below, "MY PLAN", "MY TOPICS", "MY QUESTIONS" and "MY MOCK TESTS" mean those parts of the files.
 ${RULES}
@@ -146,6 +147,22 @@ export function parseLinks(input: unknown, plan: PlanData, pack: PackData): Link
   const n = Object.keys(links).length;
   if (n === 0) { errors.push("Nothing usable was found: no date from your plan has a valid question or mock test."); return { ...fail(), warnings }; }
   return { links, errors, warnings, days: n, questions: used.size, mocks: usedMock.size };
+}
+
+/** What an imported plan's links look like against the plan and question bank that will be used. */
+export interface ImportCheck {
+  total: number;        // distinct questions and mock tests the file links to
+  working: number;      // how many of those exist
+  broken: number;       // total - working
+  good: Links | null;   // the links that work, ready to save (null when none do)
+}
+export function checkImportedLinks(raw: { date: string; practice: string[]; mock?: string; note?: string }[], plan: PlanData, pack: PackData): ImportCheck {
+  const ids = new Set<string>();
+  for (const r of raw) { (r.practice ?? []).forEach((id) => ids.add(`q:${id}`)); if (r.mock) ids.add(`m:${r.mock}`); }
+  const res = parseLinks({ days: raw }, plan, pack);
+  const working = res.links ? res.questions + res.mocks : 0;
+  const total = Math.max(ids.size, working);
+  return { total, working, broken: total - working, good: res.links };
 }
 
 /** Questions that are still in the pack, in the order the AI listed them. */

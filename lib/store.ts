@@ -177,10 +177,10 @@ export function usePlan() {
     custom: stored !== null,
     ready,
     // swap in a new plan; your milestones restart from the plan's own, and ticks are cleared unless you keep them
-    install: (next: PlanData, keepTicks: boolean) => {
+    install: (next: PlanData, keepTicks: boolean, links: Record<string, unknown> = {}) => {
       setStored(next);
       setMs(null);
-      setLinks({});
+      setLinks(links);
       if (!keepTicks) setDone({});
     },
     // small edits: keeps milestones, ticks and links as they are

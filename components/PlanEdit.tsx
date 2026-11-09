@@ -3,6 +3,8 @@ import { useState } from "react";
 import { KIND_LABEL, WEEKDAY_NAMES, fmtDate, weekday } from "@/lib/plan";
 import { KEYS, usePack, usePersisted, usePlan } from "@/lib/store";
 import { Links } from "@/lib/links";
+import PlanDescription from "./PlanDescription";
+import Rich from "@/components/Rich";
 import { Day, DayKind } from "@/lib/types";
 
 type Row = { text: string; from: number | null }; // from = position before editing, so ticks follow their task
@@ -82,6 +84,7 @@ export default function PlanEdit() {
       <section className="panel">
         <h2 style={{ marginTop: 0 }}>Edit your plan</h2>
         <p className="muted small">Open a day to change its title, hours, tasks or practice target. Changes keep your ticks, milestones and question links.</p>
+        <PlanDescription />
         <div className="row">
           <input type="date" className="pe-in" value={newDate} onChange={(e) => setNewDate(e.target.value)} aria-label="Date for the new day" />
           <button className="btn soft" onClick={add}>Add a day</button>
@@ -97,7 +100,7 @@ export default function PlanEdit() {
             <div key={d.date} className={`drow ${isOpen ? "open" : ""}`}>
               <button className="drow-head" onClick={() => pick(d)} aria-expanded={!!isOpen}>
                 <span className="pl-date sm"><b>{Number(d.date.slice(8))}</b><small>{WEEKDAY_NAMES[weekday(d.date)]}</small></span>
-                <span className="nm">{d.title}</span>
+                <span className="nm"><Rich text={d.title} /></span>
                 <span className={`pill k-${d.kind}`}>{KIND_LABEL[d.kind]}</span>
                 <span className="small muted st">{fmtDate(d.date)}</span>
               </button>

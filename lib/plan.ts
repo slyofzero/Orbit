@@ -33,8 +33,11 @@ export const FULL_WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thurs
 export const fmtLong = (d: string) => `${FULL_WEEKDAYS[weekday(d)]} ${Number(d.slice(8))} ${MONTH_NAMES[Number(d.slice(5, 7)) - 1]}`;
 
 // ---------- a whole plan as one object (the built-in one, or one the user imported) ----------
+/** Longest plan description, in characters. */
+export const PLAN_DESCRIPTION_MAX = 1500;
 export interface PlanData {
   name: string;
+  description?: string; // what the plan is for, in the owner's words; added to every AI prompt that carries the plan
   days: Day[];
   phaseNames: Record<string, string>; // phase id -> title, in display order
   milestones: Milestone[];

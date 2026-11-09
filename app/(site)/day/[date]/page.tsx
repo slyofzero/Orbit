@@ -7,6 +7,7 @@ import { attemptFrom, buildFixedMock } from "@/lib/mock";
 import { fmtLong } from "@/lib/plan";
 import { KEYS, usePack, usePersisted, usePlan } from "@/lib/store";
 import { Attempt, PracticeRec } from "@/lib/types";
+import Rich from "@/components/Rich";
 
 // The exact questions the AI matched to one plan day.
 export default function DayPractice() {
@@ -38,8 +39,8 @@ export default function DayPractice() {
   return (
     <>
       <p className="small"><Link href="/planner">← Planner</Link></p>
-      <h1>{day?.title ?? date}</h1>
-      <p className="muted">{fmtLong(date)}{link?.note ? `. ${link.note}` : ""}</p>
+      <h1>{day ? <Rich text={day.title} /> : date}</h1>
+      <p className="muted">{fmtLong(date)}{link?.note ? <>. <Rich text={link.note} /></> : ""}</p>
       {!link && <div className="card muted">No questions are linked to this day. Open Planner, then Link with AI.</div>}
       {mock && <div className="card row"><span>Mock test: <b>{mock.name}</b> ({mock.minutes} minutes)</span><button className="btn primary right" onClick={startMock}>Start the mock</button></div>}
       {qs.length > 0 && <p className="muted">{got.length} of {qs.length} answered, {right} correct.</p>}

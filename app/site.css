@@ -1074,3 +1074,12 @@ table.bd tfoot td { font-weight: 800; background: var(--sheet-2); border-top: 1.
 .sp-bars i { display: block; width: 100%; max-width: 26px; border-radius: 5px 5px 2px 2px; background: var(--accent); min-height: 0; }
 .sp-bars small { font-size: 0.68rem; color: var(--gray); } .sp-bars em { font-style: normal; font-size: 0.66rem; color: var(--gray); height: 12px; white-space: nowrap; }
 .sp-bars.hours { gap: 2px; }
+
+.d-agenda-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.d-agenda-head .when { margin: 0; }
+
+.pl-nav { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 18px 0 6px; }
+.pl-nav .btn:disabled { opacity: .45; cursor: default; }
+.pl-nav .btn { padding: 6px 16px; }
+
+.pi-links { margin: 8px 0 4px; padding: 8px 12px; border: 1.5px dashed var(--line); border-radius: 12px; }

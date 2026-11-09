@@ -1,5 +1,7 @@
 import { activity, applyFilters, breakdown, buildEvents, insights, metrics, NO_FILTER, rank, tagStats } from "../lib/stats";
 import { statsSheets } from "../lib/statsSheets";
+import { renderMath } from "../lib/tex";
+import { dayHelpPrompt } from "../lib/dayPrompt";
 import { adherenceSummary, linkProgress, linkTotals, byDifficulty, byHour, headline, masteryByTopic, netMarks, planAdherence, questionDetails, revisionQueue, traps, weekly } from "../lib/statsMore";
 import { buildXlsx } from "../lib/xlsx";
 import { writeFileSync } from "node:fs";
@@ -11,7 +13,7 @@ import { TOPICS } from "../lib/topics";
 import { GATE_PLAN } from "../lib/gatePlan";
 import { EMPTY_PACK, parsePack, packPrompt, packTemplateJson, packToJson, mergePack, mergeChanges, allQuestions } from "../lib/packs";
 import { gatePackJson, gatePlanJson } from "./export-gate";
-import { aiPrompt, parsePlan, templateJson } from "../lib/customPlan";
+import { aiPrompt, parsePlan, planToJson, templateJson } from "../lib/customPlan";
 import { hashData as hashDataCheck } from "../lib/images";
 import { checkQuestion, deleteSection, freeId, moveQuestion, moveSection, removeQuestion, renameSection, searchIds, upsertQuestion } from "../lib/packEdit";
 import type { Attempt } from "../lib/types";
@@ -26,7 +28,7 @@ import { judge, commandFor } from "../lib/runner";
 import { sameOutput } from "../lib/judge";
 import { segments, texProblems, parseFence, mergeTickLines } from "../lib/tex";
 import { highlightCode, languageOf } from "../lib/highlight";
-import { bankFile, filesPrompt, isTooLong, planFile, PROMPT_LIMIT, linkPrompt, parseLinks, liveQuestionIds, readAnswer } from "../lib/links";
+import { checkImportedLinks, bankFile, filesPrompt, isTooLong, planFile, PROMPT_LIMIT, linkPrompt, parseLinks, liveQuestionIds, readAnswer } from "../lib/links";
 
 let bad = 0;
 const err = (m: string) => { bad++; console.log("BAD:", m); };
@@ -308,6 +310,21 @@ if (ok.pack?.questions.map((q) => q.id).join() !== "a-1,a-2") err("auto ids shou
       if (r.warnings.length !== 3) err("expected warnings for unknown id, mock id, bad date only (repeats across days are allowed): " + r.warnings.join(" | "));
       if (parseLinks({ days: [{ date: "2030-01-01", practice: ["x"] }] }, plan, lp.pack).links) err("nothing valid must be an error");
       if (parseLinks("nope", plan, lp.pack).links) err("non-object must fail");
+      { // links travel with the plan
+        const L = { "2026-11-08": { q: ["t1-1", "t1-2"], note: "start easy" }, "2026-11-09": { q: [], mock: "m1" } };
+        const out = planToJson(plan, L) as { links?: { date: string; practice: string[]; mock?: string }[] };
+        if (out.links?.length !== 2 || out.links[0].date !== "2026-11-08" || out.links[1].mock !== "m1") err("export should carry the links: " + JSON.stringify(out.links));
+        if ("links" in planToJson(plan)) err("no links means no links field");
+        const back = parsePlan(JSON.parse(JSON.stringify(out)));
+        if (back.links?.length !== 2 || back.links[0].practice.join() !== "t1-1,t1-2" || back.links[0].note !== "start easy") err("links should survive export and import");
+        const all = checkImportedLinks(back.links!, plan, lp.pack);
+        if (all.broken !== 0 || all.working !== 3 || Object.keys(all.good ?? {}).length !== 2) err("all-valid links: " + JSON.stringify(all));
+        const some = checkImportedLinks([{ date: "2026-11-08", practice: ["t1-1", "gone"] }, { date: "2030-01-01", practice: ["t1-2"] }], plan, lp.pack);
+        if (some.total !== 3 || some.working !== 1 || some.broken !== 2 || some.good?.["2026-11-08"]?.q.join() !== "t1-1" || some.good?.["2030-01-01"]) err("some-broken links: " + JSON.stringify(some));
+        const none = checkImportedLinks([{ date: "2026-11-08", practice: ["gone"] }, { date: "2026-11-09", practice: [], mock: "nomock" }], plan, lp.pack);
+        if (none.working !== 0 || none.broken !== 2 || none.good !== null) err("no-valid links: " + JSON.stringify(none));
+        if (parsePlan({ name: "P", days: [{ date: "2026-11-02", title: "x" }], links: [5, { practice: [] }, { date: "2026-11-02", practice: ["a", 3] }] }).links?.[0].practice.join() !== "a") err("bad link entries should be skipped, good ones kept");
+      }
       const cut = readAnswer('```json\n{ "days": [ { "date": "2026-11-08", "practice": ["t1-1"] }, { "date": "2026-11-09", "mock": "m1" }\n]');
       if (cut.errors.length || cut.warnings.length !== 1 || !parseLinks(cut.value, plan, lp.pack).links) err("a cut-off answer should be repaired with a warning: " + JSON.stringify(cut));
       if (readAnswer("hello {").errors.length !== 1) err("garbage must give one friendly error");
@@ -676,6 +693,36 @@ console.log(bad ? `${bad} PROBLEMS` : "ALL OK");
     if (lk.length !== 3 || lk[0].total !== 4 || lk[0].right !== 1 || lk[0].wrong !== 2 || lk[0].left !== 1 || lk[0].answered !== 3) err("link progress wrong: " + JSON.stringify(lk[0]));
     if (lk[0].onDay !== 2 || lk[2].past !== false || lk[2].left !== 1) err("link progress days wrong");
     if (linkTotals(lk).total !== 6 || linkTotals(lk).pastLeft !== 1) err("link totals wrong: " + JSON.stringify(linkTotals(lk)));
+    { const dp = dayHelpPrompt(plan2.days[0], sp, { q: [ids[0], ids[1], "gone-id"], note: "Start easy" }, "My plan");
+      if (!dp.includes("1. a") || !dp.includes("2026-11-02") || !dp.includes("Start easy") || !dp.includes("PRACTICE QUESTIONS PLANNED FOR TODAY (2)") || dp.includes("gone-id")) err("day prompt wrong:\n" + dp);
+      if (/GATE/i.test(dp) || /GATE/i.test(dayHelpPrompt(plan2.days[1], sp, undefined, "x", [{ name: "Midterm", date: "2026-11-20" }]))) err("the day prompt must not mention GATE");
+      if (!dayHelpPrompt(plan2.days[1], sp, undefined, "x", [{ name: "Midterm", date: "2026-11-20" }]).includes("Midterm (2026-11-20)")) err("the day prompt should list upcoming milestones from the plan");
+      if (!dp.includes("WHAT I NEED FROM YOU") || !dayHelpPrompt(plan2.days[1], sp).includes("PRACTICE TARGET: 5")) err("day prompt sections missing"); }
+    { // plan description
+      const day = { date: "2026-11-02", title: "x", tasks: ["a"] };
+      const withD = parsePlan({ name: "P", description: "  Final exam prep. Weak in DBMS.  ", days: [day] });
+      if (withD.plan?.description !== "Final exam prep. Weak in DBMS.") err("description should be read and trimmed");
+      const back = parsePlan(JSON.parse(JSON.stringify(planToJson(withD.plan!)))).plan;
+      if (back?.description !== withD.plan!.description) err("description should survive export and upload");
+      if ("description" in planToJson(plan2) || parsePlan({ name: "P", days: [day] }).plan?.description !== undefined) err("no description should mean no field");
+      if (!parsePlan({ name: "P", description: 5, days: [day] }).errors.some((e) => e.includes('"description" must be text'))) err("non-text description must fail");
+      const long = parsePlan({ name: "P", description: "z".repeat(2000), days: [day] });
+      if (long.plan?.description?.length !== 1500 || !long.warnings.some((w) => w.includes("description"))) err("a long description should be cut with a warning");
+      const pd = { ...withD.plan!, days: plan2.days };
+      if (!linkPrompt(pd, sp).includes("ABOUT MY PLAN (in my own words)\nFinal exam prep. Weak in DBMS.") || linkPrompt(plan2, sp).includes("ABOUT MY PLAN")) err("the link prompt should carry the description, only when there is one");
+      if (planFile(pd).description !== "Final exam prep. Weak in DBMS." || !filesPrompt(false).includes('"description"')) err("the files route should carry the description");
+      if (!dayHelpPrompt(plan2.days[0], sp, undefined, "P", [], "Final exam prep. Weak in DBMS.").includes("ABOUT MY PLAN (in my own words): Final exam prep. Weak in DBMS.")) err("the day prompt should carry the description");
+      if (!aiPrompt("2026-11-02").includes('"description"') || !templateJson("2026-11-02").includes('"description"')) err("the plan-writing prompt and template should mention description");
+    }
+    { // LaTeX in plans
+      const tx = parsePlan({ name: "P", milestones: [{ name: "Exam", date: "2026-11-20", note: "see \u000crac{1}{2}" }], days: [{ date: "2026-11-02", title: "Project with $P = A(A^T A)^{-1}A^T$", tasks: ["Solve \u000crac{a}{b}", "Use \times here"] }] });
+      if (tx.plan?.days[0].tasks[0] !== "Solve \\frac{a}{b}" || tx.plan?.days[0].tasks[1] !== "Use \\times here") err("plan text should get its LaTeX backslashes back: " + JSON.stringify(tx.plan?.days[0].tasks));
+      if (tx.plan?.milestones[0].note !== "see \\frac{1}{2}") err("milestone note backslashes not restored");
+      if (!tx.warnings.some((w) => w.includes("LaTeX backslash"))) err("repairing backslashes should warn");
+      if (!tx.plan?.days[0].title.includes("$P = A(A^T A)^{-1}A^T$")) err("math in a title must be kept as typed");
+      if (!renderMath(tx.plan!.days[0].title.split("$")[1], false).includes("katex")) err("a plan title's maths should render with KaTeX");
+      if (!aiPrompt("2026-11-02").includes("LaTeX")) err("the plan-writing prompt should explain LaTeX");
+    }
     const names = statsSheets({ evs: evs2, pack: sp, attempts: [], profile: "Main", now: t + 5 * D, views: vw, plan: plan2, done: {}, links: { "2026-11-02": { q: [ids[0]] } } }).map((x) => x.name);
     for (const n of ["Question detail", "Mastery by topic", "Revision queue", "Difficulty, type, marks", "Weekly trend", "Time of day", "Plan adherence", "Linked questions"]) if (!names.includes(n)) err("missing sheet " + n);
     console.log("more stats: ok,", names.length, "sheets");

@@ -2,9 +2,12 @@
 import { useMemo, useRef, useState } from "react";
 import { aiPrompt, parsePlan, planToJson, templateJson } from "@/lib/customPlan";
 import { downloadJson, fileSafe } from "@/lib/download";
+import PlanDescription from "./PlanDescription";
 import ExportFirstModal from "./ExportFirstModal";
 import { fmtDate, todayIST, addDays } from "@/lib/plan";
-import { usePlan } from "@/lib/store";
+import { usePack, usePlan } from "@/lib/store";
+import { checkImportedLinks, Links } from "@/lib/links";
+import { KEYS, usePersisted } from "@/lib/store";
 
 const nextMonday = () => { const t = todayIST(); return addDays(t, ((8 - new Date(t).getUTCDay()) % 7) || 7); };
 const save = (name: string, text: string) => {
@@ -17,6 +20,9 @@ const save = (name: string, text: string) => {
 // Where you swap the built-in plan for your own: a JSON file you upload, or text you paste.
 export default function PlanImport({ onDone }: { onDone: () => void }) {
   const { plan, custom, install, remove } = usePlan();
+  const { pack } = usePack();
+  const [curLinks] = usePersisted<Links>(KEYS.links, {});
+  const [linkChoice, setLinkChoice] = useState<"working" | "none">("working");
   const [text, setText] = useState("");
   const [keep, setKeep] = useState(false);
   const [ask, setAsk] = useState<null | "replace" | "remove">(null);
@@ -29,12 +35,17 @@ export default function PlanImport({ onDone }: { onDone: () => void }) {
     try {
       return parsePlan(JSON.parse(text));
     } catch (e) {
-      return { plan: null, errors: [`This is not valid JSON: ${(e as Error).message}`], warnings: [] };
+      const m = (e as Error).message;
+      return { plan: null, errors: [`This is not valid JSON: ${m}${/escape/i.test(m) ? ". If you wrote LaTeX, every backslash must be doubled, like \"$\\\\frac{1}{2}$\"." : ""}`], warnings: [] };
     }
   }, [text]);
   const p = result?.plan ?? null;
 
-  const useIt = () => { if (!p) return; install(p, keep); setText(""); setAsk(null); setNote(`"${p.name}" is now your plan.`); onDone(); };
+  const rawLinks = result?.links ?? [];
+  const lc = useMemo(() => (p && rawLinks.length ? checkImportedLinks(rawLinks, p, pack) : null), [p, rawLinks, pack]); // eslint-disable-line react-hooks/exhaustive-deps
+  const importedLinks: Links | undefined = lc?.good && (lc.broken === 0 || linkChoice === "working") ? lc.good : undefined;
+
+  const useIt = () => { if (!p) return; install(p, keep, importedLinks); setText(""); setAsk(null); setNote(`"${p.name}" is now your plan${importedLinks ? ` with ${Object.keys(importedLinks).length} day${Object.keys(importedLinks).length === 1 ? "" : "s"} of linked questions` : ""}.`); onDone(); };
 
   const copy = async (what: string, value: string) => {
     try { await navigator.clipboard.writeText(value); setNote(`${what} copied.`); } catch { setNote("Copy was blocked by the browser. Use Download instead."); }
@@ -48,10 +59,11 @@ export default function PlanImport({ onDone }: { onDone: () => void }) {
         <p className="small muted" style={{ margin: 0 }}>
           {custom ? `${plan.days.length} days · ${fmtDate(plan.days[0].date)} to ${fmtDate(plan.days[plan.days.length - 1].date)} · ${plan.milestones.length} milestone${plan.milestones.length === 1 ? "" : "s"}` : "Today, the calendar and the planner stay empty until you upload a plan."}
         </p>
+        {custom && <PlanDescription />}
         {custom && (
           <div className="row" style={{ marginTop: 12 }}>
             <button className="btn soft" onClick={() => setAsk("remove")}>Remove this plan</button>
-            <button className="btn soft" onClick={() => downloadJson(`${fileSafe(plan.name)}.json`, planToJson(plan))}>Export this plan</button>
+            <button className="btn soft" onClick={() => downloadJson(`${fileSafe(plan.name)}.json`, planToJson(plan, curLinks))}>Export this plan</button>
           </div>
         )}
       </section>
@@ -89,7 +101,22 @@ export default function PlanImport({ onDone }: { onDone: () => void }) {
             <b>✓ Looks good: {p.name}</b>
             <p className="small" style={{ margin: "4px 0" }}>{p.days.length} days from {fmtDate(p.days[0].date)} to {fmtDate(p.days[p.days.length - 1].date)} · {Object.keys(p.phaseNames).length} phase{Object.keys(p.phaseNames).length === 1 ? "" : "s"} · {p.days.reduce((s, d) => s + d.hours, 0)} planned hours</p>
             {p.milestones.length > 0 && <p className="small" style={{ margin: "4px 0" }}>Milestones: {p.milestones.map((m) => `${m.name} (${fmtDate(m.date)})`).join(", ")}</p>}
-            <div className="callout">🔴 CAUTION: Using this plan replaces your current plan and milestones. Your practice history and mock results are kept.</div>
+            {lc && (
+              <div className="pi-links">
+                {lc.working === 0 ? (
+                  <p className="small" style={{ margin: "6px 0" }}>🔗 This file has linked questions, but none of them match your current question bank, so <b>only the plan will be imported</b>, not the links.{pack.questions.length === 0 ? " (No question bank is loaded yet. Load it first if you want the links.)" : ""}</p>
+                ) : lc.broken === 0 ? (
+                  <p className="small" style={{ margin: "6px 0" }}>🔗 All {lc.total} linked question{lc.total === 1 ? "" : "s"} in this file {lc.total === 1 ? "was" : "were"} found in your question bank, so the links will be imported with the plan.</p>
+                ) : (
+                  <>
+                    <p className="small" style={{ margin: "6px 0" }}>🔗 {lc.broken} of the {lc.total} linked question{lc.total === 1 ? "" : "s"} in this file can't be found in your question bank (or on a date outside this plan). What should happen to the links?</p>
+                    <label className="small pi-keep"><input type="radio" name="linkchoice" checked={linkChoice === "working"} onChange={() => setLinkChoice("working")} /> Import the plan and the {lc.working} working link{lc.working === 1 ? "" : "s"}, and drop the broken ones</label>
+                    <label className="small pi-keep"><input type="radio" name="linkchoice" checked={linkChoice === "none"} onChange={() => setLinkChoice("none")} /> Import only the plan, with no links</label>
+                  </>
+                )}
+              </div>
+            )}
+            <div className="callout">🔴 CAUTION: Using this plan replaces your current plan, milestones and question links. Your practice history and mock results are kept.</div>
             <label className="small pi-keep"><input type="checkbox" checked={keep} onChange={(e) => setKeep(e.target.checked)} /> Keep my ticked tasks (they match by date and position, so only keep them if the dates overlap)</label>
             <button className="btn primary" onClick={() => (custom ? setAsk("replace") : useIt())}>Use this plan</button>
           </div>
@@ -98,7 +125,7 @@ export default function PlanImport({ onDone }: { onDone: () => void }) {
       {note && <p className="small muted" role="status">{note}</p>}
       {ask && (
         <ExportFirstModal what="plan" action={ask} oldName={plan.name} newName={p?.name}
-          onExport={() => downloadJson(`${fileSafe(plan.name)}.json`, planToJson(plan))}
+          onExport={() => downloadJson(`${fileSafe(plan.name)}.json`, planToJson(plan, curLinks))}
           onGo={() => (ask === "replace" ? useIt() : (remove(), setAsk(null), setNote("Plan removed.")))}
           onCancel={() => setAsk(null)} />
       )}
