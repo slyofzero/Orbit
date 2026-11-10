@@ -13,6 +13,7 @@ import { KIND_LABEL, Milestone, WEEKDAY_NAMES, addDays, daysBetween, fmtDate, fm
 import { DEFAULT_SETTINGS, KEYS, clearAll, exportAll, importAll, inspectBackup, useMilestones, usePack, usePersisted, usePlan } from "@/lib/store";
 import { Attempt, PracticeRec, Settings } from "@/lib/types";
 import { marksFor } from "@/lib/scoring";
+import PageLoading from "@/components/PageLoading";
 
 const inDays = (n: number) => (n === 0 ? "today" : n === 1 ? "tomorrow" : `in ${n} days`);
 
@@ -40,7 +41,7 @@ export default function Dashboard() {
     return () => clearTimeout(t);
   }, [toast]);
 
-  if (!ready || !ms.ready || !planReady || !packReady) return <p className="muted">Loading…</p>;
+  if (!ready || !ms.ready || !planReady || !packReady) return <PageLoading />;
 
   const milestones = ms.milestones;
   const isComplete = (date: string) => {
@@ -185,7 +186,7 @@ export default function Dashboard() {
           <div className="d-agenda-head">
             <div className="when">{selected === today ? "Today" : selected === addDays(today, 1) ? "Tomorrow" : fmtLong(selected)}</div>
             <span className="row" style={{ gap: 8 }}>
-              {day && <CopyDayPrompt day={day} />}
+              {day && <CopyDayPrompt day={day} icon />}
               <Link className="btn soft" href="/planner">Go to planner</Link>
             </span>
           </div>

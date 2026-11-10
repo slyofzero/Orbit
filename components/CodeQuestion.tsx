@@ -7,6 +7,7 @@ import { KEYS, usePersisted } from "@/lib/store";
 import { Question } from "@/lib/types";
 import { setupPrompt } from "@/lib/setupPrompt";
 import Rich from "./Rich";
+import CopyIcon from "@/components/CopyIcon";
 
 const SKELETON: Record<CodeLanguage, string> = {
   python: "# read the input with input() and print the answer\n",
@@ -99,7 +100,7 @@ export default function CodeQuestion({ q, onSubmit, onReset }: {
           <b>This question needs some setup first</b>
           <div className="small"><Rich text={spec.setup} /></div>
           <div className="row">
-            <button className="btn primary" onClick={copyPrompt}>Copy setup prompt</button>
+            <button className="btn primary icon-btn" onClick={copyPrompt} title="Copy setup prompt" aria-label="Copy setup prompt"><CopyIcon /></button>
             <span className="small muted">Give it to your AI. It writes a script that builds this data on your computer.</span>
           </div>
           <label className="small">Practice folder (the full path the script printed)

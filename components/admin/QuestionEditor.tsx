@@ -10,6 +10,7 @@ import { difficultyOf } from "@/lib/questionFilter";
 import { editPrompt, pictureList } from "@/lib/editPrompt";
 import { copyPicture, downloadPicture } from "@/lib/imageClip";
 import { CODE_LANGUAGES, LANGUAGE_LABEL } from "@/lib/codeLanguages";
+import CopyIcon from "@/components/CopyIcon";
 
 type Field = "text" | "explanation" | `opt${number}`;
 
@@ -144,11 +145,11 @@ export default function QuestionEditor({ profile, pack, loc, preset, onClose, on
       <div className="ad-modal">
         <div className="ad-head">
           <h2 style={{ margin: 0 }}>{loc ? <>Edit <code>{loc.q.id}</code></> : "Add a question"}</h2>
-          <button className="btn invert" style={{ marginLeft: "auto" }} onClick={copyPrompt} title="Copies the question and exact rules for fixing how it is written, to paste into any AI">Copy prompt</button>
+          <button className="btn invert icon-btn" style={{ marginLeft: "auto" }} onClick={copyPrompt} title="Copy prompt: the question and exact rules for fixing how it is written, to paste into any AI" aria-label="Copy prompt"><CopyIcon /></button>
         </div>
         {pics.length > 0 && (
           <div className="ad-pics">
-            <span className="small">This question has {pics.length} picture{pics.length === 1 ? "" : "s"}. The prompt can't carry {pics.length === 1 ? "it" : "them"}, so after Copy prompt, paste {pics.length === 1 ? "it" : "each one"} into the same AI chat:</span>
+            <span className="small">This question has {pics.length} picture{pics.length === 1 ? "" : "s"}. The prompt can't carry {pics.length === 1 ? "it" : "them"}, so after copying the prompt, paste {pics.length === 1 ? "it" : "each one"} into the same AI chat:</span>
             {pics.map((p, i) => (
               <span key={p.ref} className="row" style={{ gap: 6 }}>
                 <button className="btn soft" onClick={() => picAct(i, "copy")}>Copy picture {i + 1}</button>

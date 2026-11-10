@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { isTooLong, linkPrompt, Links } from "@/lib/links";
 import { ExportButtons, FilesRoute } from "./LinkFiles";
 import { KEYS, usePack, usePersisted, usePlan } from "@/lib/store";
+import CopyIcon from "@/components/CopyIcon";
 
 const APPS = [
   { name: "Claude", url: "https://claude.ai/new", q: "q", dot: "#d97757" },
@@ -80,7 +81,7 @@ export default function ImprovePlan({ onPaste }: { onPaste: () => void }) {
                           <div className="ipm-apps">
                             {APPS.map((a) => <button key={a.name} onClick={() => go(a)}><i style={{ background: a.dot }} />{a.name}</button>)}
                           </div>
-                          <button className="btn soft ipm-copy" onClick={copyOnly}>Or just copy the prompt</button>
+                          <button className="btn soft icon-btn ipm-copy" onClick={copyOnly} title="Or just copy the prompt" aria-label="Copy the prompt"><CopyIcon /></button>
                           <p className="small muted" style={{ margin: "10px 0 4px" }}>Prefer files? Export them and attach both to any AI:</p>
                           <ExportButtons plan={plan} pack={pack} links={links} onNote={setNote} />
                         </>

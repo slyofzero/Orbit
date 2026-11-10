@@ -6,6 +6,7 @@ import CodeLangPill from "@/components/CodeLangPill";
 import QuestionCard from "@/components/QuestionCard";
 import { KEYS, usePack, usePersisted } from "@/lib/store";
 import { PracticeRec } from "@/lib/types";
+import PageLoading from "@/components/PageLoading";
 
 // One programming question on a page of its own: nothing else is shown.
 export default function ProgrammingQuestion() {
@@ -18,7 +19,7 @@ export default function ProgrammingQuestion() {
   const i = all.findIndex((q) => q.id === id);
   const q = all[i];
 
-  if (!packReady || !ready) return <p className="muted">Loading…</p>;
+  if (!packReady || !ready) return <PageLoading />;
   if (!q) {
     return (
       <div className="panel">

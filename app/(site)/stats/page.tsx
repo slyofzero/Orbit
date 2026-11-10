@@ -10,6 +10,7 @@ import { useStats } from "@/components/stats/useStats";
 import { activeProfileId, listProfiles } from "@/lib/profiles";
 import { statsSheets } from "@/lib/statsSheets";
 import { downloadXlsx } from "@/lib/xlsx";
+import PageLoading from "@/components/PageLoading";
 
 type Tab = "overview" | "progress" | "explore" | "questions" | "mistakes";
 const TABS: [Tab, string][] = [["overview", "Overview"], ["progress", "Progress"], ["explore", "Explore"], ["questions", "Questions"], ["mistakes", "Mistakes"]];
@@ -21,7 +22,7 @@ export default function Stats() {
   const [note, setNote] = useState("");
   useEffect(() => { const t = new URLSearchParams(window.location.search).get("tab"); if (TABS.some(([k]) => k === t)) setTab(t as Tab); }, []);
 
-  if (!ready) return <p className="muted">Loading…</p>;
+  if (!ready) return <PageLoading />;
 
   const exportXlsx = () => {
     const profile = listProfiles().find((p) => p.id === activeProfileId())?.name ?? "Main";

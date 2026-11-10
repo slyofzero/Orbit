@@ -9,6 +9,7 @@ import { makeMatcher } from "@/lib/questionFilter";
 import { KEYS, usePack, usePersisted } from "@/lib/store";
 import { LANGUAGE_LABEL, type CodeLanguage } from "@/lib/codeLanguages";
 import { PracticeRec } from "@/lib/types";
+import PageLoading from "@/components/PageLoading";
 
 const firstLine = (t: string) => t.replace(/!\[[^\]\n]*\]\([^)\s]+\)/g, "").replace(/```[\s\S]*?```/g, " ").replace(/[`$]/g, "").split("\n").map((l) => l.trim()).find(Boolean)?.slice(0, 110) ?? "Programming question";
 
@@ -36,14 +37,14 @@ export default function Programming() {
   });
   const solved = all.filter((q) => practice[q.id]?.correct).length;
 
-  if (!packReady || !ready) return <p className="muted">Loading…</p>;
+  if (!packReady || !ready) return <PageLoading />;
 
   return (
     <>
       <div className="row" style={{ alignItems: "center", marginBottom: 18 }}>
         <h1>Practice</h1>
         <PracticeTabs active="programming" />
-        <button className="btn soft right" onClick={() => setManaging((m) => !m)}>{managing ? "Back to questions" : "Question pack"}</button>
+        <button className="btn invert right" onClick={() => setManaging((m) => !m)}>{managing ? "Back to questions" : "Manage pack"}</button>
       </div>
       {managing ? (
         <PackImport onDone={(m) => { setDone(m); setManaging(false); window.scrollTo({ top: 0 }); }} />
@@ -52,7 +53,7 @@ export default function Programming() {
       {!custom || all.length === 0 ? (
         <div className="panel">
           <h2 style={{ marginTop: 0 }}>No programming questions yet</h2>
-          <p className="muted" style={{ margin: 0 }}>Programming questions are ones where you write code and Orbit runs it on your computer. Ask your AI for questions with <code>"type": "code"</code> using the prompt in Practice, Question pack, then upload them. They appear here.</p>
+          <p className="muted" style={{ margin: 0 }}>Programming questions are ones where you write code and Orbit runs it on your computer. Ask your AI for questions with <code>"type": "code"</code> using the prompt in Practice, Manage pack, then upload them. They appear here.</p>
         </div>
       ) : (
         <>

@@ -4,6 +4,7 @@ import { downloadText, fileSafe } from "@/lib/download";
 import { isTooLong, linkPrompt, parseLinks, readAnswer, Links } from "@/lib/links";
 import { ExportButtons, FilesRoute } from "./LinkFiles";
 import { KEYS, usePack, usePersisted, usePlan } from "@/lib/store";
+import CopyIcon from "@/components/CopyIcon";
 
 // Export plan + question bank for an AI, paste its answer back, and every plan day points at real questions.
 export default function LinkPlan({ onDone }: { onDone?: () => void }) {
@@ -47,7 +48,7 @@ export default function LinkPlan({ onDone }: { onDone?: () => void }) {
             <p className="muted small">It holds the instructions, your plan and your question bank ({pack.questions.length} questions, {pack.mockTests.length} mock tests).</p>
             <label className="small"><input type="checkbox" checked={withText} onChange={(e) => setWithText(e.target.checked)} /> Include the start of each question (smarter matches, longer text)</label>
             <div className="row" style={{ marginTop: 10 }}>
-              <button className="btn primary" onClick={copy}>Copy for AI</button>
+              <button className="btn primary icon-btn" onClick={copy} title="Copy for AI" aria-label="Copy for AI"><CopyIcon /></button>
               <button className="btn" onClick={() => downloadText(`${fileSafe(plan.name)}-link-request.txt`, prompt)}>Download</button>
               <span className="small muted">{Math.round(prompt.length / 1000)}k characters</span>
             </div>

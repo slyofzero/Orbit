@@ -3,6 +3,7 @@ import type { PackData } from "@/lib/packs";
 import type { PlanData } from "@/lib/plan";
 import { bankFile, filesPrompt, Links, planFile } from "@/lib/links";
 import { downloadJson, fileSafe } from "@/lib/download";
+import CopyIcon from "@/components/CopyIcon";
 
 // Two separate JSON files (your plan, your question bank) for banks too big to paste, plus the short prompt that goes with them.
 export function ExportButtons({ plan, pack, links, onNote }: { plan: PlanData; pack: PackData; links: Links; onNote?: (s: string) => void }) {
@@ -24,11 +25,11 @@ export function FilesRoute({ plan, pack, links, size, onNote }: { plan: PlanData
       <ol className="ipm-sub">
         <li>Export both files below.</li>
         <li>Open any AI that accepts file uploads and attach both files.</li>
-        <li>Copy the short prompt and send it.</li>
+        <li>Press the copy button below, paste the short prompt into the chat and send it.</li>
       </ol>
       <p className="small" style={{ margin: "0 0 10px", color: "var(--bad, #c0392b)" }}>🔴 CAUTION: some AIs cannot read a file this big (token limits) and may quietly read only the first part. Use an AI with a large context window, such as Gemini, Claude or ChatGPT on a paid plan. Before sending the prompt, ask it: "How many items are in the questions list of question-bank.json?" The answer must be {count.toLocaleString()}. If it gives another number, do NOT continue: start a new chat or try another AI.</p>
       <ExportButtons plan={plan} pack={pack} links={links} onNote={onNote} />
-      <div className="row" style={{ marginTop: 8 }}><button className="btn primary" onClick={copy}>Copy the short prompt</button></div>
+      <div className="row" style={{ marginTop: 8 }}><button className="btn primary icon-btn" onClick={copy} title="Copy the short prompt" aria-label="Copy the short prompt"><CopyIcon /></button></div>
       <textarea readOnly className="pi-text" rows={4} value={prompt} onFocus={(e) => e.currentTarget.select()} style={{ marginTop: 8 }} />
     </div>
   );

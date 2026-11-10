@@ -8,6 +8,7 @@ import { fmtLong } from "@/lib/plan";
 import { KEYS, usePack, usePersisted, usePlan } from "@/lib/store";
 import { Attempt, PracticeRec } from "@/lib/types";
 import Rich from "@/components/Rich";
+import PageLoading from "@/components/PageLoading";
 
 // The exact questions the AI matched to one plan day.
 export default function DayPractice() {
@@ -19,7 +20,7 @@ export default function DayPractice() {
   const [practice, setPractice, pReady] = usePersisted<Record<string, PracticeRec>>(KEYS.practice, {});
   const [, setFixed] = usePersisted<Record<string, boolean>>(KEYS.fixed, {});
   const [, setAttempts] = usePersisted<Attempt[]>(KEYS.attempts, []);
-  if (!planReady || !packReady || !lReady || !pReady) return <p className="muted">Loading…</p>;
+  if (!planReady || !packReady || !lReady || !pReady) return <PageLoading />;
 
   const day = plan.days.find((d) => d.date === date);
   const link = links[date];

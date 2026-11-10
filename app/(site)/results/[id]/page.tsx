@@ -6,6 +6,7 @@ import Rich from "@/components/Rich";
 import { formatAnswer, formatGiven, isAttempted, isCorrect, marksFor } from "@/lib/scoring";
 import { KEYS, usePack, usePersisted } from "@/lib/store";
 import { Attempt } from "@/lib/types";
+import PageLoading from "@/components/PageLoading";
 
 type Filter = "all" | "wrong" | "skipped" | "right";
 
@@ -16,7 +17,7 @@ export default function Results() {
   const [filter, setFilter] = useState<Filter>("all");
   const a = attempts.find((x) => x.id === id);
 
-  if (!ready) return <p className="muted">Loading…</p>;
+  if (!ready) return <PageLoading />;
   if (!a) return <p>Attempt not found. <Link href="/mocks">Back to mocks</Link></p>;
   if (!a.submittedAt) return <p>This attempt is not submitted yet. <Link href={`/exam/${a.id}`}>Resume it</Link></p>;
 

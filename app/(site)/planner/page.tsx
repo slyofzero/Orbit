@@ -13,6 +13,7 @@ import { KEYS, usePack, usePersisted, usePlan } from "@/lib/store";
 import { burst } from "@/lib/fx";
 import { PracticeRec } from "@/lib/types";
 import { Day } from "@/lib/types";
+import PageLoading from "@/components/PageLoading";
 
 type View = "next" | "all" | "missed" | "plan" | "link" | "edit";
 type Done = Record<string, boolean>;
@@ -94,7 +95,7 @@ export default function Planner() {
   const today = todayIST();
   useEffect(() => { const t = new URLSearchParams(window.location.search).get("tab"); if (t === "plan" || t === "link" || t === "edit") setView(t); }, []);
 
-  if (!ready || !planReady) return <p className="muted">Loading…</p>;
+  if (!ready || !planReady) return <PageLoading />;
 
   if (!plan.days.length) {
     return (
@@ -141,11 +142,11 @@ export default function Planner() {
             <h2>{labelFor(date)}</h2>
             <span className="muted small">{fmtLong(date)}</span>
           </div>
-          {d && <span className="pl-side"><CopyDayPrompt day={d} /><span className={`pill k-${d.kind}`}>{KIND_LABEL[d.kind]}</span></span>}
+          {d && <span className="pl-side"><span className={`pill k-${d.kind}`}>{KIND_LABEL[d.kind]}</span><CopyDayPrompt day={d} icon /></span>}
         </div>
         {d ? (
           <>
-            <p className="pl-title"><Rich text={d.title} />{d.hours > 0 && <span className="muted small"> · {d.hours} h</span>}</p>
+            <p className="pl-title"><Rich text={d.title} />{d.hours > 0 && <span className="muted small" style={{ whiteSpace: "nowrap" }}> · {d.hours}&nbsp;h</span>}</p>
             <DayBody d={d} done={done} setDone={setDone} qs={answeredOn(date)} />
           </>
         ) : (

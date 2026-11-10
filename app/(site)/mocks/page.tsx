@@ -7,6 +7,7 @@ import { FixedMock, MockTemplate } from "@/lib/packs";
 import { marksFor } from "@/lib/scoring";
 import { KEYS, usePack, usePersisted } from "@/lib/store";
 import { Attempt, PracticeRec } from "@/lib/types";
+import PageLoading from "@/components/PageLoading";
 
 const countQs = (t: MockTemplate) => t.sections.reduce((s, x) => s + x.picks.reduce((a, p) => a + p.one + p.two, 0), 0);
 const countMarks = (t: MockTemplate) => t.sections.reduce((s, x) => s + x.picks.reduce((a, p) => a + p.one + 2 * p.two, 0), 0);
@@ -42,7 +43,7 @@ export default function Mocks() {
     router.push(`/exam/${id}`);
   };
 
-  if (!ready || !packReady) return <p className="muted">Loading…</p>;
+  if (!ready || !packReady) return <PageLoading />;
   const scoreOf = (a: Attempt) => a.questions.reduce((s, q, i) => s + marksFor(q, a.responses[i]?.ans), 0);
   const weakN = pack.topics.filter((t) => t.status !== "know").length;
 
@@ -71,7 +72,7 @@ export default function Mocks() {
             <h2 className="mk-h">Full-length mocks and PYQs</h2>
             <p className="muted small mk-sub">Complete papers with their own fixed questions, sections and timer.</p>
             {pack.mockTests.length === 0 && pack.mocks.length === 0 ? (
-              <div className="panel muted">No full-length mocks yet. Add "mockTests" to your question pack (see the pack prompt in Practice, Question pack) and they will appear here.</div>
+              <div className="panel muted">No full-length mocks yet. Add "mockTests" to your question pack (see the pack prompt in Practice, Manage pack) and they will appear here.</div>
             ) : (
               <div className="mock-grid">
                 {pack.mockTests.map((t, i) => {

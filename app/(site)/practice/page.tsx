@@ -9,6 +9,7 @@ import PracticeTabs from "@/components/PracticeTabs";
 import { fmtDate, todayIST } from "@/lib/plan";
 import { KEYS, usePack, usePersisted, usePlan } from "@/lib/store";
 import { PracticeRec, TopicStatus } from "@/lib/types";
+import PageLoading from "@/components/PageLoading";
 
 const STATUS_LABEL: Record<TopicStatus, string> = { noidea: "No idea", shaky: "Shaky", know: "Know" };
 
@@ -39,7 +40,7 @@ export default function PracticeHome() {
     return m;
   }, [practice]);
 
-  if (!ready || !planReady || !packReady) return <p className="muted">Loading…</p>;
+  if (!ready || !planReady || !packReady) return <PageLoading />;
 
   const searching = q.trim().length > 0 || only !== "all" || picked.length > 0;
   const passes = makeMatcher(pack, picked);
@@ -58,7 +59,7 @@ export default function PracticeHome() {
       <div className="row" style={{ alignItems: "center", marginBottom: 18 }}>
         <h1>Practice</h1>
         <PracticeTabs active="topics" />
-        {hasPack && <button className="btn soft right" onClick={() => setManaging((m) => !m)}>{managing ? "Back to topics" : "Question pack"}</button>}
+        {hasPack && <button className="btn invert right" onClick={() => setManaging((m) => !m)}>{managing ? "Back to topics" : "Manage pack"}</button>}
       </div>
 
       {!hasPack && (
@@ -126,7 +127,17 @@ export default function PracticeHome() {
                       <Link key={t.id} href={`/practice/${t.id}`} className="pr-row">
                         <i className={`dot ${t.status}`} title={STATUS_LABEL[t.status]} />
                         <span className="nm">{t.name}</span>
-                        <span className="muted small">{picked.length > 0 ? `${tagged(t.id)} matching q` : s ? `${s.c}/${s.n} right` : `${n}${hasGenerator(pack, t.id) ? "+" : ""} q`}</span>
+                        {picked.length > 0 || !s ? (
+                          <span className="muted small">{picked.length > 0 ? `${tagged(t.id)} matching q` : `${n}${hasGenerator(pack, t.id) ? "+" : ""} q`}</span>
+                        ) : (
+                          <span className="pr-prog" title={`${s.n} answered of ${n}: ${s.c} right, ${s.n - s.c} wrong`}>
+                            <span className="pr-prog-bar" aria-hidden="true">
+                              <i className="ok" style={{ width: `${Math.min(100, (s.c / Math.max(1, n)) * 100)}%` }} />
+                              <i className="bad" style={{ width: `${Math.min(100 - Math.min(100, (s.c / Math.max(1, n)) * 100), ((s.n - s.c) / Math.max(1, n)) * 100)}%` }} />
+                            </span>
+                            <span className="small"><b>{s.n}</b><span className="muted"> / {n}{hasGenerator(pack, t.id) ? "+" : ""} q</span></span>
+                          </span>
+                        )}
                       </Link>
                     );
                   })}

@@ -1,5 +1,6 @@
 // Lets any page tell the study buddy how a question or mock went.
-export type Outcome = "right" | "wrong" | "skip" | "giveup" | "quit";
+// "progress" = you leave a set of questions after answering at least one; "quit" = you leave without answering a single one
+export type Outcome = "right" | "wrong" | "skip" | "giveup" | "quit" | "progress";
 const PENDING = "gate.pending-outcome";
 
 /**

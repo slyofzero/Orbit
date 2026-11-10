@@ -734,7 +734,7 @@ console.log(bad ? `${bad} PROBLEMS` : "ALL OK");
     }
     { // study buddies: every buddy must have every line the app can ask for (see agents/14-study-buddies.md)
       const REACTIONS = ["supernova", "nebula", "shooting", "comet", "cluster", "aurora", "saturn", "asteroid", "impact", "rings"];
-      const OUTCOMES = ["right", "wrong", "skip", "giveup", "quit"];
+      const OUTCOMES = ["right", "wrong", "skip", "giveup", "quit", "progress"];
       if (new Set(BUDDIES.map((b) => b.id)).size !== BUDDIES.length) err("buddy ids must be unique");
       for (const b of BUDDIES) {
         if (!b.name || !b.sleep || b.chat.length < 6 || typeof b.art !== "function") err(`buddy ${b.id}: needs a name, a sleep line, at least 6 chat lines and art`);

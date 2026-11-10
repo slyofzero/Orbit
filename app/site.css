@@ -453,7 +453,8 @@ html[data-switching] .shell { transform: scale(0.985); filter: blur(6px); transi
 .pr-next > div:first-child { display: grid; gap: 2px; }
 .pr-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
 .pr-search { flex: 1; min-width: 200px; max-width: 340px; padding: 9px 14px; border: 1.5px solid var(--line); border-radius: 999px; background: var(--sheet); color: var(--ink); font: 0.95rem var(--font-body); }
-.pr-list { display: grid; gap: 8px; margin-bottom: 14px; }
+.pr-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; margin-bottom: 14px; }
+.pr-list > * { min-width: 0; }
 .pr-sub { background: var(--sheet); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; }
 .pr-head { width: 100%; display: flex; align-items: center; gap: 12px; padding: 14px 18px; background: transparent; border: none; cursor: pointer; color: var(--ink); font: inherit; text-align: left; }
 .pr-head h2 { margin: 0; font-size: 1.12rem; flex: 1; }
@@ -698,7 +699,8 @@ html:not([data-theme="dark"]) .scene-paris i { display: none; }
 .quote-banner { background: linear-gradient(120deg, #e11d48, #f4511e 38%, #f97316 70%, #f59e0b); }
 
 /* ---------- import a plan ---------- */
-.pi { display: grid; gap: 18px; max-width: 860px; }
+.pi { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; max-width: 860px; }
+.pi > * { min-width: 0; }
 .pi h2 { font-size: 1.15rem; }
 .pi-text { width: 100%; min-height: 180px; margin-top: 12px; padding: 12px 14px; border: 1.5px solid var(--line); border-radius: 14px; background: color-mix(in srgb, var(--sheet) 70%, transparent); color: var(--ink); font: 0.85rem/1.45 ui-monospace, Consolas, monospace; resize: vertical; }
 .pi-err { margin-top: 12px; padding: 12px 16px; border-radius: 14px; background: var(--red-soft); color: var(--ink); border: 1.5px solid var(--red); }
@@ -878,11 +880,12 @@ button.tg { cursor: pointer; font-family: inherit; } button.tg:hover { border-co
 .pl-main-go:hover { filter: brightness(1.1); }
 
 /* Plan editor */
-.pe { display: grid; gap: 12px; }
-.pe-f { display: grid; gap: 4px; font-size: 0.85rem; color: var(--ink-2); }
+.pe { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.pe > * { min-width: 0; }
+.pe-f { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; gap: 4px; font-size: 0.85rem; color: var(--ink-2); }
 .pe-in { font: inherit; padding: 9px 12px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--sheet); color: var(--ink); min-width: 0; }
 .pe-in:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-.pe-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.pe-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .pe-task { display: flex; gap: 8px; align-items: center; } .pe-task .pe-in { flex: 1; }
 @media (max-width: 700px) { .pe-grid { grid-template-columns: 1fr; } }
 .pe-qid { font-family: ui-monospace, monospace; font-size: 0.8rem; padding: 2px 8px; border-radius: 8px; background: var(--sheet-2); color: var(--ink); flex: none; }
@@ -960,7 +963,7 @@ pre.code code { background: none !important; border: none !important; padding: 0
 /* Practice sections and the programming list */
 .pt-tabs { display: inline-flex; gap: 4px; padding: 4px; margin: 0 0 0 10px; border-radius: 999px; background: var(--sheet-2); border: 1px solid var(--line); }
 .pt-tabs a { padding: 7px 18px; border-radius: 999px; font-weight: 700; font-size: 0.92rem; color: var(--ink-2); text-decoration: none; }
-.pt-tabs a.on { background: var(--accent); color: #04211c; }
+.pt-tabs a.on { background: var(--accent); color: var(--on-accent); }
 .pg-list { display: grid; gap: 8px; }
 .pg-item { background: var(--sheet); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
 .pg-item.open { border-color: var(--accent); }
@@ -969,7 +972,7 @@ pre.code code { background: none !important; border: none !important; padding: 0
 .pg-head .nm { flex: 1 1 260px; min-width: 0; font-weight: 600; }
 .pg-meta { flex-basis: 100%; padding-left: 34px; }
 .pg-state { display: grid; place-items: center; width: 24px; height: 24px; flex: none; border-radius: 50%; border: 1.5px solid var(--line); font-size: 0.8rem; }
-.pg-state.ok { background: var(--accent); border-color: var(--accent); color: #04211c; font-weight: 800; }
+.pg-state.ok { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 800; }
 .pg-state.tried { color: var(--ink-2); }
 
 /* sidebar fit: the buttons keep their size; spacing above is tighter so the mascot window does not have to shrink more */
@@ -1004,7 +1007,7 @@ table.bd tfoot td { font-weight: 800; background: var(--sheet-2); border-top: 1.
 /* Tag filter: a Filter button with a popover */
 .tf-wrap { position: relative; margin-left: auto; }
 .tf-btn.on { border-color: var(--accent); background: var(--accent-soft); }
-.tf-badge { margin-left: 6px; background: var(--accent); color: #fff; border-radius: 999px; padding: 0 7px; font-size: 0.75rem; font-weight: 800; }
+.tf-badge { margin-left: 6px; background: var(--accent); color: var(--on-accent); border-radius: 999px; padding: 0 7px; font-size: 0.75rem; font-weight: 800; }
 .tf-pop { position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; width: min(420px, 88vw); background: var(--sheet); border: 1px solid var(--line); border-radius: 14px; padding: 12px; box-shadow: 0 12px 36px rgba(0,0,0,.28); }
 .tf-find { width: 100%; box-sizing: border-box; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--sheet-2); color: var(--ink); font: inherit; }
 .tf-sel { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
@@ -1104,4 +1107,88 @@ html[data-theme="dark"] .btn.invert:hover { background: #e6e6e6; color: #000; }
 .pl-main.is-done:hover { opacity: 0.85; filter: none; }
 
 /* planner card: Copy AI prompt and the day-kind tag, stacked at the card's right edge */
-.pl-side { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; margin-left: auto; flex: none; }
+.pl-side { display: flex; flex-direction: row; align-items: center; gap: 8px; margin-left: auto; flex: none; }
+.icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; padding: 0; border-radius: 50%; flex: none; }
+
+/* Plan editor: past days are grouped at the top, crossed off and dimmed, with a separator below */
+.pe-past-h { margin: 0; }
+.pe-sep { border: none; border-top: 2px dashed var(--line); margin: 8px 0 4px; width: 100%; }
+.drow.past { opacity: 0.5; }
+.drow.past:hover, .drow.past.open { opacity: 1; }
+.drow.past:not(.open) .drow-head .nm { text-decoration: line-through; text-decoration-thickness: 1.5px; }
+.pe-more { justify-self: start; }
+
+/* Full-page loading: the page is blurred and an orbit animation sits in the middle (components/PageLoading.tsx) */
+.page-enter { transition: filter 0.35s ease, opacity 0.35s ease; }
+html[data-page-loading] .page-enter { filter: blur(9px); opacity: 0.55; pointer-events: none; user-select: none; }
+.pgl { position: fixed; inset: 0 0 0 var(--rail); z-index: 80; display: grid; place-items: center; pointer-events: none; }
+@media (max-width: 760px) { .pgl { inset: 0; } }
+.pgl-box { display: grid; justify-items: center; gap: 18px; padding: 28px 40px 24px; border-radius: 28px; background: color-mix(in srgb, var(--sheet) 82%, transparent); box-shadow: var(--shadow); border: 1px solid var(--line); animation: pglIn 0.3s ease both; }
+.pgl-orbit { position: relative; width: 112px; height: 112px; }
+.pgl-core { position: absolute; left: 50%; top: 50%; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff, var(--accent) 55%, #6d28d9); box-shadow: 0 0 22px var(--accent); animation: pglPulse 1.3s ease-in-out infinite; }
+.pgl-ring { position: absolute; border-radius: 50%; border: 1.5px dashed color-mix(in srgb, var(--ink) 22%, transparent); animation: pglSpin var(--d) linear infinite; }
+.pgl-ring s { position: absolute; top: -6px; left: 50%; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: var(--c); box-shadow: 0 0 12px var(--c); }
+.pgl-ring.r1 { inset: 22px; --d: 1.4s; --c: var(--accent); }
+.pgl-ring.r2 { inset: 8px; --d: 2.3s; --c: var(--hi); animation-direction: reverse; }
+.pgl-ring.r3 { inset: -6px; --d: 3.6s; --c: #e879f9; }
+.pgl-text { display: flex; align-items: baseline; font: 800 1.35rem var(--font-display); letter-spacing: 0.04em; color: var(--ink); }
+.pgl-text span { display: inline-block; animation: pglHop 1.3s ease-in-out infinite; animation-delay: calc(var(--i) * 90ms); }
+.pgl-text em { font-style: normal; animation: pglDot 1.3s ease-in-out infinite; }
+.pgl-text em:nth-of-type(1) { animation-delay: 0.7s; } .pgl-text em:nth-of-type(2) { animation-delay: 0.85s; } .pgl-text em:nth-of-type(3) { animation-delay: 1s; }
+@keyframes pglSpin { to { transform: rotate(360deg); } }
+@keyframes pglPulse { 50% { transform: scale(1.35); box-shadow: 0 0 34px var(--accent); } }
+@keyframes pglHop { 0%, 55%, 100% { transform: translateY(0); } 25% { transform: translateY(-9px); color: var(--accent); } }
+@keyframes pglDot { 0%, 60%, 100% { opacity: 0.2; } 30% { opacity: 1; } }
+@keyframes pglIn { from { opacity: 0; transform: scale(0.92); } }
+@media (prefers-reduced-motion: reduce) { .pgl-ring, .pgl-core, .pgl-text span, .pgl-text em { animation: none; } .pgl-text em { opacity: 1; } }
+
+/* "Continuing where you left off" sits in the same row as the Filter button */
+.pr-resume { display: flex; align-items: center; gap: 12px; flex: 1 1 320px; min-width: 0; margin-right: auto; padding: 5px 6px 5px 16px; border-radius: 999px; background: var(--sheet-2); border: 1px solid var(--line); }
+.pr-resume .small { flex: 1; min-width: 0; }
+.pr-resume .btn { padding: 6px 14px; flex: none; }
+
+/* Practice topic rows: answered / total questions, with a bar that is green for right answers and red for wrong ones */
+.pr-prog { display: inline-flex; align-items: center; gap: 10px; flex: none; }
+.pr-prog-bar { display: flex; width: 74px; height: 8px; border-radius: 999px; overflow: hidden; background: var(--sheet-2); box-shadow: inset 0 0 0 1px var(--line); }
+.pr-prog-bar i { display: block; height: 100%; min-width: 3px; transition: width 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.pr-prog-bar i[style*="width: 0%"] { min-width: 0; }
+.pr-prog-bar .ok { background: var(--green); }
+.pr-prog-bar .bad { background: var(--red); }
+
+/* The scene is a window and the mascot a layer behind it: anything of the drawing (tail, whiskers, hat, sparkles) that goes past the scene's
+   sides or bottom is cut off by the window. The top is left open (the scene is tall); the speech bubble is not part of the drawing, so it stays outside. */
+.owl { clip-path: inset(-400px 0 -6px 0 round 0 0 22px 22px); }
+
+/* Topic page: seen / correct / wrong tiles with one meter */
+.tp-stats { display: flex; align-items: stretch; flex-wrap: wrap; gap: 10px; margin: 6px 0 14px; }
+.tp-meter { display: grid; align-content: center; gap: 6px; flex: 1 1 200px; min-width: 180px; max-width: 420px; }
+.tp-track { position: relative; height: 12px; border-radius: 999px; overflow: hidden; background: var(--sheet-2); box-shadow: inset 0 0 0 1px var(--line); }
+.tp-track i { position: absolute; top: 0; bottom: 0; left: 0; transition: width 0.6s cubic-bezier(0.2, 0.8, 0.2, 1), left 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.tp-track .seen { background: color-mix(in srgb, var(--accent) 32%, transparent); }
+.tp-track .ok { background: var(--green); } .tp-track .bad { background: var(--red); }
+
+/* Topic page: the progress tracker sits beside Filter; an eye in the title row says answered questions are hidden */
+.pr-bar .tp-stats { flex: 1 1 auto; margin: 0 auto 0 0; }
+.tp-eye { position: relative; display: inline-grid; place-items: center; width: 44px; height: 44px; padding: 0; border-radius: 50%; border: 1.5px solid var(--line); background: var(--sheet); color: var(--ink); cursor: pointer; flex: none; animation: tpGlow 2.8s ease-out 1 both; }
+.tp-eye:hover, .tp-eye:focus-visible, .tp-eye.on { border-color: var(--accent); color: var(--accent); }
+.tp-eye::after { content: attr(data-tip); position: absolute; right: 0; top: calc(100% + 10px); width: max-content; max-width: 260px; padding: 9px 13px; border-radius: 12px; background: var(--ink); color: var(--sheet); font: 600 0.85rem/1.35 var(--font-body); text-align: left; box-shadow: var(--shadow); opacity: 0; transform: translateY(-4px); pointer-events: none; transition: opacity 0.15s, transform 0.15s; z-index: 20; }
+.tp-eye:hover::after, .tp-eye:focus-visible::after { opacity: 1; transform: none; }
+@keyframes tpGlow {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  18%, 58% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 35%, transparent), 0 0 26px 6px color-mix(in srgb, var(--accent) 65%, transparent); border-color: var(--accent); color: var(--accent); }
+  38% { box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent), 0 0 12px 2px color-mix(in srgb, var(--accent) 35%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) { .tp-eye { animation: none; } }
+
+/* Progress tracker revamp: one slim row, about as tall as the Filter button, with some air under the title */
+.pr-bar:has(.tp-stats) { margin-top: 20px; }
+.pr-bar .tp-stats { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0 auto 0 0; flex: 1 1 auto; }
+.tp-chip { display: inline-flex; align-items: center; gap: 7px; height: 40px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--line); font-size: 0.88rem; font-weight: 700; color: var(--ink-2); white-space: nowrap; }
+.tp-chip b { font: 800 1.2rem var(--font-display); line-height: 1; }
+.tp-chip.seen { background: var(--sheet-2); color: var(--gray); } .tp-chip.seen b { color: var(--ink-2); }
+.tp-chip.ok { background: var(--green-soft); border-color: color-mix(in srgb, var(--green) 35%, transparent); } .tp-chip.ok b { color: var(--green); }
+.tp-chip.bad { background: var(--red-soft); border-color: color-mix(in srgb, var(--red) 35%, transparent); } .tp-chip.bad b { color: var(--red); }
+.pr-bar .tp-meter { display: flex; align-items: center; gap: 12px; flex: 1 1 260px; min-width: 220px; max-width: 460px; height: 40px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--line); background: var(--sheet-2); }
+.pr-bar .tp-meter .tp-track { flex: 1; height: 10px; }
+.pr-bar .tp-meter .small { white-space: nowrap; }
+.tp-track .seen { background: color-mix(in srgb, var(--ink) 20%, transparent); }

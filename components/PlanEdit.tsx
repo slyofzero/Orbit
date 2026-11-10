@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { KIND_LABEL, WEEKDAY_NAMES, fmtDate, weekday } from "@/lib/plan";
+import { KIND_LABEL, WEEKDAY_NAMES, fmtDate, todayIST, weekday } from "@/lib/plan";
 import { KEYS, usePack, usePersisted, usePlan } from "@/lib/store";
 import { Links } from "@/lib/links";
 import PlanDescription from "./PlanDescription";
@@ -24,6 +24,7 @@ export default function PlanEdit() {
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
   const [askDel, setAskDel] = useState(false);
+  const [pastShown, setPastShown] = useState(2); // how many past days are listed: the latest 2 first, then 5 more per click
 
   const pick = (d: Day) => {
     if (open === d.date) { setOpen(null); setDraft(null); return; }
@@ -94,10 +95,14 @@ export default function PlanEdit() {
       </section>
 
       <div className="pr-list">
-        {plan.days.map((d) => {
+        {(() => {
+          const today = todayIST();
+          const past = plan.days.filter((d) => d.date < today);
+          const rest = plan.days.filter((d) => d.date >= today);
+          const row = (d: Day, isPast: boolean) => {
           const isOpen = open === d.date && draft;
           return (
-            <div key={d.date} className={`drow ${isOpen ? "open" : ""}`}>
+            <div key={d.date} className={`drow ${isOpen ? "open" : ""} ${isPast ? "past" : ""}`}>
               <button className="drow-head" onClick={() => pick(d)} aria-expanded={!!isOpen}>
                 <span className="pl-date sm"><b>{Number(d.date.slice(8))}</b><small>{WEEKDAY_NAMES[weekday(d.date)]}</small></span>
                 <span className="nm"><Rich text={d.title} /></span>
@@ -167,7 +172,25 @@ export default function PlanEdit() {
               )}
             </div>
           );
-        })}
+          };
+          return (
+            <>
+              {past.length > 0 && (
+                <>
+                  <p className="small muted pe-past-h">Past days ({Math.min(pastShown, past.length)} of {past.length})</p>
+                  {past.length > pastShown && (
+                    <button className="btn soft pe-more" onClick={() => setPastShown((n) => n + 5)}>
+                      Show {Math.min(5, past.length - pastShown)} earlier {Math.min(5, past.length - pastShown) === 1 ? "day" : "days"}
+                    </button>
+                  )}
+                  {past.slice(-pastShown).map((d) => row(d, true))}
+                  <hr className="pe-sep" />
+                </>
+              )}
+              {rest.map((d) => row(d, false))}
+            </>
+          );
+        })()}
       </div>
     </div>
   );
