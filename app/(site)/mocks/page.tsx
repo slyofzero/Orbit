@@ -49,7 +49,10 @@ export default function Mocks() {
 
   return (
     <>
-      <h1>Mocks</h1>
+      <div className="row" style={{ alignItems: "center", marginBottom: 6 }}>
+        <h1>Mocks</h1>
+        <Link href="/practice/manage?tab=mock-tests" className="btn invert right">Manage mocks</Link>
+      </div>
       <p className="muted">
         The arena is an exam-style screen: question palette, Save &amp; Next, Mark for Review, virtual calculator, NAT keypad, section tabs and a countdown timer.
         Marking: MCQ has negative marking (1/3 of the marks), MSQ and NAT have none.

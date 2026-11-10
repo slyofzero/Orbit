@@ -1253,3 +1253,25 @@ html[data-page-loading] .page-enter { filter: blur(9px); opacity: 0.55; pointer-
 .q-edit { cursor: pointer; padding: 0; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 10px; border: 1px solid var(--line); color: var(--gray); background: transparent; text-decoration: none; transition: color 0.15s, border-color 0.15s, background 0.15s; }
 .q-edit:hover { color: var(--ink); border-color: var(--ink); background: var(--sheet-2); }
 .qmeta .q-edit.right { margin-left: auto; } .qmeta .small.right + .q-edit { margin-left: 4px; }
+
+/* the cross at the top right of every dialog */
+.xf-modal, .ad-modal, .modal { position: relative; }
+.m-x { position: absolute; top: 12px; right: 14px; z-index: 2; width: 32px; height: 32px; display: grid; place-items: center; padding: 0; border-radius: 50%; border: 0; background: transparent; color: var(--gray); font: 400 1.7rem/1 var(--font-body); cursor: pointer; transition: background 0.15s, color 0.15s; }
+.m-x:hover { background: var(--sheet-2); color: var(--ink); }
+.modal .m-x { color: #555; } .modal .m-x:hover { background: #eee; color: #000; }
+.ad-head { padding-right: 38px; }
+.xf-modal h2 { padding-right: 34px; }
+.m-x.inline { position: static; flex: none; margin-left: 0; }
+.ad-head { align-items: center; padding-right: 0; }
+/* option editor: the rendered preview sits under the input, lined up with it */
+.ad-opt { display: block; margin: 8px 0; }
+.ad-optrow { display: flex; gap: 8px; align-items: center; } .ad-optrow b { width: 18px; } .ad-optrow .ad-in { flex: 1 1 auto; }
+.ad-opt .ad-optprev { max-width: none; margin: 6px 48px 0 52px; padding: 8px 12px; border-radius: 12px; background: var(--sheet-2); font-size: 0.95rem; }
+/* editor fields: a field's name and its hint sit side by side and wrap when they must; the control takes the full row below */
+.ad-form label:not(.ad-check) { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px; row-gap: 4px; }
+.ad-form label:not(.ad-check) > :not(span.small) { flex: 0 0 100%; }
+.ad-form label.ad-check { display: flex; align-items: center; gap: 8px; align-self: end; padding-bottom: 8px; } .ad-form label.ad-check input { width: auto; margin: 0; }
+/* option editor: checkbox | letter | input | remove on one grid, so the preview lines up exactly under the input */
+.ad-opt { display: grid; grid-template-columns: auto 18px minmax(0, 1fr) auto; column-gap: 8px; row-gap: 6px; align-items: center; }
+.ad-optrow { display: contents; }
+.ad-opt .ad-optprev { grid-column: 3; margin: 0; }

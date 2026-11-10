@@ -41,3 +41,7 @@ Pick a profile, then panels: Questions (add/edit/delete, search by id within a p
 
 ## Study buddy and quotes
 `Companion.tsx` reacts to outcomes (`lib/outcome.ts` → `components/outcomes.ts`), shows quotes from `lib/quotes.ts`; mascots in `mascots.tsx`; admin has its own lines (`adminLines.ts`). Effects in `lib/fx.ts` respect reduced motion. The sky events (`Cosmos.tsx`, one every 15–25 minutes) and the buddies are documented in `13-cosmic-events.md` and `14-study-buddies.md`.
+
+## Manage pack (`/practice/manage`)
+
+Its own page, reached from the "Manage pack" button on Practice and Programming. `components/PackManager.tsx` renders it for the profile you are in. The section is the `tab` query: `?tab=questions` (default), `mock-tests`, `topics`, `plan`, `upload`; `&q=<question id>` opens that question's editor. The first four tabs reuse the panels in `components/admin/`; `upload` is `components/PackImport.tsx`. Every profile edits its own questions, so the separate Admin profile is no longer offered in the profile menu (the code stays for a profile that already exists). The Edit icon on a question card links to `/practice/manage?tab=questions&q=<id>`.

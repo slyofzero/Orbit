@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { KEYS } from "@/lib/store";
-import { Profile, activeProfileId, createProfile, deleteProfile, ensureAdmin, listProfiles, renameProfile, switchProfile } from "@/lib/profiles";
+import { Profile, activeProfileId, createProfile, deleteProfile, listProfiles, renameProfile, switchProfile } from "@/lib/profiles";
 
 // Browser-style profile picker. Each profile keeps its own plan, question pack and progress.
 export default function ProfileSwitcher() {
@@ -52,7 +52,6 @@ export default function ProfileSwitcher() {
               {!me.admin && <button className="pf-act" onClick={() => { setMode("new"); setText(""); }}>+ New profile</button>}
               {!me.admin && <button className="pf-act" onClick={() => { setMode("rename"); setText(me.name); }}>Rename this profile</button>}
               {!me.admin && list.filter((p) => !p.admin).length > 1 && <button className="pf-act danger" onClick={() => setMode("delete")}>Delete this profile</button>}
-              {!me.admin && <button className="pf-act" onClick={() => switchProfile(ensureAdmin(), "Opening admin")}>★ Admin: manage all profiles</button>}
               {me.admin && <button className="pf-act" onClick={() => { const first = list.find((p) => !p.admin); if (first) switchProfile(first.id, "Leaving admin"); }}>Leave admin</button>}
             </>
           )}

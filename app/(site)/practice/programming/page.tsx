@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import CodeLangPill from "@/components/CodeLangPill";
-import PackImport from "@/components/PackImport";
+
 import PracticeTabs from "@/components/PracticeTabs";
 import TagFilter from "@/components/TagFilter";
 import { makeMatcher } from "@/lib/questionFilter";
@@ -18,8 +18,6 @@ export default function Programming() {
   const [practice, , ready] = usePersisted<Record<string, PracticeRec>>(KEYS.practice, {});
   const [lang, setLang] = useState("all");
   const [status, setStatus] = useState<"all" | "todo" | "solved">("all");
-  const [managing, setManaging] = useState(false);
-  const [done, setDone] = useState("");
   const [picked, setPicked] = useState<string[]>([]);
   const [find, setFind] = useState("");
 
@@ -44,12 +42,8 @@ export default function Programming() {
       <div className="row" style={{ alignItems: "center", marginBottom: 18 }}>
         <h1>Practice</h1>
         <PracticeTabs active="programming" />
-        <button className="btn invert right" onClick={() => setManaging((m) => !m)}>{managing ? "Back to questions" : "Manage pack"}</button>
+        <Link href="/practice/manage" className="btn invert right">Manage pack</Link>
       </div>
-      {managing ? (
-        <PackImport onDone={(m) => { setDone(m); setManaging(false); window.scrollTo({ top: 0 }); }} />
-      ) : <>
-      {done && <div className="pi-ok" role="status" style={{ marginBottom: 14 }}><span>✓ {done}</span><button className="btn soft" style={{ justifySelf: "start" }} onClick={() => setDone("")}>Dismiss</button></div>}
       {!custom || all.length === 0 ? (
         <div className="panel">
           <h2 style={{ marginTop: 0 }}>No programming questions yet</h2>
@@ -90,7 +84,6 @@ export default function Programming() {
           </div>
         </>
       )}
-      </>}
     </>
   );
 }

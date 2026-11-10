@@ -12,6 +12,7 @@ export function readKey<T>(profile: string, key: string): T | null {
 export function writeKey(profile: string, key: string, value: unknown | null) {
   if (value === null) localStorage.removeItem(scope(key, profile));
   else localStorage.setItem(scope(key, profile), JSON.stringify(value));
+  window.dispatchEvent(new CustomEvent("gate-store", { detail: scope(key, profile) })); // other screens on this page pick the change up
 }
 
 export const readPack = (profile: string): PackData | null => {

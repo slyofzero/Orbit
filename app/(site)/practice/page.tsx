@@ -18,7 +18,6 @@ export default function PracticeHome() {
   const { pack, custom: hasPack, ready: packReady } = usePack();
   const SUBJECTS = pack.subjects;
   const TOPICS = pack.topics;
-  const [managing, setManaging] = useState(false);
   const [done, setDone] = useState("");
   const [practice, , ready] = usePersisted<Record<string, PracticeRec>>(KEYS.practice, {});
   const [only, setOnly] = useState<"all" | TopicStatus>("all");
@@ -59,7 +58,7 @@ export default function PracticeHome() {
       <div className="row" style={{ alignItems: "center", marginBottom: 18 }}>
         <h1>Practice</h1>
         <PracticeTabs active="topics" />
-        {hasPack && <button className="btn invert right" onClick={() => setManaging((m) => !m)}>{managing ? "Back to topics" : "Manage pack"}</button>}
+        {hasPack && <Link href="/practice/manage" className="btn invert right">Manage pack</Link>}
       </div>
 
       {!hasPack && (
@@ -71,8 +70,7 @@ export default function PracticeHome() {
           <PackImport onDone={(m) => { setDone(m); window.scrollTo({ top: 0 }); }} />
         </>
       )}
-      {hasPack && managing && <PackImport onDone={(m) => { setDone(m); setManaging(false); window.scrollTo({ top: 0 }); }} />}
-      {hasPack && !managing && <>
+      {hasPack && <>
       {done && <div className="pi-ok" role="status" style={{ marginBottom: 14 }}><span>✓ {done}</span><button className="btn soft" style={{ justifySelf: "start" }} onClick={() => setDone("")}>Dismiss</button></div>}
 
       {nextDay && nextTopics.length > 0 && (

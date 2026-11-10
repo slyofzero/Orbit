@@ -1,4 +1,5 @@
 "use client";
+import ModalClose from "@/components/ModalClose";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Rich from "@/components/Rich";
 import { loadImages, saveImages } from "@/lib/imageStore";
@@ -146,6 +147,7 @@ export default function QuestionEditor({ profile, pack, loc, preset, onClose, on
         <div className="ad-head">
           <h2 style={{ margin: 0 }}>{loc ? <>Edit <code>{loc.q.id}</code></> : "Add a question"}</h2>
           <button className="btn invert icon-btn" style={{ marginLeft: "auto" }} onClick={copyPrompt} title="Copy prompt: the question and exact rules for fixing how it is written, to paste into any AI" aria-label="Copy prompt"><CopyIcon /></button>
+          <ModalClose onClick={onClose} inline />
         </div>
         {pics.length > 0 && (
           <div className="ad-pics">
@@ -218,11 +220,13 @@ export default function QuestionEditor({ profile, pack, loc, preset, onClose, on
               <div className="small muted">Options. Tick the right {type === "mcq" ? "one" : "ones"}.</div>
               {options.map((o, i) => (
                 <div key={i} className="ad-opt">
-                  <input type={type === "mcq" ? "radio" : "checkbox"} name="right" checked={picked.includes(i)} onChange={() => toggle(i)} aria-label={`Option ${String.fromCharCode(65 + i)} is right`} />
-                  <b>{String.fromCharCode(65 + i)}</b>
-                  <input className="ad-in" value={o} onFocus={() => (last.current = `opt${i}`)} onChange={(e) => setOpt(i, e.target.value)} spellCheck={false} />
-                  {/(!\[|\$)/.test(o) && <span className="ad-optprev"><Rich text={o} /></span>}
-                  {options.length > 2 && <button className="btn soft" onClick={() => dropOption(i)} aria-label={`Remove option ${String.fromCharCode(65 + i)}`}>✕</button>}
+                  <div className="ad-optrow">
+                    <input type={type === "mcq" ? "radio" : "checkbox"} name="right" checked={picked.includes(i)} onChange={() => toggle(i)} aria-label={`Option ${String.fromCharCode(65 + i)} is right`} />
+                    <b>{String.fromCharCode(65 + i)}</b>
+                    <input className="ad-in" value={o} onFocus={() => (last.current = `opt${i}`)} onChange={(e) => setOpt(i, e.target.value)} spellCheck={false} />
+                    {options.length > 2 && <button className="btn soft" onClick={() => dropOption(i)} aria-label={`Remove option ${String.fromCharCode(65 + i)}`}>✕</button>}
+                  </div>
+                  {/(!\[|\$)/.test(o) && <div className="ad-optprev"><Rich text={o} /></div>}
                 </div>
               ))}
               {options.length < 8 && <button className="btn soft" onClick={() => setOptions((o) => [...o, ""])}>+ Add option</button>}

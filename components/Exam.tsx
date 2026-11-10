@@ -1,4 +1,5 @@
 "use client";
+import ModalClose from "@/components/ModalClose";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -29,6 +30,12 @@ export default function Exam({ id }: { id: string }) {
   const [draft, setDraft] = useState<Answer | undefined>(undefined);
   const [now, setNow] = useState(() => Date.now());
   const [modal, setModal] = useState<null | "paper" | "instr" | "submit">(null);
+  useEffect(() => {
+    if (!modal) return;
+    const k = (e: KeyboardEvent) => { if (e.key === "Escape") setModal(null); };
+    document.addEventListener("keydown", k);
+    return () => document.removeEventListener("keydown", k);
+  }, [modal]);
   const [calc, setCalc] = useState(false);
   const [agree, setAgree] = useState(false);
   const [fsError, setFsError] = useState("");
@@ -341,6 +348,7 @@ export default function Exam({ id }: { id: string }) {
       {modal === "submit" && (
         <div className="modal-bg">
           <div className="modal">
+            <ModalClose onClick={() => setModal(null)} />
             <h2>Exam Summary</h2>
             <table className="t">
               <thead><tr><th>Section</th><th>Questions</th><th>Answered</th><th>Not Answered</th><th>Marked for Review</th><th>Answered &amp; Marked</th><th>Not Visited</th></tr></thead>

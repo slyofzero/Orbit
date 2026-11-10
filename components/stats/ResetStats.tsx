@@ -1,4 +1,5 @@
 "use client";
+import ModalClose from "@/components/ModalClose";
 import { useEffect, useState } from "react";
 import { KEYS, usePersisted } from "@/lib/store";
 
@@ -36,6 +37,7 @@ export default function ResetStats({ onExport, onDone }: { onExport: () => void;
       {open && (
         <div className="xf-veil" onMouseDown={(e) => { if (e.target === e.currentTarget) close(); }}>
           <div className="xf-modal" role="dialog" aria-modal="true" aria-labelledby="rs-title">
+            <ModalClose onClick={close} />
             <h2 id="rs-title">Reset all stats?</h2>
             <p className="small" style={{ color: "var(--bad, #c0392b)" }}>🔴 CAUTION: this cannot be undone. It deletes:</p>
             <ul className="small" style={{ margin: "0 0 10px", paddingLeft: 20 }}>

@@ -5,18 +5,20 @@ import { Answer, Question } from "@/lib/types";
 import { formatAnswer, isAttempted, isCorrect, negLabel } from "@/lib/scoring";
 import { logPractice, logView, usePack } from "@/lib/store";
 import { announce } from "@/lib/outcome";
-import { activeProfileId, ensureAdmin, isAdminProfile, switchProfile } from "@/lib/profiles";
 import Rich from "./Rich";
 import { strHint } from "@/lib/strMatch";
 import { difficultyOf } from "@/lib/questionFilter";
 import CodeQuestion from "./CodeQuestion";
+import EditQuestionDialog from "./EditQuestionDialog";
 
 const TYPE_LABEL = { mcq: "MCQ", msq: "MSQ", nat: "NAT", str: "TEXT", code: "CODE" } as const;
 
 export default function QuestionCard({
   q, index, onResult, showTopic,
 }: { q: Question; index?: number; onResult?: (correct: boolean) => void; showTopic?: boolean }) {
-  const { topicById: TOPIC_BY_ID, subjects: SUBJECTS } = usePack();
+  const { topicById: TOPIC_BY_ID, subjects: SUBJECTS, byId } = usePack();
+  const inPack = byId.has(q.id);
+  const [editing, setEditing] = useState(false);
   const subjectName = (x: Question) => { const id = x.subject ?? TOPIC_BY_ID[x.topic]?.subject ?? ""; return SUBJECTS[id] ?? id; };
   const [sel, setSel] = useState<Answer | undefined>(undefined);
   const [checked, setChecked] = useState(false);
@@ -64,12 +66,6 @@ export default function QuestionCard({
     announce(right ? "right" : "wrong");
   };
 
-  // Questions live in the profile you're in; Admin is its own profile, so hop over to it with this question open.
-  const editInAdmin = () => {
-    const to = `/admin?profile=${encodeURIComponent(activeProfileId())}&q=${encodeURIComponent(q.id)}`;
-    if (isAdminProfile()) window.location.assign(to);
-    else switchProfile(ensureAdmin(), "Opening admin", to);
-  };
   const reset = () => { setSel(undefined); setChecked(false); shownAt.current = Date.now(); };
 
   return (
@@ -83,9 +79,11 @@ export default function QuestionCard({
         {showTopic && TOPIC_BY_ID[q.topic] && (
           <Link href={q.type === "code" ? "/practice/programming" : `/practice/${q.topic}`} className="small right">{TOPIC_BY_ID[q.topic].name}</Link>
         )}
-        <button type="button" className={`q-edit ${showTopic && TOPIC_BY_ID[q.topic] ? "" : "right"}`} title="Edit this question in Admin" aria-label="Edit this question in Admin" onClick={editInAdmin}>
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z" /><path d="M14 7l3 3" /></svg>
-        </button>
+        {inPack && (
+          <button type="button" className={`q-edit ${showTopic && TOPIC_BY_ID[q.topic] ? "" : "right"}`} title="Edit this question" aria-label="Edit this question" onClick={() => setEditing(true)}>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z" /><path d="M14 7l3 3" /></svg>
+          </button>
+        )}
       </div>
       <div className="qtext"><Rich text={q.text} /></div>
       {(TOPIC_BY_ID[q.topic] || q.tags?.length || difficultyOf(q)) && (
@@ -143,6 +141,7 @@ export default function QuestionCard({
           <div style={{ marginTop: 6 }}><Rich text={q.explanation} /></div>
         </div>
       )}
+      {editing && <EditQuestionDialog id={q.id} onClose={() => setEditing(false)} />}
     </div>
   );
 }

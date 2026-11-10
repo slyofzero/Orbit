@@ -64,4 +64,8 @@ The **owl is reversed**: asleep 09:00 to 18:00, awake otherwise.
 
 ## Edit button on questions
 
-Each question card has an icon button at the far right of its header row. It switches to the Admin profile and opens `/admin?profile=<id>&q=<question id>`, which opens that question's editor. `switchProfile(id, note, to)` takes an optional destination.
+Each question card (that is in the pack) has an icon button at the far right of its header row. It opens `components/EditQuestionDialog.tsx`, the question editor as a dialog on the same page. Saving writes the pack, and every open page updates at once.
+
+## Dialogs
+
+Every dialog has a cross at the top right (`components/ModalClose.tsx`, `.m-x` in `app/site.css`; the dialog box must be `position: relative`) and closes with Esc. New dialogs must do both.
