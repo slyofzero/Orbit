@@ -123,18 +123,18 @@ export default function PracticeHome() {
                   {ts.map((t) => {
                     const s = stats[t.id];
                     const n = pack.questions.filter((x) => x.topic === t.id && x.type !== "code").length;
+                    // the row itself is the progress bar: green up to the share answered right, red for the share answered wrong
+                    const share = (v: number) => (v > 0 ? Math.max(1.5, Math.min(100, (v / Math.max(1, n)) * 100)) : 0);
+                    const okPct = s ? share(s.c) : 0;
+                    const badPct = s ? Math.min(100 - okPct, share(s.n - s.c)) : 0;
                     return (
-                      <Link key={t.id} href={`/practice/${t.id}`} className="pr-row">
+                      <Link key={t.id} href={`/practice/${t.id}`} className={`pr-row ${s && picked.length === 0 ? "has-prog" : ""}`} style={s && picked.length === 0 ? ({ "--ok": `${okPct}%`, "--bad": `${okPct + badPct}%` } as React.CSSProperties) : undefined}>
                         <i className={`dot ${t.status}`} title={STATUS_LABEL[t.status]} />
                         <span className="nm">{t.name}</span>
                         {picked.length > 0 || !s ? (
                           <span className="muted small">{picked.length > 0 ? `${tagged(t.id)} matching q` : `${n}${hasGenerator(pack, t.id) ? "+" : ""} q`}</span>
                         ) : (
                           <span className="pr-prog" title={`${s.n} answered of ${n}: ${s.c} right, ${s.n - s.c} wrong`}>
-                            <span className="pr-prog-bar" aria-hidden="true">
-                              <i className="ok" style={{ width: `${Math.min(100, (s.c / Math.max(1, n)) * 100)}%` }} />
-                              <i className="bad" style={{ width: `${Math.min(100 - Math.min(100, (s.c / Math.max(1, n)) * 100), ((s.n - s.c) / Math.max(1, n)) * 100)}%` }} />
-                            </span>
                             <span className="small"><b>{s.n}</b><span className="muted"> / {n}{hasGenerator(pack, t.id) ? "+" : ""} q</span></span>
                           </span>
                         )}
