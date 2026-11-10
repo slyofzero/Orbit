@@ -215,7 +215,6 @@ export default function Dashboard() {
                   <b className="pl-main-h">{lq.length ? `${linkedDone(link, pack, practice) ? "Done: " : "Main event: "}your questions for this day` : "Main event: the mock for this day"}</b>
                   <div className="small">
                     {lq.length > 0 && `${lq.filter((id) => practice[id]).length} of ${lq.length} answered, ${lq.filter((id) => practice[id]?.correct).length} correct`}
-                    {link?.finished && `${lq.length ? " · " : ""}marked as finished`}
                     {lmock && `${lq.length ? " · " : ""}Mock: ${lmock.name}`}
                   </div>
                   {link?.note && <div className="small pl-main-note"><Rich text={link.note} /></div>}

@@ -31,6 +31,7 @@ import { highlightCode, languageOf } from "../lib/highlight";
 import { BUDDIES } from "../components/mascots";
 import { OUTCOME_LINES } from "../components/outcomes";
 import { NIGHT_LINES, PARTY_LINES, SLEEP_LINES, SPECIAL_LINES } from "../components/modeLines";
+import { calcEvaluate, calcFormat } from "../lib/calc";
 import { PARTY_MS, SPECIALS, clockMode, partyActive, petMode, specialOf } from "../lib/petMode";
 import { ADMIN_LINES } from "../components/adminLines";
 import { editPrompt, pictureList } from "../lib/editPrompt";
@@ -326,8 +327,7 @@ if (ok.pack?.questions.map((q) => q.id).join() !== "a-1,a-2") err("auto ids shou
         if (dayFinished(day, { "2026-11-08:0": true }, undefined, lp.pack, {})) err("an unticked task: not finished");
         if (dayFinished(day, ticked, lk, lp.pack, { "t1-1": 1 })) err("a linked question left: not finished");
         if (!dayFinished(day, ticked, lk, lp.pack, { "t1-1": 1, "t1-2": 1 })) err("tasks ticked and links answered: finished");
-        if (!linkedDone({ q: ["t1-1", "t1-2"], finished: true }, lp.pack, {}) || !dayFinished(day, ticked, { q: ["t1-1"], finished: true }, lp.pack, {})) err("a link marked finished (Tick all) counts as done with no answers");
-        if (linkedDone({ q: ["t1-1"], finished: undefined }, lp.pack, {})) err("an unset finished flag changes nothing");
+        if (linkedDone({ q: ["t1-1", "t1-2"], finished: true }, lp.pack, {}) || dayFinished(day, ticked, { q: ["t1-1"], finished: true }, lp.pack, {})) err("Tick all must not finish the linked questions (an old finished flag is ignored)");
         if (dayFinished({ date: "2026-11-08", tasks: [] }, {}, undefined, lp.pack, {}) || dayFinished(undefined, {}, undefined, lp.pack, {})) err("an empty or missing day is never finished");
       }
       { // links travel with the plan
@@ -760,7 +760,7 @@ console.log(bad ? `${bad} PROBLEMS` : "ALL OK");
         for (const id of Object.keys(SPECIALS)) { const sp = SPECIALS[id]; if (clockMode(sp.from, id) === "sleep") err(`signature hour of ${id} falls while it sleeps`); }
         if (specialOf(21, "cat", "night") !== "cat" || specialOf(21, "cat", "party") !== null || specialOf(3, "cat", "sleep") !== null) err("signature hours apply only while awake and not partying");
         const t0 = Date.parse("2026-11-10T10:00:00Z");
-        if (!partyActive({ date: "2026-11-10", at: t0 }, "2026-11-10", t0 + PARTY_MS - 1000) || partyActive({ date: "2026-11-10", at: t0 }, "2026-11-10", t0 + PARTY_MS + 1000)) err("a party lasts 30 minutes");
+        if (!partyActive({ date: "2026-11-10", at: t0 }, "2026-11-10", t0 + PARTY_MS - 1000) || partyActive({ date: "2026-11-10", at: t0 }, "2026-11-10", t0 + PARTY_MS + 1000)) err("a party lasts 15 minutes");
         if (partyActive({ date: "2026-11-10", at: 0 }, "2026-11-10", t0) || partyActive({ date: "2026-11-09", at: t0 }, "2026-11-10", t0 + 1000) || partyActive(null, "2026-11-10", t0)) err("no party for a day that was already complete, for yesterday, or without a record");
         console.log("buddy modes: ok");
       }
@@ -803,4 +803,14 @@ console.log(bad ? `${bad} PROBLEMS` : "ALL OK");
   if (bytes[0] !== 0x50 || bytes[1] !== 0x4b) err("xlsx must be a zip");
   writeFileSync("/tmp/orbit-test.xlsx", bytes);
   console.log("stats: ok,", sheets.length, "sheets,", bytes.length, "bytes xlsx");
+}
+
+// calculator maths
+{
+  const near = (src: string, want: number, deg = true) => { let got = NaN; try { got = calcEvaluate(src, deg); } catch (e) { err(`calc "${src}" threw ${(e as Error).message}`); return; } if (Math.abs(got - want) > 1e-9 * Math.max(1, Math.abs(want))) err(`calc "${src}" = ${got}, want ${want}`); };
+  near("2+3×4", 14); near("2^3^2", 512); near("-2^2", -4); near("10 mod 3", 1); near("5!", 120); near("0!", 1); near("sin(30)", 0.5); near("cos(90)", 0); near("sin(pi/2)", 1, false);
+  near("asin(0.5)", 30); near("log(1000)", 3); near("ln(e)", 1); near("sqrt(16)", 4); near("∛(27)", 3); near("2π", 2 * Math.PI); near("3(4+1)", 15); near("(1+2", 3); near("10^(2)", 100); near("sinh(0)", 0); near("1/(4)", 0.25);
+  for (const bad of ["1+", "2**3", "foo(1)", "(-1)!"]) { let threw = false; try { calcEvaluate(bad, true); } catch { threw = true; } if (!threw) err(`calc "${bad}" should be an error`); }
+  if (calcFormat(0.1 + 0.2) !== "0.3" || calcFormat(1 / 0) !== "Error" || calcFormat(1e20) !== "1e20") err("calcFormat output");
+  console.log("calculator maths: ok");
 }

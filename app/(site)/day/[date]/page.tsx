@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import CalculatorButton from "@/components/CalculatorButton";
 import QuestionCard from "@/components/QuestionCard";
 import { liveQuestionIds, Links } from "@/lib/links";
 import { attemptFrom, buildFixedMock } from "@/lib/mock";
@@ -40,7 +41,10 @@ export default function DayPractice() {
   return (
     <>
       <p className="small"><Link href="/planner">← Planner</Link></p>
-      <h1>{day ? <Rich text={day.title} /> : date}</h1>
+      <div className="row" style={{ alignItems: "center" }}>
+        <h1>{day ? <Rich text={day.title} /> : date}</h1>
+        <CalculatorButton />
+      </div>
       <p className="muted">{fmtLong(date)}{link?.note ? <>. <Rich text={link.note} /></> : ""}</p>
       {!link && <div className="card muted">No questions are linked to this day. Open Planner, then Link with AI.</div>}
       {mock && <div className="card row"><span>Mock test: <b>{mock.name}</b> ({mock.minutes} minutes)</span><button className="btn primary right" onClick={startMock}>Start the mock</button></div>}

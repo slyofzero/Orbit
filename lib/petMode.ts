@@ -5,14 +5,14 @@
 //   night   18:00 - 24:00   "night study" (book, lamp), chatty
 //   sleep   00:00 - 09:00   asleep and silent; a click only gets a sleepy line
 // The owl keeps the opposite schedule in the daytime: it sleeps 09:00 - 18:00 and is awake the rest of the day.
-// Party mode (all of today's planned tasks ticked, for 30 minutes) beats every other mode.
+// Party mode (all of today's planned tasks ticked, for 15 minutes) beats every other mode.
 // Every buddy also has one "signature" hour (see SPECIALS) that adds extra flair on top of the clock mode.
 
 export type PetMode = "active" | "night" | "sleep" | "party";
 
 export const DAY_FROM = 9;     // active mode starts
 export const NIGHT_FROM = 18;  // night-study mode starts; it runs until midnight
-export const PARTY_MS = 30 * 60 * 1000;
+export const PARTY_MS = 15 * 60 * 1000;
 
 export const clockMode = (hour: number, buddyId: string): Exclude<PetMode, "party"> => {
   const day = hour >= DAY_FROM && hour < NIGHT_FROM;

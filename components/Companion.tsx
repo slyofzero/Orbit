@@ -3,7 +3,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { QUOTES } from "@/lib/quotes";
 import { todayIST } from "@/lib/plan";
-import { KEYS, usePersisted, usePlan } from "@/lib/store";
+import { KEYS, usePack, usePersisted, usePlan } from "@/lib/store";
+import { dayFinished, type Links } from "@/lib/links";
+import type { PracticeRec } from "@/lib/types";
 import { BUDDIES, type Reaction } from "./mascots";
 import { OUTCOME_LINES } from "./outcomes";
 import { ADMIN_LINES, ADMIN_NOTES } from "./adminLines";
@@ -55,6 +57,9 @@ const istHour = (ms: number) => Number(new Date(ms).toLocaleString("en-GB", { ho
 export default function Companion() {
   const { days: DAYS, ready: planReady } = usePlan();
   const [done, , doneReady] = usePersisted<Record<string, boolean>>(KEYS.done, {});
+  const { pack, ready: packReady } = usePack();
+  const [links, , linksReady] = usePersisted<Links>(KEYS.links, {});
+  const [practice, , practiceReady] = usePersisted<Record<string, PracticeRec>>(KEYS.practice, {});
   const [partyRec, setPartyRec, partyReady] = usePersisted<PartyRec>(KEYS.party, null);
   const [now, setNow] = useState(0); // 0 until the browser has mounted (keeps the first render the same on server and client)
   const [idx, setIdx] = useState(0);
@@ -69,7 +74,8 @@ export default function Companion() {
   const buddy = BUDDIES[idx];
   const today = todayIST();
   const day = DAYS.find((d) => d.date === today);
-  const allDone = !!day && day.tasks.length > 0 && day.tasks.every((_, i) => done[`${today}:${i}`]);
+  // the party is for a day that is really finished: every planner item ticked, and every linked question answered (a day with no links only needs the ticks)
+  const allDone = dayFinished(day, done, links[today], pack, practice);
   const hour = now ? istHour(now) : 12;
   const partyOn = party || partyActive(partyRec, today, now);
   const mood = petMode(hour, buddy.id, partyOn); // "active" | "night" | "sleep" | "party"
@@ -117,11 +123,11 @@ export default function Companion() {
   // the clock: re-check the mode every 20 seconds (sleep, night study and the end of a party all depend on it)
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 20_000); return () => clearInterval(t); }, []);
 
-  // party mode starts the moment the last planned task of today gets ticked, and lasts 30 minutes.
+  // party mode starts the moment the last planned task of today gets ticked, and lasts 15 minutes.
   // A day that was already complete when Orbit first looked gets no party, and unticking a task ends it.
   const prevAll = useRef<boolean | null>(null);
   useEffect(() => {
-    if (!doneReady || !planReady || !partyReady) return;
+    if (!doneReady || !planReady || !partyReady || !packReady || !linksReady || !practiceReady) return;
     const mine = partyRec?.date === today;
     if (prevAll.current === null) {
       prevAll.current = allDone;
@@ -132,7 +138,7 @@ export default function Companion() {
     if (allDone && !prevAll.current) setPartyRec({ date: today, at: Date.now() });
     if (!allDone && prevAll.current && mine) setPartyRec(null);
     prevAll.current = allDone;
-  }, [doneReady, planReady, partyReady, allDone, partyRec, today, setPartyRec]);
+  }, [doneReady, planReady, partyReady, packReady, linksReady, practiceReady, allDone, partyRec, today, setPartyRec]);
   // another buddy (and its backdrop) every few minutes
   useEffect(() => {
     const t = setInterval(() => { if (!document.hidden) change(); }, ROTATE_MS);

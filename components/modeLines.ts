@@ -24,7 +24,7 @@ export const NIGHT_LINES: Record<string, string[]> = {
   ghost: ["B-boo. Night study is my favourite. No cake in sight.", "Spooky hours, scholarly hours.", "Whooo reads at night? Me.", "The lamp is cosy. Please keep the cake away."],
 };
 
-// Party (30 minutes after you tick the last task of the day).
+// Party (15 minutes after you tick the last task of the day).
 export const PARTY_LINES: Record<string, string[]> = {
   owl: ["Hoot hoot! Every task done. Party time!", "Wise move, finishing early. Celebrate!", "Confetti for the scholar! Hoot!", "A perfect day. Even owls dance."],
   robot: ["All tasks complete. Dance protocol started.", "Beep boop! Celebration mode: ON.", "Checklist: 100%. Confetti: deployed.", "Mission accomplished. Disco subroutine running."],

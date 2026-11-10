@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import TagFilter from "@/components/TagFilter";
 import { makeMatcher } from "@/lib/questionFilter";
 import { announce } from "@/lib/outcome";
+import CalculatorButton from "@/components/CalculatorButton";
 import QuestionCard from "@/components/QuestionCard";
 import PageLoading from "@/components/PageLoading";
 import SolvedAllModal from "@/components/SolvedAllModal";
@@ -129,6 +130,7 @@ export default function TopicPractice() {
       )}
       <p className="small"><Link href="/practice">← All topics</Link></p>
       <div className="row">
+        <CalculatorButton />
         <h1>{t.name}</h1>
         <span className={`pill ${t.status}`}>{t.status === "noidea" ? "no idea" : t.status}</span>
         {nDone > 0 && !askDone && (

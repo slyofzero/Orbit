@@ -5,7 +5,7 @@ import type { PackData } from "./packs";
 import type { PlanData } from "./plan";
 import { difficultyOf } from "./questionFilter";
 
-export interface DayLink { q: string[]; mock?: string; note?: string; finished?: boolean } // finished: the person used "Tick all", so the day's linked work counts as done without answers being recorded
+export interface DayLink { q: string[]; mock?: string; note?: string; finished?: boolean } // old: "Tick all" used to set this. It is ignored now; Tick all only ticks the planner items
 export type Links = Record<string, DayLink>; // date -> what to do that day
 
 const clip = (s: string, n: number) => { const t = s.replace(/!\[[^\]\n]*\]\([^)\s]+\)/g, "[picture]").replace(/```[\s\S]*?```/g, "[code]").replace(/\s+/g, " ").trim(); return t.length > n ? `${t.slice(0, n - 1)}…` : t; };
@@ -165,9 +165,8 @@ export function checkImportedLinks(raw: { date: string; practice: string[]; mock
   return { total, working, broken: total - working, good: res.links };
 }
 
-/** True when a day has linked practice questions and every one of them has been answered. Also true when the person marked the day finished with "Tick all". A day with only a linked mock is otherwise never "done" here. */
+/** True when a day has linked practice questions and every one of them has been answered. A day with only a linked mock is otherwise never "done" here. */
 export function linkedDone(link: DayLink | undefined, pack: PackData, practice: Record<string, unknown>): boolean {
-  if (link?.finished) return true;
   const ids = liveQuestionIds(link, pack).ids;
   return ids.length > 0 && ids.every((id) => practice[id]);
 }
@@ -178,7 +177,7 @@ export function dayFinished(day: { date: string; tasks: string[] } | undefined, 
   const live = liveQuestionIds(link, pack).ids;
   if (day.tasks.length === 0 && live.length === 0) return false;
   if (!day.tasks.every((_, i) => done[`${day.date}:${i}`])) return false;
-  return live.length === 0 || linkedDone(link, pack, practice); // finished flag is covered by linkedDone
+  return live.length === 0 || linkedDone(link, pack, practice);
 }
 
 /** Questions that are still in the pack, in the order the AI listed them. */

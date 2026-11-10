@@ -53,11 +53,11 @@ Every buddy has a mode, worked out in `lib/petMode.ts` and drawn by `components/
 | active | 09:00 to 18:00 | normal animations |
 | night | 18:00 to 24:00 | book + lamp, nodding, "night study" |
 | sleep | 00:00 to 09:00 | eyes shut, breathing, zzz, no automatic speech; clicking gives a sleepy line |
-| party | 30 minutes after today's planned tasks are all done | all awake, party hat, confetti; overrides every other mode |
+| party | 15 minutes after today is finished (planner items ticked + linked questions answered) | all awake, party hat, confetti; overrides every other mode |
 
 The **owl is reversed**: asleep 09:00 to 18:00, awake otherwise.
 
-- Party: starts only when the app sees "all today's tasks done" go from false to true (a day that is already complete when you open the app does not start one). Unticking a task ends it. Stored in `gate.party` as `{date, at}` (in `KEYS`, so backup and reset include it). `partyActive()` checks the 30 minutes.
+- Party: starts only when the app sees today become finished (`dayFinished`: every planner item ticked and every linked question answered, or just the ticks on a day with no links) go from false to true (a day that is already complete when you open the app does not start one). Unticking a task ends it. "Tick all" on the planner only ticks the planner items; it does not touch linked questions, so it does not start a party while questions are pending. Stored in `gate.party` as `{date, at}` (in `KEYS`, so backup and reset include it). `partyActive()` checks the 15 minutes.
 - Signature hours (`SPECIALS` in `lib/petMode.ts`) are extra flair while awake and not partying: owl Midnight hunt 0-3, robot Overclock 13-14, cat Zoomies 21-22, astro Spacewalk 11-12, jelly Glow hour 20-21, tea Tea time 16-17, rex Rampage 10-11, ghost Witching hour 23-24.
 - Lines live in `components/modeLines.ts` (`SLEEP_LINES`, `NIGHT_LINES`, `PARTY_LINES`, `SPECIAL_LINES`, at least 3 each per buddy, no exam names). `scripts/check.ts` enforces this and tests the schedule.
 - Adding a buddy: add its lines to all four lists in `modeLines.ts` and an entry in `SPECIALS`; the check fails until you do.

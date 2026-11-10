@@ -48,7 +48,6 @@ function DayBody({ d, done, setDone, qs }: { d: Day; done: Done; setDone: (u: (p
           <b className="pl-main-h">{lq.length ? `${linkedDone(link, pack, prac) ? "Done: " : "Main event: "}your questions for this day` : "Main event: the mock for this day"}</b>
           <div className="small">
             {lq.length > 0 && `${lq.filter((id) => prac[id]).length} of ${lq.length} answered, ${lq.filter((id) => prac[id]?.correct).length} correct`}
-            {link?.finished && `${lq.length ? " · " : ""}marked as finished`}
             {lmock && `${lq.length ? " · " : ""}Mock: ${lmock.name}`}
           </div>
           {link?.note && <div className="small pl-main-note"><Rich text={link.note} /></div>}
@@ -69,8 +68,6 @@ function DayBody({ d, done, setDone, qs }: { d: Day; done: Done; setDone: (u: (p
         {d.kind === "mock" && <Link className="btn primary" href="/mocks">Start the mock</Link>}
         <button className="btn soft right" onClick={() => {
           setDone((p) => { const n = { ...p }; d.tasks.forEach((_, i) => (n[`${d.date}:${i}`] = !complete)); return n; });
-          // the linked questions of that day count as finished too (or not, when un-ticking); no answers are recorded
-          if (links[d.date]) setLinks((p) => ({ ...p, [d.date]: { ...p[d.date], finished: !complete || undefined } }));
         }}>
           {complete ? "Untick all" : "Tick all"}
         </button>

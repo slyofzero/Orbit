@@ -45,3 +45,7 @@ Pick a profile, then panels: Questions (add/edit/delete, search by id within a p
 ## Manage pack (`/practice/manage`)
 
 Its own page, reached from the "Manage pack" button on Practice and Programming. `components/PackManager.tsx` renders it for the profile you are in. The section is the `tab` query: `?tab=questions` (default), `mock-tests`, `topics`, `plan`, `upload`; `&q=<question id>` opens that question's editor. The first four tabs reuse the panels in `components/admin/`; `upload` is `components/PackImport.tsx`. Every profile edits its own questions, so the separate Admin profile is no longer offered in the profile menu (the code stays for a profile that already exists). The Edit icon on a question card links to `/practice/manage?tab=questions&q=<id>`.
+
+## Calculator (day page and practice topic page)
+
+`components/CalculatorButton.tsx` is a pill pinned (position fixed) at the top right, so it stays while you scroll. It opens `components/ScientificCalc.tsx`, a draggable floating calculator (Deg/Rad, Inv for inverse functions, hyperbolics, log/ln, powers and roots, n!, mod, 1/x, memory keys; typing works; Esc closes). Maths is in `lib/calc.ts` (no eval) and is tested in `scripts/check.ts`. The exam arena keeps its own simpler `components/Calculator.tsx`. To add the button to another page, render `<CalculatorButton />` anywhere on it.
