@@ -1102,3 +1102,6 @@ html[data-theme="dark"] .btn.invert:hover { background: #e6e6e6; color: #000; }
 
 .pl-main.is-done { opacity: 0.5; filter: saturate(0.35); }
 .pl-main.is-done:hover { opacity: 0.85; filter: none; }
+
+/* planner card: Copy AI prompt and the day-kind tag, stacked at the card's right edge */
+.pl-side { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; margin-left: auto; flex: none; }

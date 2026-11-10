@@ -141,7 +141,7 @@ export default function Planner() {
             <h2>{labelFor(date)}</h2>
             <span className="muted small">{fmtLong(date)}</span>
           </div>
-          {d && <span className="right row" style={{ gap: 8 }}><CopyDayPrompt day={d} /><span className={`pill k-${d.kind}`}>{KIND_LABEL[d.kind]}</span></span>}
+          {d && <span className="pl-side"><CopyDayPrompt day={d} /><span className={`pill k-${d.kind}`}>{KIND_LABEL[d.kind]}</span></span>}
         </div>
         {d ? (
           <>
