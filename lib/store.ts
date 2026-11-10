@@ -22,6 +22,7 @@ export const KEYS = {
   drafts: "gate.drafts", // Record<qid, code you were writing>  (programming questions)
   views: "gate.views", // {q, at}[]  (every time a practice question was on screen; skips = views minus answers)
   links: "gate.links", // Record<date, {q, mock?, note?}>  (which questions go with which plan day)
+  party: "gate.party", // {date, at} | null  (when today's last planned task was ticked: the study buddies party for 30 minutes)
 } as const;
 
 const LOG_MAX = 20000;

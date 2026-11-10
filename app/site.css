@@ -461,7 +461,7 @@ html[data-switching] .shell { transform: scale(0.985); filter: blur(6px); transi
 .pr-head:hover { background: var(--sheet-2); }
 .chev { display: inline-block; width: 14px; font-size: 1.3rem; line-height: 1; color: var(--gray); transition: transform 0.2s; } .pr-sub.open .chev { transform: rotate(90deg); }
 .pr-dots { display: flex; gap: 3px; } .pr-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--green); } .pr-dots i.shaky { background: var(--amber); } .pr-dots i.noidea { background: var(--red); }
-.pr-rows { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); padding: 0 10px 10px; animation: rise 0.25s both; }
+.pr-rows { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 6px; padding: 0 10px 10px; animation: rise 0.25s both; }
 .pr-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; color: var(--ink); text-decoration: none; transition: background 0.15s; }
 .pr-row:hover { background: var(--sheet-2); }
 .pr-row .nm { flex: 1; font-weight: 600; line-height: 1.3; }
@@ -1195,3 +1195,61 @@ html[data-page-loading] .page-enter { filter: blur(9px); opacity: 0.55; pointer-
     color-mix(in srgb, var(--red) 30%, transparent) var(--ok), color-mix(in srgb, var(--red) 30%, transparent) var(--bad),
     transparent var(--bad));
 }
+
+/* ───────── study buddy modes (lib/petMode.ts): active, night study, asleep, party, plus one signature hour each ───────── */
+
+/* active: livelier. A little hop every few seconds, a quicker bob */
+.pet.active .body { animation-duration: 2.4s; }
+.pet.active .body:not(.float) { animation: owl-bob 2.4s ease-in-out infinite, act-hop 6s ease-in-out infinite; }
+.pet.active .wing.wr { animation-duration: 4.5s; }
+@keyframes act-hop { 0%, 84%, 100% { translate: 0 0; } 88% { translate: 0 -8px; } 92% { translate: 0 0; } 95% { translate: 0 -3px; } }
+
+/* night study: the scene dims and warms, the buddy reads by a lamp, eyes down, head nodding, pages turning */
+.rail-stage.mode-night .sky::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 80% 92%, rgba(255, 200, 90, 0.3), transparent 58%), rgba(10, 14, 44, 0.36); }
+.pet.night .body { animation: ns-nod 5s ease-in-out infinite; transform-origin: 50% 100%; }
+.pet.night .pupils { transform: translate(var(--px), calc(var(--py) + 1.8px)); }
+.ns-glow { animation: ns-flicker 3.2s ease-in-out infinite; }
+.ns-page { transform-box: fill-box; transform-origin: 0% 50%; animation: ns-turn 7s ease-in-out infinite; }
+@keyframes ns-nod { 0%, 100% { transform: rotate(0); } 35% { transform: rotate(1.6deg) translateY(1px); } 70% { transform: rotate(-1deg); } }
+@keyframes ns-flicker { 0%, 100% { opacity: 0.85; } 50% { opacity: 1; } 72% { opacity: 0.7; } }
+@keyframes ns-turn { 0%, 76%, 100% { transform: scaleX(1); } 88% { transform: scaleX(-1); } 89% { transform: scaleX(1); opacity: 0; } 95% { opacity: 1; } }
+
+/* asleep: dark scene, closed eyes (the existing .sleep rules), slow breathing */
+.rail-stage.mode-sleep .sky::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: rgba(4, 6, 22, 0.5); }
+.pet.sleep .owl { filter: saturate(0.8) brightness(0.9); }
+.pet.sleep .body { animation: sleep-breathe 5.5s ease-in-out infinite; }
+@keyframes sleep-breathe { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.015, 0.985); } }
+
+/* party: confetti behind the buddy (hat and sparkles come from the existing .party rules) */
+.confetti { position: absolute; inset: 0; overflow: hidden; z-index: 1; pointer-events: none; }
+.confetti i { position: absolute; top: -12%; border-radius: 1.5px; opacity: 0.95; animation: confetti-fall linear infinite; }
+@keyframes confetti-fall { 0% { transform: translateY(0) rotate(0); } 100% { transform: translateY(560px) rotate(520deg); } }
+.rail-stage.mode-party .sky { box-shadow: inset 0 0 22px rgba(255, 201, 51, 0.35); }
+
+/* signature hours */
+.pet.sp-owl .owl { animation: sp-glow 2.4s ease-in-out infinite; --gl: #ffe08a; }
+.pet.sp-jelly .owl { animation: sp-glow 2.2s ease-in-out infinite; --gl: #7fe9ff; }
+@keyframes sp-glow { 0%, 100% { filter: drop-shadow(0 0 2px var(--gl)); } 50% { filter: drop-shadow(0 0 9px var(--gl)); } }
+.pet.sp-robot .owl { animation: sp-vibe 0.16s linear infinite; filter: drop-shadow(0 0 5px #ff8a3c); }
+@keyframes sp-vibe { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(0.8px); } }
+.pet.sp-cat .body { animation: sp-zoom 1.8s ease-in-out infinite !important; }
+@keyframes sp-zoom { 0%, 100% { transform: translateX(-6px); } 50% { transform: translateX(6px) rotate(3deg); } }
+.pet.sp-astro .body { animation: sp-drift 6s ease-in-out infinite !important; }
+@keyframes sp-drift { 0%, 100% { transform: translate(0, 0) rotate(-4deg); } 50% { transform: translate(2px, -8px) rotate(5deg); } }
+.pet.sp-tea .steam { animation-duration: 1.4s; stroke-width: 3.4; }
+.pet.sp-tea .body { animation: sp-sip 3s ease-in-out infinite !important; transform-origin: 50% 100%; }
+@keyframes sp-sip { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-5deg); } }
+.pet.sp-rex .body { animation: sp-stomp 0.55s ease-in-out infinite !important; }
+@keyframes sp-stomp { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+.rail-stage:has(.pet.sp-rex) .sky { animation: sp-shake 0.55s linear infinite; }
+@keyframes sp-shake { 0%, 100% { transform: translate(0, 0); } 25% { transform: translate(1px, 1px); } 75% { transform: translate(-1px, 0); } }
+.pet.sp-ghost .body { animation: sp-flicker 1.9s ease-in-out infinite !important; }
+@keyframes sp-flicker { 0%, 100% { opacity: 1; } 40% { opacity: 0.45; } 55% { opacity: 0.9; } 70% { opacity: 0.35; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .pet.active .body, .pet.night .body, .pet.sleep .body, .ns-glow, .ns-page, .confetti i, .pet[class*="sp-"] .body, .pet[class*="sp-"] .owl, .rail-stage:has(.pet[class*="sp-"]) .sky { animation: none !important; }
+}
+
+.q-edit { cursor: pointer; padding: 0; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 10px; border: 1px solid var(--line); color: var(--gray); background: transparent; text-decoration: none; transition: color 0.15s, border-color 0.15s, background 0.15s; }
+.q-edit:hover { color: var(--ink); border-color: var(--ink); background: var(--sheet-2); }
+.qmeta .q-edit.right { margin-left: auto; } .qmeta .small.right + .q-edit { margin-left: 4px; }

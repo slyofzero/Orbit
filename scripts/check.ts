@@ -30,6 +30,8 @@ import { segments, texProblems, parseFence, mergeTickLines } from "../lib/tex";
 import { highlightCode, languageOf } from "../lib/highlight";
 import { BUDDIES } from "../components/mascots";
 import { OUTCOME_LINES } from "../components/outcomes";
+import { NIGHT_LINES, PARTY_LINES, SLEEP_LINES, SPECIAL_LINES } from "../components/modeLines";
+import { PARTY_MS, SPECIALS, clockMode, partyActive, petMode, specialOf } from "../lib/petMode";
 import { ADMIN_LINES } from "../components/adminLines";
 import { editPrompt, pictureList } from "../lib/editPrompt";
 import { dayFinished, linkedDone, checkImportedLinks, bankFile, filesPrompt, isTooLong, planFile, PROMPT_LIMIT, linkPrompt, parseLinks, liveQuestionIds, readAnswer } from "../lib/links";
@@ -743,6 +745,24 @@ console.log(bad ? `${bad} PROBLEMS` : "ALL OK");
         const al = ADMIN_LINES[b.id];
         if (!al || !al.hello || !al.sleep || !al.react || al.chat.length < 4) err(`buddy ${b.id}: missing or thin ADMIN_LINES entry in components/adminLines.ts`);
         for (const l of [...b.chat, ...Object.values(b.react), b.sleep]) if (/\bGATE\b/.test(l)) err(`buddy ${b.id}: no exam names in buddy lines: ${l}`);
+        // mode lines (components/modeLines.ts)
+        for (const [name, lines, min] of [["SLEEP_LINES", SLEEP_LINES, 3], ["NIGHT_LINES", NIGHT_LINES, 3], ["PARTY_LINES", PARTY_LINES, 3], ["SPECIAL_LINES", SPECIAL_LINES, 3]] as const) {
+          if ((lines[b.id]?.length ?? 0) < min) err(`buddy ${b.id}: ${name} needs at least ${min} lines in components/modeLines.ts`);
+          for (const l of lines[b.id] ?? []) if (/\bGATE\b/.test(l)) err(`buddy ${b.id}: no exam names in ${name}: ${l}`);
+        }
+        if (!SPECIALS[b.id]) err(`buddy ${b.id}: needs a signature hour in SPECIALS (lib/petMode.ts)`);
+      }
+      { // the clock schedule: active 9-18, night study 18-24, asleep 0-9; the owl sleeps in the day; party beats everything
+        const want = (h: number, id: string, m: string) => { if (clockMode(h, id) !== m) err(`clockMode(${h}, ${id}) should be ${m}, got ${clockMode(h, id)}`); };
+        for (const [h, m] of [[0, "sleep"], [8, "sleep"], [9, "active"], [17, "active"], [18, "night"], [23, "night"]] as const) want(h, "cat", m);
+        for (const [h, m] of [[0, "active"], [8, "active"], [9, "sleep"], [17, "sleep"], [18, "night"], [23, "night"]] as const) want(h, "owl", m);
+        if (petMode(3, "cat", true) !== "party" || petMode(12, "owl", true) !== "party") err("party mode must override every other mode");
+        for (const id of Object.keys(SPECIALS)) { const sp = SPECIALS[id]; if (clockMode(sp.from, id) === "sleep") err(`signature hour of ${id} falls while it sleeps`); }
+        if (specialOf(21, "cat", "night") !== "cat" || specialOf(21, "cat", "party") !== null || specialOf(3, "cat", "sleep") !== null) err("signature hours apply only while awake and not partying");
+        const t0 = Date.parse("2026-11-10T10:00:00Z");
+        if (!partyActive({ date: "2026-11-10", at: t0 }, "2026-11-10", t0 + PARTY_MS - 1000) || partyActive({ date: "2026-11-10", at: t0 }, "2026-11-10", t0 + PARTY_MS + 1000)) err("a party lasts 30 minutes");
+        if (partyActive({ date: "2026-11-10", at: 0 }, "2026-11-10", t0) || partyActive({ date: "2026-11-09", at: t0 }, "2026-11-10", t0 + 1000) || partyActive(null, "2026-11-10", t0)) err("no party for a day that was already complete, for yesterday, or without a record");
+        console.log("buddy modes: ok");
       }
     }
     { // question edit prompt

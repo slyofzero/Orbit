@@ -43,3 +43,25 @@ Remove its `BUDDIES` entry, its `OUTCOME_LINES[id]` and its `ADMIN_LINES[id]` en
 
 ## Art stays inside the scene
 The scene is a window and the mascot a layer behind it. `.owl { clip-path: ... }` in `app/site.css` cuts off any part of a buddy's drawing (tail, whiskers, hat, sparkles) that goes past the scene's sides or bottom, without changing any animation. The speech bubble is not part of the drawing and stays outside the scene on purpose. Draw new buddies inside the 80 x 110 viewBox so nothing important is cut.
+
+## Modes (clock + party + signature hours)
+
+Every buddy has a mode, worked out in `lib/petMode.ts` and drawn by `components/Companion.tsx` (CSS at the end of `app/site.css`, class `mode-<mode>` on `.rail-stage`, `.pet <mode>`).
+
+| Mode | When (India time) | Look |
+|---|---|---|
+| active | 09:00 to 18:00 | normal animations |
+| night | 18:00 to 24:00 | book + lamp, nodding, "night study" |
+| sleep | 00:00 to 09:00 | eyes shut, breathing, zzz, no automatic speech; clicking gives a sleepy line |
+| party | 30 minutes after today's planned tasks are all done | all awake, party hat, confetti; overrides every other mode |
+
+The **owl is reversed**: asleep 09:00 to 18:00, awake otherwise.
+
+- Party: starts only when the app sees "all today's tasks done" go from false to true (a day that is already complete when you open the app does not start one). Unticking a task ends it. Stored in `gate.party` as `{date, at}` (in `KEYS`, so backup and reset include it). `partyActive()` checks the 30 minutes.
+- Signature hours (`SPECIALS` in `lib/petMode.ts`) are extra flair while awake and not partying: owl Midnight hunt 0-3, robot Overclock 13-14, cat Zoomies 21-22, astro Spacewalk 11-12, jelly Glow hour 20-21, tea Tea time 16-17, rex Rampage 10-11, ghost Witching hour 23-24.
+- Lines live in `components/modeLines.ts` (`SLEEP_LINES`, `NIGHT_LINES`, `PARTY_LINES`, `SPECIAL_LINES`, at least 3 each per buddy, no exam names). `scripts/check.ts` enforces this and tests the schedule.
+- Adding a buddy: add its lines to all four lists in `modeLines.ts` and an entry in `SPECIALS`; the check fails until you do.
+
+## Edit button on questions
+
+Each question card has an icon button at the far right of its header row. It switches to the Admin profile and opens `/admin?profile=<id>&q=<question id>`, which opens that question's editor. `switchProfile(id, note, to)` takes an optional destination.

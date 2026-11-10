@@ -107,7 +107,7 @@ export default function Results() {
             </div>
           )}
           <div className={`verdict ${r.correct ? "ok" : "no"}`}>
-            <div>Your answer: <b>{formatGiven(r.q, r.ans)}</b> · Correct answer: <b>{formatAnswer(r.q)}</b></div>
+            <div>Your answer: <b><Rich text={formatGiven(r.q, r.ans)} /></b> · Correct answer: <b><Rich text={formatAnswer(r.q)} /></b></div>
             <div style={{ marginTop: 6 }}><Rich text={r.q.explanation} /></div>
           </div>
         </div>

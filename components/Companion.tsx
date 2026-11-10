@@ -9,6 +9,8 @@ import { OUTCOME_LINES } from "./outcomes";
 import { ADMIN_LINES, ADMIN_NOTES } from "./adminLines";
 import { isAdminProfile } from "@/lib/profiles";
 import { takePending, type Outcome } from "@/lib/outcome";
+import { SPECIALS, partyActive, petMode, specialOf, type PartyRec } from "@/lib/petMode";
+import { NIGHT_LINES, PARTY_LINES, SLEEP_LINES, SPECIAL_LINES } from "./modeLines";
 
 const STARS: [number, number, number][] = [[12, 8, 0], [70, 14, 1.2], [38, 20, 2.1], [84, 32, 0.6], [20, 38, 1.7], [58, 44, 2.6], [8, 56, 0.9], [76, 60, 1.9], [44, 66, 0.3], [90, 74, 2.3], [26, 80, 1.4], [62, 8, 0.8], [30, 52, 2.0], [84, 88, 1.1]];
 const pick = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)];
@@ -27,13 +29,37 @@ const SceneArt = ({ scene }: { scene: string }) => {
   }
 };
 
+// Night study: a warm lamp glow, a small open book and a lamp, drawn over the buddy's lap.
+const NightStudy = () => (
+  <g className="ns" aria-hidden="true">
+    <defs><radialGradient id="ns-glow" cx="50%" cy="50%" r="50%"><stop offset="0" stopColor="#ffd56a" stopOpacity="0.6" /><stop offset="1" stopColor="#ffd56a" stopOpacity="0" /></radialGradient></defs>
+    <ellipse className="ns-glow" cx="62" cy="84" rx="30" ry="26" fill="url(#ns-glow)" />
+    <path d="M66 94h10M71 94V82l-5-8" stroke="#8b94a8" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M60 72l8-5 7 6z" fill="#ffc933" stroke="#d8a928" strokeWidth="0.8" strokeLinejoin="round" />
+    <path d="M24 85q8-3 16 1v9q-8-4-16-1zM56 85q-8-3-16 1v9q8-4 16-1z" fill="#fdf6e3" stroke="#c9b98a" strokeWidth="1" strokeLinejoin="round" />
+    <path d="M27 88q5-1.5 10 .5M27 91q5-1.5 10 .5M43 88.5q5-2 10-.5M43 91.5q5-2 10-.5" stroke="#b9a878" strokeWidth="0.8" fill="none" strokeLinecap="round" />
+    <path className="ns-page" d="M40 86q6-3 14-1v9q-8-3-14 0z" fill="#fff" stroke="#c9b98a" strokeWidth="0.8" strokeLinejoin="round" />
+  </g>
+);
+
+// Party: confetti pieces falling through the scene.
+const CONFETTI = ["#ff5d73", "#ffc933", "#14b8a6", "#7c5cff", "#4fc3ff", "#ff9ab8"];
+const Confetti = () => (
+  <div className="confetti" aria-hidden="true">
+    {Array.from({ length: 18 }, (_, i) => <i key={i} style={{ left: `${(i * 53 + 7) % 96}%`, background: CONFETTI[i % CONFETTI.length], animationDelay: `${-(i * 0.37) % 4}s`, animationDuration: `${2.6 + (i % 5) * 0.5}s`, width: 4 + (i % 3) * 2, height: 7 + (i % 4) * 2 }} />)}
+  </div>
+);
+
+const istHour = (ms: number) => Number(new Date(ms).toLocaleString("en-GB", { hour: "numeric", hourCycle: "h23", timeZone: "Asia/Kolkata" }));
+
 export default function Companion() {
-  const { days: DAYS } = usePlan();
-  const [done] = usePersisted<Record<string, boolean>>(KEYS.done, {});
+  const { days: DAYS, ready: planReady } = usePlan();
+  const [done, , doneReady] = usePersisted<Record<string, boolean>>(KEYS.done, {});
+  const [partyRec, setPartyRec, partyReady] = usePersisted<PartyRec>(KEYS.party, null);
+  const [now, setNow] = useState(0); // 0 until the browser has mounted (keeps the first render the same on server and client)
   const [idx, setIdx] = useState(0);
   const [say, setSay] = useState<string | null>(null);
-  const [hour, setHour] = useState(12);
-  const [party, setParty] = useState(false);
+  const [party, setParty] = useState(false); // the hidden finale party (9 seconds)
   const [dizzy, setDizzy] = useState(false);
   const svg = useRef<SVGSVGElement>(null);
   const bubble = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -44,9 +70,14 @@ export default function Companion() {
   const today = todayIST();
   const day = DAYS.find((d) => d.date === today);
   const allDone = !!day && day.tasks.length > 0 && day.tasks.every((_, i) => done[`${today}:${i}`]);
-  const mood = hour < 5 ? "sleep" : allDone || party ? "party" : "awake";
+  const hour = now ? istHour(now) : 12;
+  const partyOn = party || partyActive(partyRec, today, now);
+  const mood = petMode(hour, buddy.id, partyOn); // "active" | "night" | "sleep" | "party"
+  const special = specialOf(hour, buddy.id, mood);
   const moodRef = useRef(mood); moodRef.current = mood;
+  const specialRef = useRef(special); specialRef.current = special;
   const idxRef = useRef(idx); idxRef.current = idx;
+
 
   const pathname = usePathname();
   const pathRef = useRef(pathname); pathRef.current = pathname;
@@ -54,7 +85,15 @@ export default function Companion() {
   const speak = useCallback((t?: string, ms = 5200) => {
     const b = BUDDIES[idxRef.current];
     const a = adminRef.current ? ADMIN_LINES[b.id] : null;
-    setSay(t ?? (a ? (moodRef.current === "sleep" ? a.sleep : pick(a.chat)) : moodRef.current === "sleep" ? b.sleep : moodRef.current === "party" ? pick(["All done today! Brilliant.", "Day complete. Go rest, champion.", "Look at you, ticking everything!"]) : pick(b.chat)));
+    const m = moodRef.current;
+    const line = a
+      ? (m === "sleep" ? a.sleep : pick(a.chat))
+      : m === "sleep" ? pick(SLEEP_LINES[b.id] ?? [b.sleep])
+      : m === "party" ? pick(PARTY_LINES[b.id] ?? ["All done today! Brilliant."])
+      : specialRef.current && Math.random() < 0.5 ? pick(SPECIAL_LINES[b.id])
+      : m === "night" && Math.random() < 0.6 ? pick(NIGHT_LINES[b.id])
+      : pick(b.chat);
+    setSay(t ?? line);
     if (bubble.current) clearTimeout(bubble.current);
     bubble.current = setTimeout(() => setSay(null), ms);
   }, []);
@@ -71,10 +110,29 @@ export default function Companion() {
 
   useEffect(() => {
     adminRef.current = isAdminProfile();
-    setHour(Number(new Date().toLocaleString("en-GB", { hour: "numeric", hour12: false, timeZone: "Asia/Kolkata" })));
+    setNow(Date.now());
     try { const s = sessionStorage.getItem("gate.buddy"); if (s) setIdx(Number(s) % BUDDIES.length); } catch { /* ignore */ }
   }, []);
 
+  // the clock: re-check the mode every 20 seconds (sleep, night study and the end of a party all depend on it)
+  useEffect(() => { const t = setInterval(() => setNow(Date.now()), 20_000); return () => clearInterval(t); }, []);
+
+  // party mode starts the moment the last planned task of today gets ticked, and lasts 30 minutes.
+  // A day that was already complete when Orbit first looked gets no party, and unticking a task ends it.
+  const prevAll = useRef<boolean | null>(null);
+  useEffect(() => {
+    if (!doneReady || !planReady || !partyReady) return;
+    const mine = partyRec?.date === today;
+    if (prevAll.current === null) {
+      prevAll.current = allDone;
+      if (allDone && !mine) setPartyRec({ date: today, at: 0 });
+      if (!allDone && mine) setPartyRec(null);
+      return;
+    }
+    if (allDone && !prevAll.current) setPartyRec({ date: today, at: Date.now() });
+    if (!allDone && prevAll.current && mine) setPartyRec(null);
+    prevAll.current = allDone;
+  }, [doneReady, planReady, partyReady, allDone, partyRec, today, setPartyRec]);
   // another buddy (and its backdrop) every few minutes
   useEffect(() => {
     const t = setInterval(() => { if (!document.hidden) change(); }, ROTATE_MS);
@@ -104,11 +162,12 @@ export default function Companion() {
 
   // chatter, and reactions to the sky show
   useEffect(() => {
-    const t = setInterval(() => { if (!document.hidden && Math.random() < 0.6) speak(); }, 150_000);
-    const first = setTimeout(() => { if (!document.hidden) speak(adminRef.current ? ADMIN_LINES[BUDDIES[idxRef.current].id]?.hello : "Hi! I'm your study buddy. Click me. Click my sky, too."); }, 9000);
-    const cosmic = (e: Event) => { const b = BUDDIES[idxRef.current]; const line = adminRef.current ? ADMIN_LINES[b.id]?.react : b.react[(e as CustomEvent).detail as Reaction]; if (line) setTimeout(() => speak(line), 600); };
+    const t = setInterval(() => { if (!document.hidden && moodRef.current !== "sleep" && Math.random() < 0.6) speak(); }, 150_000);
+    const first = setTimeout(() => { if (!document.hidden && moodRef.current !== "sleep") speak(adminRef.current ? ADMIN_LINES[BUDDIES[idxRef.current].id]?.hello : "Hi! I'm your study buddy. Click me. Click my sky, too."); }, 9000);
+    const cosmic = (e: Event) => { const b = BUDDIES[idxRef.current]; const line = adminRef.current ? ADMIN_LINES[b.id]?.react : b.react[(e as CustomEvent).detail as Reaction]; if (line && moodRef.current !== "sleep") setTimeout(() => speak(line), 600); };
     let lastOutcome = 0;
     const outcome = (kind: Outcome) => {
+      if (moodRef.current === "sleep") return; // asleep: no comments
       // right/wrong answers get a reaction only now and then; skips and give-ups always do
       if (kind === "right" || kind === "wrong") {
         if (Math.random() > 0.4 || Date.now() - lastOutcome < 15_000) return;
@@ -128,7 +187,7 @@ export default function Companion() {
     const gap = () => (20 + Math.random() * 10) * 60_000;
     const schedule = (delay: number) => {
       quoteT = setTimeout(() => {
-        if (document.hidden || pathRef.current === "/") return schedule(60_000);
+        if (document.hidden || pathRef.current === "/" || moodRef.current === "sleep") return schedule(60_000);
         const list = adminRef.current ? ADMIN_NOTES : QUOTES;
         if (!pool.length) pool = list.map((_, i) => i);
         const [i] = pool.splice(Math.floor(Math.random() * pool.length), 1);
@@ -147,6 +206,7 @@ export default function Companion() {
   const onPet = () => {
     const now = Date.now();
     clicks.current = [...clicks.current.filter((t) => now - t < 3000), now];
+    if (moodRef.current === "sleep") { speak(); return; } // asleep: only a sleepy line, no matter how many clicks
     if (clicks.current.length >= 5) {
       clicks.current = [];
       setDizzy(true); speak(adminRef.current ? "Whee… Boss, too much spinning…" : "Whee… too much spinning…");
@@ -159,12 +219,12 @@ export default function Companion() {
 
   return (
     <>
-    <div className="rail-stage" onClick={(e) => { if (!(e.target as HTMLElement).closest(".pet")) change(); }} title="Click the scene to meet someone else">
-      <div className={`sky scene-${buddy.scene}`} key={buddy.id} aria-hidden="true"><SceneArt scene={buddy.scene} /></div>
-      <div className={`pet ${mood} ${dizzy ? "dizzy" : ""}`} key={`${buddy.id}-pet`}>
+    <div className={`rail-stage mode-${mood}`} onClick={(e) => { if (!(e.target as HTMLElement).closest(".pet")) change(); }} title="Click the scene to meet someone else">
+      <div className={`sky scene-${buddy.scene}`} key={buddy.id} aria-hidden="true"><SceneArt scene={buddy.scene} />{mood === "party" && <Confetti />}</div>
+      <div className={`pet ${mood} ${special ? `sp-${special}` : ""} ${dizzy ? "dizzy" : ""}`} key={`${buddy.id}-pet`}>
         {say && <div className="pet-say" key={say} role="status">{say}</div>}
-        <button className="pet-btn" aria-label={`${buddy.name}, your study buddy. Click for a message`} onClick={onPet}>
-          <svg ref={svg} viewBox="0 -14 80 110" className="owl" aria-hidden="true">{buddy.art()}</svg>
+        <button className="pet-btn" aria-label={`${buddy.name}, your study buddy, ${mood === "sleep" ? "asleep" : mood === "party" ? "partying" : mood === "night" ? "studying at night" : "awake"}. Click for a message`} onClick={onPet}>
+          <svg ref={svg} viewBox="0 -14 80 110" className="owl" aria-hidden="true">{buddy.art()}{mood === "night" && <NightStudy />}</svg>
         </button>
       </div>
     </div>

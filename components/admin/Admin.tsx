@@ -10,7 +10,13 @@ export default function Admin() {
   const [focus, setFocus] = useState<string | null>(null);
   const [needle, setNeedle] = useState("");
   const refresh = () => setRows(summaries());
-  useEffect(() => { refresh(); }, []);
+  useEffect(() => {
+    refresh();
+    // deep link from a question's Edit button: /admin?profile=<id>&q=<question id>
+    const sp = new URLSearchParams(window.location.search);
+    const pf = sp.get("profile"), q = sp.get("q");
+    if (pf) { setPicked(pf); setFocus(q); }
+  }, []);
 
   if (!rows) return <p className="muted">Loading…</p>;
   const me = rows.find((r) => r.profile.id === picked);

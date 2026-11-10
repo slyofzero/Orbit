@@ -60,7 +60,7 @@ export function renameProfile(id: string, name: string) {
  * A full-screen veil covers the reload: it fades in here, stays up across the reload, then fades out (see components/Veil.tsx).
  */
 export const VEIL_KEY = "gate.veil";
-export function switchProfile(id: string, note = "") {
+export function switchProfile(id: string, note = "", to?: string) {
   const name = listProfiles().find((p) => p.id === id)?.name ?? "";
   try { sessionStorage.setItem(VEIL_KEY, JSON.stringify({ name, note })); } catch { /* ignore */ }
   const el = document.documentElement;
@@ -75,7 +75,7 @@ export function switchProfile(id: string, note = "") {
   setTimeout(() => {
     localStorage.setItem(ACTIVE, id);
     cached = null;
-    window.location.reload();
+    if (to) window.location.assign(to); else window.location.reload();
   }, 420);
 }
 
