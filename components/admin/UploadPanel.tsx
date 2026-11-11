@@ -36,7 +36,7 @@ export default function UploadPanel({ profile, pack, save }: { profile: string; 
         <input ref={file} type="file" accept="application/json,.json" hidden onChange={async (e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) setText(await f.text()); }} />
         {text && <button className="btn soft" onClick={() => setText("")}>Clear</button>}
       </div>
-      <textarea className="pi-text ad-json" spellCheck={false} placeholder="…or paste the JSON here" readOnly={big} onChange={(e) => setText(e.target.value)}
+      <textarea className="pi-text pk-json" spellCheck={false} placeholder="…or paste the JSON here" readOnly={big} onChange={(e) => setText(e.target.value)}
         value={big ? `(${(text.length / 1e6).toFixed(1)} MB file loaded. Check the preview below.)` : text} />
       {result && result.errors.length > 0 && <div className="pi-err" role="alert"><b>🔴 Fix this first:</b><ul>{result.errors.map((e, i) => <li key={i}>{e}</li>)}</ul></div>}
       {result && result.warnings.length > 0 && <ul className="pi-warn">{result.warnings.map((w, i) => <li key={i}>{w}</li>)}</ul>}
@@ -55,7 +55,7 @@ export default function UploadPanel({ profile, pack, save }: { profile: string; 
                 🔴 CAUTION: {r.replacedIds.length} id{r.replacedIds.length === 1 ? " in this file already exists" : "s in this file already exist"} in this profile. Applying will OVERRIDE {r.replacedIds.length === 1 ? "that question" : "those questions"}: <code>{r.replacedIds.slice(0, 12).join(", ")}{r.replacedIds.length > 12 ? ` and ${r.replacedIds.length - 12} more` : ""}</code>. Search an id in the Questions tab to see what is there now.
               </div>
             )}
-            <ul className="ad-sum">
+            <ul className="pk-sum">
               {result && result.autoIds > 0 && <li>{result.autoIds} question{result.autoIds === 1 ? " had" : "s had"} no id, so the system gave {result.autoIds === 1 ? "it a new id" : "them new ids"}.</li>}
               <li>{r.newQuestions} new practice, {r.newMockQuestions} new mock question{r.newMockQuestions === 1 ? "" : "s"}{r.newMockTests ? ` (${r.newMockTests} new mock test${r.newMockTests === 1 ? "" : "s"})` : ""}</li>
               <li>{r.updatedQuestions + r.updatedMockQuestions} replaced (same id), {r.unchanged} identical</li>
@@ -70,7 +70,7 @@ export default function UploadPanel({ profile, pack, save }: { profile: string; 
           {adding && r && mergeChanges(r) === 0 && <span className="small muted"> Nothing to change.</span>}
         </div>
       )}
-      {note && <p className="small ad-note">{note}</p>}
+      {note && <p className="small pk-note">{note}</p>}
     </>
   );
 }

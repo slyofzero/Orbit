@@ -7,7 +7,7 @@
 - Buttons: `.btn`, `.btn.soft`, `.btn.primary`, `.btn.invert` (white in dark mode, black in light mode; used for the question editor's Copy prompt). Pills: `.pill`. Panels: `.panel`. Tabs: `.tabs`. Callouts: `.callout`.
 
 ## Dialogs and Esc
-Overlays: `ExportFirstModal` (`.xf-veil`), `ResetStats` (`.xf-veil`), `ImprovePlan` (`.ipm-veil`), `QuestionEditor` (`.ad-veil`), `TagFilter` popover. **Every dialog closes on Esc** (`keydown` listener in each) and on a click outside where it makes sense. The exam arena is the exception (Esc ends that test). Success/copy feedback that must not move the layout is a fixed bottom toast (`.ad-toast`), not inline text.
+Overlays: `ExportFirstModal` (`.xf-veil`), `ResetStats` (`.xf-veil`), `ImprovePlan` (`.ipm-veil`), `QuestionEditor` (`.pk-veil`), `TagFilter` popover. **Every dialog closes on Esc** (`keydown` listener in each) and on a click outside where it makes sense. The exam arena is the exception (Esc ends that test). Success/copy feedback that must not move the layout is a fixed bottom toast (`.pk-toast`), not inline text.
 
 ## Wording and tone
 Plain language for a college student. Red 🔴 **CAUTION:** lines (a `.callout` or `.pi-err`) for anything destructive or that the user must not do. Errors say what is wrong and how to fix it; no apologies. Button names stay consistent through a flow. No exam-specific words.
@@ -21,3 +21,6 @@ Reduced-motion is respected (`prefers-reduced-motion`, `lib/fx.ts`). Interactive
 ## Layout notes
 Sidebar rail (`--rail: 96px`), `.shell` + `.page`. Dashboard top row (`.top-row`: greeting + quote) and compact runway are desktop-only rules (`@media (min-width:761px)`); calendar milestone labels truncate with ellipsis (`@media (min-width:561px)`). Planner cards use `.pl-focus` / `.pl-wrap`; the Prev/Today/Next row is `.pl-nav` (centred below the cards).
 - The Today agenda card (`.d-agenda`) is deliberately locked to the calendar's height and **scrolls inside itself** (`height: 0; min-height: 100%; overflow-y: auto`, desktop only), so browsing months or days never moves the page. Content below the fold (for example "Coming up") is reached by scrolling the card. This is intended; do not "fix" it.
+
+## Do not start class names with `ad-`, `ads-`, `banner`, `sponsor`
+Ad blockers (uBlock Origin, AdBlock) hide elements whose class looks like an advert with `display: none`. They skip `localhost`, so the page looks fine in dev and loses its tabs, search bar and table on the deployed site. The Manage pack classes used to start with `ad-` (for "admin") and were hidden. They now start with `pk-`. Pick prefixes that do not look like adverts.

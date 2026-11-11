@@ -142,15 +142,15 @@ export default function QuestionEditor({ profile, pack, loc, preset, onClose, on
   };
 
   return (
-    <div className="ad-veil" role="dialog" aria-modal="true" aria-label={loc ? `Edit ${loc.q.id}` : "Add question"}>
-      <div className="ad-modal">
-        <div className="ad-head">
+    <div className="pk-veil" role="dialog" aria-modal="true" aria-label={loc ? `Edit ${loc.q.id}` : "Add question"}>
+      <div className="pk-modal">
+        <div className="pk-head">
           <h2 style={{ margin: 0 }}>{loc ? <>Edit <code>{loc.q.id}</code></> : "Add a question"}</h2>
           <button className="btn invert icon-btn" style={{ marginLeft: "auto" }} onClick={copyPrompt} title="Copy prompt: the question and exact rules for fixing how it is written, to paste into any AI" aria-label="Copy prompt"><CopyIcon /></button>
           <ModalClose onClick={onClose} inline />
         </div>
         {pics.length > 0 && (
-          <div className="ad-pics">
+          <div className="pk-pics">
             <span className="small">This question has {pics.length} picture{pics.length === 1 ? "" : "s"}. The prompt can't carry {pics.length === 1 ? "it" : "them"}, so after copying the prompt, paste {pics.length === 1 ? "it" : "each one"} into the same AI chat:</span>
             {pics.map((p, i) => (
               <span key={p.ref} className="row" style={{ gap: 6 }}>
@@ -161,8 +161,8 @@ export default function QuestionEditor({ profile, pack, loc, preset, onClose, on
             ))}
           </div>
         )}
-        <div className="ad-form">
-          <label>Id <span className="small muted">({loc ? "fixed" : "assigned by the system"})</span><input className="ad-in" value={id} disabled spellCheck={false} />
+        <div className="pk-form">
+          <label>Id <span className="small muted">({loc ? "fixed" : "assigned by the system"})</span><input className="pk-in" value={id} disabled spellCheck={false} />
             <span className="small muted">{loc ? "Saving changes overrides this question. Its id stays the same." : "Every question gets its own unique id automatically."}</span></label>
           <label>Topic<select value={topic} onChange={(e) => pickTopic(e.target.value)}>
             {pack.topics.map((t) => <option key={t.id} value={t.id}>{pack.subjects[t.subject] ?? t.subject}: {t.name}</option>)}</select></label>
@@ -176,78 +176,78 @@ export default function QuestionEditor({ profile, pack, loc, preset, onClose, on
                   {sections.map((x) => <option key={x} value={x}>{x}</option>)}<option value="__new__">New section…</option>
                 </select>
               )}
-              {useNewSec && <input className="ad-in" placeholder="Section name, e.g. General Aptitude" value={section} onChange={(e) => setSection(e.target.value)} />}
+              {useNewSec && <input className="pk-in" placeholder="Section name, e.g. General Aptitude" value={section} onChange={(e) => setSection(e.target.value)} />}
             </label>
           )}
-          <div className="ad-two">
+          <div className="pk-two">
             <label>Type<select value={type} onChange={(e) => { const t = e.target.value as QType; setType(t); setPicked(t === "mcq" ? picked.slice(0, 1).length ? picked.slice(0, 1) : [0] : picked); }}>
               <option value="mcq">MCQ (one right option)</option><option value="msq">MSQ (several right options)</option><option value="nat">NAT (typed number)</option><option value="str">Text answer (typed text, Practice only)</option><option value="code">Programming (write code, Practice only)</option></select></label>
             <label>Marks<select value={marks} onChange={(e) => setMarks(Number(e.target.value) as 1 | 2)}><option value={1}>1</option><option value={2}>2</option></select></label>
           </div>
           <label>Question <span className="small muted">(LaTeX between $…$, pictures with the button below)</span>
-            <textarea className="ad-ta" rows={5} value={text} onFocus={() => (last.current = "text")} onChange={(e) => setText(e.target.value)} spellCheck={false} /></label>
-          {text.trim() && <div className="ad-prev"><Rich text={text} /></div>}
+            <textarea className="pk-ta" rows={5} value={text} onFocus={() => (last.current = "text")} onChange={(e) => setText(e.target.value)} spellCheck={false} /></label>
+          {text.trim() && <div className="pk-prev"><Rich text={text} /></div>}
 
           {type === "code" ? (
             <>
-              <div className="ad-two">
+              <div className="pk-two">
                 <label>Language<select value={language} onChange={(e) => setLanguage(e.target.value)}>{CODE_LANGUAGES.map((l) => <option key={l} value={l}>{LANGUAGE_LABEL[l]}</option>)}</select></label>
-                <label>Time limit per test (ms, optional)<input className="ad-in" inputMode="numeric" placeholder="3000" value={limit} onChange={(e) => setLimit(e.target.value)} /></label>
+                <label>Time limit per test (ms, optional)<input className="pk-in" inputMode="numeric" placeholder="3000" value={limit} onChange={(e) => setLimit(e.target.value)} /></label>
               </div>
-              <label>Setup needed <span className="small muted">(optional: exact files, folders or tables that must exist; shows a "Copy setup prompt" button)</span><textarea className="ad-ta" rows={3} value={setup} onChange={(e) => setSetup(e.target.value)} spellCheck={false} /></label>
-              <label>Starter code <span className="small muted">(optional)</span><textarea className="ad-ta" rows={4} value={starter} onChange={(e) => setStarter(e.target.value)} spellCheck={false} /></label>
-              <label>Reference solution <span className="small muted">(shown after Submit or Skip)</span><textarea className="ad-ta" rows={5} value={solution} onChange={(e) => setSolution(e.target.value)} spellCheck={false} /></label>
-              <label>Tests <span className="small muted">(JSON list of {"{"} "input", "output", "hidden"? {"}"}; at least one visible)</span><textarea className="ad-ta" rows={7} value={testsJson} onChange={(e) => setTestsJson(e.target.value)} spellCheck={false} /></label>
+              <label>Setup needed <span className="small muted">(optional: exact files, folders or tables that must exist; shows a "Copy setup prompt" button)</span><textarea className="pk-ta" rows={3} value={setup} onChange={(e) => setSetup(e.target.value)} spellCheck={false} /></label>
+              <label>Starter code <span className="small muted">(optional)</span><textarea className="pk-ta" rows={4} value={starter} onChange={(e) => setStarter(e.target.value)} spellCheck={false} /></label>
+              <label>Reference solution <span className="small muted">(shown after Submit or Skip)</span><textarea className="pk-ta" rows={5} value={solution} onChange={(e) => setSolution(e.target.value)} spellCheck={false} /></label>
+              <label>Tests <span className="small muted">(JSON list of {"{"} "input", "output", "hidden"? {"}"}; at least one visible)</span><textarea className="pk-ta" rows={7} value={testsJson} onChange={(e) => setTestsJson(e.target.value)} spellCheck={false} /></label>
             </>
           ) : type === "str" ? (
             <div>
               <label>Accepted answer(s) <span className="small muted">(one per line; any one is accepted. Write NIL for an empty list)</span>
-                <textarea className="ad-ta" rows={3} value={strAnswer} onChange={(e) => setStrAnswer(e.target.value)} spellCheck={false} placeholder="I,D,B" /></label>
-              <div className="ad-two">
+                <textarea className="pk-ta" rows={3} value={strAnswer} onChange={(e) => setStrAnswer(e.target.value)} spellCheck={false} placeholder="I,D,B" /></label>
+              <div className="pk-two">
                 <label>How it is compared<select value={strMatch} onChange={(e) => setStrMatch(e.target.value)}>
                   <option value="exact">Exact text</option><option value="list">Ordered list (comma separated)</option><option value="set">Set, any order (comma separated)</option></select></label>
-                <label className="ad-check"><input type="checkbox" checked={strCase} onChange={(e) => setStrCase(e.target.checked)} /> Case matters</label>
+                <label className="pk-check"><input type="checkbox" checked={strCase} onChange={(e) => setStrCase(e.target.checked)} /> Case matters</label>
               </div>
               <div className="small muted">Spaces are ignored and case is ignored (unless it matters). Never use NAT for a text answer.</div>
             </div>
           ) : type === "nat" ? (
-            <div className="ad-two">
-              <label>Right answer (a number)<input className="ad-in" inputMode="decimal" value={natValue} onChange={(e) => setNatValue(e.target.value)} /></label>
-              <label>Allowed error (±)<input className="ad-in" inputMode="decimal" value={natTol} onChange={(e) => setNatTol(e.target.value)} /></label>
+            <div className="pk-two">
+              <label>Right answer (a number)<input className="pk-in" inputMode="decimal" value={natValue} onChange={(e) => setNatValue(e.target.value)} /></label>
+              <label>Allowed error (±)<input className="pk-in" inputMode="decimal" value={natTol} onChange={(e) => setNatTol(e.target.value)} /></label>
             </div>
           ) : (
             <div>
               <div className="small muted">Options. Tick the right {type === "mcq" ? "one" : "ones"}.</div>
               {options.map((o, i) => (
-                <div key={i} className="ad-opt">
-                  <div className="ad-optrow">
+                <div key={i} className="pk-opt">
+                  <div className="pk-optrow">
                     <input type={type === "mcq" ? "radio" : "checkbox"} name="right" checked={picked.includes(i)} onChange={() => toggle(i)} aria-label={`Option ${String.fromCharCode(65 + i)} is right`} />
                     <b>{String.fromCharCode(65 + i)}</b>
-                    <input className="ad-in" value={o} onFocus={() => (last.current = `opt${i}`)} onChange={(e) => setOpt(i, e.target.value)} spellCheck={false} />
+                    <input className="pk-in" value={o} onFocus={() => (last.current = `opt${i}`)} onChange={(e) => setOpt(i, e.target.value)} spellCheck={false} />
                     {options.length > 2 && <button className="btn soft" onClick={() => dropOption(i)} aria-label={`Remove option ${String.fromCharCode(65 + i)}`}>✕</button>}
                   </div>
-                  {/(!\[|\$)/.test(o) && <div className="ad-optprev"><Rich text={o} /></div>}
+                  {/(!\[|\$)/.test(o) && <div className="pk-optprev"><Rich text={o} /></div>}
                 </div>
               ))}
               {options.length < 8 && <button className="btn soft" onClick={() => setOptions((o) => [...o, ""])}>+ Add option</button>}
             </div>
           )}
 
-          <label>Explanation<textarea className="ad-ta" rows={3} value={explanation} onFocus={() => (last.current = "explanation")} onChange={(e) => setExplanation(e.target.value)} spellCheck={false} /></label>
+          <label>Explanation<textarea className="pk-ta" rows={3} value={explanation} onFocus={() => (last.current = "explanation")} onChange={(e) => setExplanation(e.target.value)} spellCheck={false} /></label>
           <label>Difficulty
-            <select className="ad-in" value={difficulty} onChange={(e) => setDifficulty(e.target.value)}>
+            <select className="pk-in" value={difficulty} onChange={(e) => setDifficulty(e.target.value)}>
               <option value="">Pick one…</option>
               {DIFFICULTIES.map((d) => <option key={d} value={d}>{d[0].toUpperCase() + d.slice(1)}</option>)}
             </select>
           </label>
-          <label>Tags <span className="small muted">(optional, at most 3, general skills only like formula or trap, separated by commas)</span><input className="ad-in" value={tags} onChange={(e) => setTags(e.target.value)} placeholder="formula, trap" /></label>
+          <label>Tags <span className="small muted">(optional, at most 3, general skills only like formula or trap, separated by commas)</span><input className="pk-in" value={tags} onChange={(e) => setTags(e.target.value)} placeholder="formula, trap" /></label>
           <div className="row">
             <button className="btn soft" onClick={() => file.current?.click()}>Add picture…</button>
             <span className="small muted">It goes into the field you last clicked.</span>
             <input ref={file} type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" hidden onChange={async (e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) await insertPicture(f); }} />
           </div>
         </div>
-        {copied && <div className="ad-toast" role="status">{copied}</div>}
+        {copied && <div className="pk-toast" role="status">{copied}</div>}
         {errors.length > 0 && <div className="pi-err" role="alert"><b>🔴 Fix this first:</b><ul>{errors.map((e, i) => <li key={i}>{e}</li>)}</ul></div>}
         <div className="row" style={{ marginTop: 12 }}>
           <button className="btn primary" disabled={busy} onClick={submit}>{loc ? "Save changes" : "Add question"}</button>

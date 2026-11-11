@@ -32,21 +32,21 @@ export default function TopicsPanel({ pack, save }: { pack: PackData; save: (p: 
   return (
     <>
       <h2>Subjects</h2>
-      <div className="ad-chips">
+      <div className="pk-chips">
         {subjectIds.map((s) => (
-          <label key={s} className="ad-chip"><code>{s}</code>
-            <input className="ad-in" defaultValue={pack.subjects[s]} onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== pack.subjects[s]) save({ ...pack, subjects: { ...pack.subjects, [s]: v } }); }} /></label>
+          <label key={s} className="pk-chip"><code>{s}</code>
+            <input className="pk-in" defaultValue={pack.subjects[s]} onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== pack.subjects[s]) save({ ...pack, subjects: { ...pack.subjects, [s]: v } }); }} /></label>
         ))}
       </div>
       <h2>Topics</h2>
-      <table className="t ad-table">
+      <table className="t pk-table">
         <thead><tr><th>Id</th><th>Subject</th><th>Name</th><th>Status</th><th>Questions</th><th /></tr></thead>
         <tbody>
           {pack.topics.map((t) => (
             <tr key={t.id}>
               <td><code>{t.id}</code></td>
               <td>{pack.subjects[t.subject] ?? t.subject}</td>
-              <td><input className="ad-in" defaultValue={t.name} onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== t.name) patch(t.id, { name: v }); }} /></td>
+              <td><input className="pk-in" defaultValue={t.name} onBlur={(e) => { const v = e.target.value.trim(); if (v && v !== t.name) patch(t.id, { name: v }); }} /></td>
               <td><select value={t.status} onChange={(e) => patch(t.id, { status: e.target.value as TopicStatus })}>{STATUS.map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></td>
               <td>{used.get(t.id) ?? 0}</td>
               <td>{(used.get(t.id) ?? 0) === 0 ? <button className="btn soft" onClick={() => save({ ...pack, topics: pack.topics.filter((x) => x.id !== t.id) })}>Delete</button> : <span className="small muted">in use</span>}</td>
@@ -55,13 +55,13 @@ export default function TopicsPanel({ pack, save }: { pack: PackData; save: (p: 
         </tbody>
       </table>
       <h3>Add a topic</h3>
-      <div className="ad-bar">
-        <input className="ad-in" placeholder="id, e.g. algebra" value={id} onChange={(e) => setId(e.target.value)} spellCheck={false} />
-        <input className="ad-in" placeholder="Name, e.g. Algebra" value={name} onChange={(e) => setName(e.target.value)} />
+      <div className="pk-bar">
+        <input className="pk-in" placeholder="id, e.g. algebra" value={id} onChange={(e) => setId(e.target.value)} spellCheck={false} />
+        <input className="pk-in" placeholder="Name, e.g. Algebra" value={name} onChange={(e) => setName(e.target.value)} />
         <select value={useNew ? "__new__" : subject} onChange={(e) => setSubject(e.target.value)}>
           {subjectIds.map((s) => <option key={s} value={s}>{pack.subjects[s]}</option>)}<option value="__new__">New subject…</option>
         </select>
-        {useNew && <input className="ad-in" placeholder="New subject name" value={newSubject} onChange={(e) => setNewSubject(e.target.value)} />}
+        {useNew && <input className="pk-in" placeholder="New subject name" value={newSubject} onChange={(e) => setNewSubject(e.target.value)} />}
         <button className="btn primary" onClick={add}>Add topic</button>
       </div>
       {err && <p className="pi-err" role="alert">{err}</p>}

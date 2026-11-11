@@ -42,8 +42,8 @@ export default function QuestionsPanel({ profile, pack, save, focusId }: Props) 
 
   return (
     <>
-      <div className="ad-bar">
-        <input className="ad-in" value={needle} onChange={(e) => { setNeedle(e.target.value); setShow(PAGE); }} placeholder="Find by id or text, e.g. alg-3" spellCheck={false} />
+      <div className="pk-bar">
+        <input className="pk-in" value={needle} onChange={(e) => { setNeedle(e.target.value); setShow(PAGE); }} placeholder="Find by id or text, e.g. alg-3" spellCheck={false} />
         <select value={bank} onChange={(e) => { setBank(e.target.value); setShow(PAGE); }}>
           <option value="all">All questions</option>
           <option value="practice">Practice only</option>
@@ -56,21 +56,21 @@ export default function QuestionsPanel({ profile, pack, save, focusId }: Props) 
         <button className="btn primary" onClick={() => setEdit("new")} disabled={pack.topics.length === 0}>+ Add question</button>
       </div>
       {pack.topics.length === 0 && <p className="small muted">Add a topic first (Topics tab). Every question needs one.</p>}
-      {note && <p className="small ad-note">{note}</p>}
+      {note && <p className="small pk-note">{note}</p>}
       <p className="small muted">{rows.length} of {all.length} questions. Every question has one id that is unique across Practice and all mock tests.</p>
 
-      <table className="t ad-table ad-qtable">
+      <table className="t pk-table pk-qtable">
         <colgroup><col className="c-id" /><col className="c-bank" /><col className="c-topic" /><col className="c-type" /><col /><col className="c-act" /></colgroup>
         <thead><tr><th>Id</th><th>Bank</th><th>Topic</th><th>Type</th><th>Question</th><th /></tr></thead>
         <tbody>
           {rows.slice(0, show).map((l) => (
             <tr key={l.q.id}>
               <td><code>{l.q.id}</code></td>
-              <td className="muted ad-bank" title={l.bank === "practice" ? "Practice" : `${l.mockName} · ${l.section}`}>{l.bank === "practice" ? "Practice" : `${l.mockName} · ${l.section}`}</td>
+              <td className="muted pk-bank" title={l.bank === "practice" ? "Practice" : `${l.mockName} · ${l.section}`}>{l.bank === "practice" ? "Practice" : `${l.mockName} · ${l.section}`}</td>
               <td>{topicName(l.q.topic)}</td>
-              <td className="ad-type">{l.q.type.toUpperCase()} · {l.q.marks}m</td>
-              <td className="ad-text">{plain(l.q.text, 90)}</td>
-              <td className="ad-act">
+              <td className="pk-type">{l.q.type.toUpperCase()} · {l.q.marks}m</td>
+              <td className="pk-text">{plain(l.q.text, 90)}</td>
+              <td className="pk-act">
                 {confirm === l.q.id ? (
                   <>Delete? <button className="btn primary" onClick={() => remove(l.q.id)}>Yes</button> <button className="btn soft" onClick={() => setConfirm(null)}>No</button></>
                 ) : (

@@ -253,3 +253,52 @@ Use exactly this format:
 
 Here is a valid example to copy the shape from:
 ${templateJson(start)}`;
+
+/** Merge only the days in `incoming` into `current`: same date = replaced, new date = added. Everything else (other days, milestones, name) is untouched.
+ *  `tickMoves` says, for each replaced day, which old task position each new task came from (matched by text), so ticks can follow. */
+export function mergeDays(current: PlanData, incoming: PlanData) {
+  const byDate = new Map(current.days.map((d) => [d.date, d]));
+  const updated: string[] = [], added: string[] = [];
+  const tickMoves: Record<string, (number | null)[]> = {};
+  // a file with no phases of its own gets one automatic phase named after the plan; those days join the phase of the day they replace or sit next to
+  const autoPhase = Object.keys(incoming.phaseNames).length === 1 && Object.values(incoming.phaseNames)[0] === incoming.name;
+  const nearPhase = (date: string) => { const prev = [...current.days].reverse().find((x) => x.date < date) ?? current.days.find((x) => x.date > date); return prev?.phase; };
+  for (const raw of incoming.days) {
+    const old = byDate.get(raw.date);
+    const d = autoPhase ? { ...raw, phase: old?.phase ?? nearPhase(raw.date) ?? raw.phase } : raw;
+    if (old) {
+      updated.push(d.date);
+      const used = new Set<number>();
+      tickMoves[d.date] = d.tasks.map((t) => { const i = old.tasks.findIndex((o, k) => o === t && !used.has(k)); if (i >= 0) used.add(i); return i >= 0 ? i : null; });
+    } else added.push(d.date);
+    byDate.set(d.date, d);
+  }
+  const days = [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
+  const phaseNames = { ...current.phaseNames };
+  if (!autoPhase) for (const [k, v] of Object.entries(incoming.phaseNames)) if (!(k in phaseNames)) phaseNames[k] = v;
+  return { plan: { ...current, days, phaseNames }, updated, added, tickMoves };
+}
+
+/** Prompt for changing only some dates of a plan the person already has. The AI answers with just those days. */
+export const aiUpdatePrompt = (plan: PlanData): string => {
+  const phases = Object.entries(plan.phaseNames).map(([id, name]) => `${id} = ${name}`).join("; ");
+  const first = plan.days[0]?.date ?? "", last = plan.days[plan.days.length - 1]?.date ?? "";
+  return `I already have a study plan and want to change ONLY a few dates. Reply with ONLY one JSON object (no explanation, no markdown fence) that contains just the days I ask you to change. Do not repeat any other day.
+
+My plan: "${plan.name}", ${plan.days.length} days from ${first} to ${last}.${plan.description ? `\nAbout the plan: ${plan.description}` : ""}
+Phase ids already in use: ${phases || "none"}. Reuse these ids in "phase" when a day belongs to one of them.
+
+What I want changed (fill this in before sending):
+- Dates to change (or a range): 
+- What should happen on those dates: 
+- Hours I can study on those dates: 
+- Anything to avoid: 
+
+Use exactly this format:
+{ "name": "${plan.name.replace(/"/g, '\\"')}", "days": [ { "date": "YYYY-MM-DD", "title": "…", "kind": "study", "hours": 4, "tasks": ["…", "…"] } ] }
+- Only put the dates I asked to change in "days". Leave out "milestones", "phases" and "description".
+- Every day needs "title", "kind" (one of: study, crunch, light, mock, buffer, exam, taper), "hours" (0-16) and a "tasks" list of 1-12 short checklist items. "questions" (a practice-question target) and "topics" are optional.
+- Each entry fully REPLACES that date, so write the complete day, not just the changes. A date I did not have before is added as a new day.
+- Maths goes between dollar signs as LaTeX. Because this is JSON, write every LaTeX backslash twice. A real dollar sign is written \\$.
+- All dates are YYYY-MM-DD and real calendar dates.`;
+};

@@ -43,7 +43,7 @@ export default function PlanPanel({ profile }: { profile: string }) {
       {plan ? (
         <p className="muted"><b>{plan.name}</b>: {plan.days.length} days{plan.days.length ? `, ${plan.days[0].date} to ${plan.days[plan.days.length - 1].date}` : ""}, {Object.keys(plan.phaseNames).length} phases, {plan.milestones.length} milestones.</p>
       ) : <p className="muted">This profile has no plan. Paste one below, or start from the template.</p>}
-      <textarea className="pi-text ad-json" spellCheck={false} value={text} onChange={(e) => setText(e.target.value)} placeholder="Plan JSON" />
+      <textarea className="pi-text pk-json" spellCheck={false} value={text} onChange={(e) => setText(e.target.value)} placeholder="Plan JSON" />
       <div className="row" style={{ marginTop: 8 }}>
         <button className="btn primary" onClick={apply} disabled={!text.trim()}>Check and save plan</button>
         {!plan && <button className="btn soft" onClick={() => setText(templateJson(new Date().toISOString().slice(0, 10)))}>Start from the template</button>}
@@ -51,7 +51,7 @@ export default function PlanPanel({ profile }: { profile: string }) {
       </div>
       {errors.length > 0 && <div className="pi-err" role="alert"><b>🔴 Fix this first:</b><ul>{errors.map((e, i) => <li key={i}>{e}</li>)}</ul></div>}
       {warnings.length > 0 && <ul className="pi-warn">{warnings.map((w, i) => <li key={i}>{w}</li>)}</ul>}
-      {note && <p className="small ad-note">{note}</p>}
+      {note && <p className="small pk-note">{note}</p>}
     </>
   );
 }

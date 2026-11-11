@@ -62,7 +62,7 @@ export default function PackImport({ onDone }: { onDone?: (message: string) => v
         <div className="small muted">Your current question pack</div>
         {renaming === null ? <h2 style={{ margin: "2px 0 4px" }}>{custom ? pack.name : "None loaded"}</h2> : (
           <form className="row" style={{ margin: "4px 0" }} onSubmit={async (e) => { e.preventDefault(); const n = renaming.trim().slice(0, 60); if (!n) return; await install({ ...pack, name: n }, true); setRenaming(null); const m = `Your pack is now called "${n}".`; setNote(m); onDone?.(m); }}>
-            <input className="ad-in" autoFocus maxLength={60} value={renaming} onChange={(e) => setRenaming(e.target.value)} aria-label="Question pack name" style={{ minWidth: 260 }} onKeyDown={(e) => { if (e.key === "Escape") setRenaming(null); }} />
+            <input className="pk-in" autoFocus maxLength={60} value={renaming} onChange={(e) => setRenaming(e.target.value)} aria-label="Question pack name" style={{ minWidth: 260 }} onKeyDown={(e) => { if (e.key === "Escape") setRenaming(null); }} />
             <button className="btn primary" type="submit" disabled={!renaming.trim()}>Save name</button>
             <button className="btn soft" type="button" onClick={() => setRenaming(null)}>Cancel</button>
           </form>
@@ -127,7 +127,7 @@ export default function PackImport({ onDone }: { onDone?: (message: string) => v
             <b>✓ Looks good: {chosen}</b>
             {!adding && (
               <label className="small" style={{ display: "grid", gap: 4, margin: "6px 0" }}>Pack name (you can change it later with Rename)
-                <input className="ad-in" maxLength={60} value={newName} placeholder={p.name} onChange={(e) => setNewName(e.target.value)} />
+                <input className="pk-in" maxLength={60} value={newName} placeholder={p.name} onChange={(e) => setNewName(e.target.value)} />
               </label>
             )}
             <p className="small" style={{ margin: "4px 0" }}>{p.topics.length} topics in {Object.keys(p.subjects).length} subject{Object.keys(p.subjects).length === 1 ? "" : "s"} · {p.questions.length} practice questions ({count("mcq")} MCQ, {count("msq")} MSQ, {count("nat")} NAT{count("str") ? `, ${count("str")} text` : ""}{count("code") ? `, ${count("code")} programming` : ""}) · {p.mockTests.length} mock test{p.mockTests.length === 1 ? "" : "s"} with {mockQs(p)} questions of their own{p.mockTests.length ? `: ${p.mockTests.map((m) => m.name).join(", ")}` : ""}{p.mocks.length ? ` · ${p.mocks.length} old-style recipe${p.mocks.length === 1 ? "" : "s"}` : ""}</p>

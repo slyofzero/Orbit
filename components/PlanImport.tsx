@@ -1,6 +1,6 @@
 "use client";
 import { useMemo, useRef, useState } from "react";
-import { aiPrompt, parsePlan, planToJson, templateJson } from "@/lib/customPlan";
+import { aiPrompt, aiUpdatePrompt, mergeDays, parsePlan, planToJson, templateJson } from "@/lib/customPlan";
 import { downloadJson, fileSafe } from "@/lib/download";
 import PlanDescription from "./PlanDescription";
 import ExportFirstModal from "./ExportFirstModal";
@@ -19,9 +19,11 @@ const save = (name: string, text: string) => {
 
 // Where you swap the built-in plan for your own: a JSON file you upload, or text you paste.
 export default function PlanImport({ onDone }: { onDone: () => void }) {
-  const { plan, custom, install, remove } = usePlan();
+  const { plan, custom, install, update, remove } = usePlan();
   const { pack } = usePack();
-  const [curLinks] = usePersisted<Links>(KEYS.links, {});
+  const [curLinks, setCurLinks] = usePersisted<Links>(KEYS.links, {});
+  const [, setDone] = usePersisted<Record<string, boolean>>(KEYS.done, {});
+  const [mode, setMode] = useState<"all" | "dates">("all");
   const [linkChoice, setLinkChoice] = useState<"working" | "none">("working");
   const [text, setText] = useState("");
   const [keep, setKeep] = useState(false);
@@ -46,6 +48,25 @@ export default function PlanImport({ onDone }: { onDone: () => void }) {
   const importedLinks: Links | undefined = lc?.good && (lc.broken === 0 || linkChoice === "working") ? lc.good : undefined;
 
   const useIt = () => { if (!p) return; install(p, keep, importedLinks); setText(""); setAsk(null); setNote(`"${p.name}" is now your plan${importedLinks ? ` with ${Object.keys(importedLinks).length} day${Object.keys(importedLinks).length === 1 ? "" : "s"} of linked questions` : ""}.`); onDone(); };
+
+  // only the dates in the file: replace or add those days, leave everything else as it is
+  const merged = useMemo(() => (p && custom && mode === "dates" ? mergeDays(plan, p) : null), [p, custom, mode, plan]);
+  const useDates = () => {
+    if (!p || !merged) return;
+    update(merged.plan);
+    setDone((d) => {
+      const n = { ...d };
+      for (const [date, moves] of Object.entries(merged.tickMoves)) {
+        const was = Object.keys(d).filter((k) => k.startsWith(`${date}:`));
+        was.forEach((k) => delete n[k]);
+        moves.forEach((from, i) => { if (from !== null && d[`${date}:${from}`]) n[`${date}:${i}`] = true; });
+      }
+      return n;
+    });
+    if (importedLinks) setCurLinks((l) => { const n = { ...l }; for (const [date, v] of Object.entries(importedLinks)) if (merged.updated.includes(date) || merged.added.includes(date)) n[date] = v; return n; });
+    setText(""); setNote(`Updated ${merged.updated.length} day${merged.updated.length === 1 ? "" : "s"} and added ${merged.added.length}. Every other day, your milestones and your ticks on other days were left alone.`);
+    onDone();
+  };
 
   const copy = async (what: string, value: string) => {
     try { await navigator.clipboard.writeText(value); setNote(`${what} copied.`); } catch { setNote("Copy was blocked by the browser. Use Download instead."); }
@@ -75,8 +96,9 @@ export default function PlanImport({ onDone }: { onDone: () => void }) {
           <button className="btn soft" onClick={() => save("my-plan-template.json", templateJson(start))}>Download template</button>
           <button className="btn soft" onClick={() => copy("Template", templateJson(start))}>Copy template</button>
           <button className="btn primary" onClick={() => copy("AI prompt", aiPrompt(start))}>Copy AI prompt</button>
+          {custom && <button className="btn soft" onClick={() => copy("AI prompt for selected dates", aiUpdatePrompt(plan))}>Copy AI prompt for selected dates</button>}
         </div>
-        <p className="small muted" style={{ marginBottom: 0 }}>Copy AI prompt: paste it into any AI chat, fill in your goal and dates, and paste the JSON it gives back in step 2.</p>
+        <p className="small muted" style={{ marginBottom: 0 }}>Copy AI prompt: paste it into any AI chat, fill in your goal and dates, and paste the JSON it gives back in step 2.{custom ? " To change only a few dates, use Copy AI prompt for selected dates, then choose \"Update only the dates in this file\" in step 2." : ""}</p>
       </section>
 
       <section className="panel">
@@ -116,9 +138,27 @@ export default function PlanImport({ onDone }: { onDone: () => void }) {
                 )}
               </div>
             )}
-            <div className="callout">🔴 CAUTION: Using this plan replaces your current plan, milestones and question links. Your practice history and mock results are kept.</div>
-            <label className="small pi-keep"><input type="checkbox" checked={keep} onChange={(e) => setKeep(e.target.checked)} /> Keep my ticked tasks (they match by date and position, so only keep them if the dates overlap)</label>
-            <button className="btn primary" onClick={() => (custom ? setAsk("replace") : useIt())}>Use this plan</button>
+            {custom && (
+              <div className="pi-mode">
+                <label className="small pi-keep"><input type="radio" name="pmode" checked={mode === "all"} onChange={() => setMode("all")} /> Replace my whole plan with this file</label>
+                <label className="small pi-keep"><input type="radio" name="pmode" checked={mode === "dates"} onChange={() => setMode("dates")} /> Update only the dates in this file, and leave the rest of my plan alone</label>
+              </div>
+            )}
+            {custom && mode === "dates" && merged ? (
+              <>
+                <p className="small" style={{ margin: "6px 0" }}>
+                  <b>{merged.updated.length}</b> day{merged.updated.length === 1 ? "" : "s"} will be replaced{merged.updated.length ? ` (${merged.updated.slice(0, 6).map(fmtDate).join(", ")}${merged.updated.length > 6 ? ", …" : ""})` : ""} and <b>{merged.added.length}</b> new day{merged.added.length === 1 ? "" : "s"} added{merged.added.length ? ` (${merged.added.slice(0, 6).map(fmtDate).join(", ")}${merged.added.length > 6 ? ", …" : ""})` : ""}. Ticks stay on tasks whose wording is unchanged. If the file has links for a date, they replace that date's links; dates without links in the file keep theirs.
+                </p>
+                <div className="callout">🔴 CAUTION: the replaced days lose their old tasks and details. Other days, milestones and the plan name are not touched.</div>
+                <button className="btn primary" onClick={useDates} disabled={merged.updated.length + merged.added.length === 0}>Update these dates</button>
+              </>
+            ) : (
+              <>
+                <div className="callout">🔴 CAUTION: Using this plan replaces your current plan, milestones and question links. Your practice history and mock results are kept.</div>
+                <label className="small pi-keep"><input type="checkbox" checked={keep} onChange={(e) => setKeep(e.target.checked)} /> Keep my ticked tasks (they match by date and position, so only keep them if the dates overlap)</label>
+                <button className="btn primary" onClick={() => (custom ? setAsk("replace") : useIt())}>Use this plan</button>
+              </>
+            )}
           </div>
         )}
       </section>

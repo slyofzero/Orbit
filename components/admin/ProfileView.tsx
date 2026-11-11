@@ -26,7 +26,7 @@ export default function ProfileView({ row, focusId, onBack }: { row: ProfileSumm
       <p className="small"><a href="#" onClick={(e) => { e.preventDefault(); onBack(); }}>← All profiles</a></p>
       <h1 style={{ display: "flex", alignItems: "center", gap: 12 }}><span className="pf-av">{row.profile.name.slice(0, 1).toUpperCase()}</span>{row.profile.name}</h1>
       <p className="muted">{pack ? `${pack.name}: ${pack.questions.length} practice questions, ${pack.mockTests.length} mock test${pack.mockTests.length === 1 ? "" : "s"}, ${pack.topics.length} topics.` : "This profile has no question pack."}</p>
-      <div className="ad-tabs" role="tablist">
+      <div className="pk-tabs" role="tablist">
         {TABS.map((t) => <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? "on" : ""} onClick={() => setTab(t)}>{t}</button>)}
       </div>
       {needsPack && !pack && <div className="panel"><p>There is no question pack in this profile yet.</p><button className="btn primary" onClick={() => setTab("Upload")}>Upload one</button></div>}

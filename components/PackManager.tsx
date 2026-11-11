@@ -12,6 +12,8 @@ import PlanPanel from "@/components/admin/PlanPanel";
 import { PackData } from "@/lib/packs";
 import { activeProfileId } from "@/lib/profiles";
 import { KEYS, usePersisted } from "@/lib/store";
+import { exportPack } from "@/lib/imageStore";
+import { downloadJson, fileSafe } from "@/lib/download";
 
 export const MANAGE_TABS = [["questions", "Questions"], ["mock-tests", "Mock tests"], ["topics", "Topics"], ["plan", "Plan"], ["upload", "Upload"]] as const;
 type Tab = (typeof MANAGE_TABS)[number][0];
@@ -35,10 +37,13 @@ export default function PackManager() {
     <ImageProfile.Provider value={profile}>
       <div className="row" style={{ alignItems: "center", marginBottom: 18 }}>
         <h1>Manage pack</h1>
-        <Link href="/practice" className="btn invert right">Back to practice</Link>
+        <div className="right row" style={{ gap: 8 }}>
+          {pack && <button className="btn soft" onClick={async () => { downloadJson(`${fileSafe(pack.name)}.json`, await exportPack(pack)); setDone(`Exported ${pack.questions.length} practice questions and ${pack.mockTests.length} mock test${pack.mockTests.length === 1 ? "" : "s"} to ${fileSafe(pack.name)}.json.`); }}>Export pack</button>}
+          <Link href="/practice" className="btn invert">Back to practice</Link>
+        </div>
       </div>
       <p className="muted">{pack ? `${pack.name}: ${pack.questions.length} practice questions, ${pack.mockTests.length} mock test${pack.mockTests.length === 1 ? "" : "s"}, ${pack.topics.length} topics.` : "No question pack yet."}</p>
-      <div className="ad-tabs" role="tablist">
+      <div className="pk-tabs" role="tablist">
         {MANAGE_TABS.map(([k, l]) => <button key={k} role="tab" aria-selected={tab === k} className={tab === k ? "on" : ""} onClick={() => go(k)}>{l}</button>)}
       </div>
       {done && <div className="pi-ok" role="status" style={{ marginBottom: 14 }}><span>✓ {done}</span><button className="btn soft" style={{ justifySelf: "start" }} onClick={() => setDone("")}>Dismiss</button></div>}

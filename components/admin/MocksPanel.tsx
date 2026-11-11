@@ -14,12 +14,12 @@ function Card({ m, onSave, onDelete, onOpen }: { m: FixedMock; onSave: (m: Fixed
   const mins = Number(minutes);
   const dirty = name !== m.name || mins !== m.minutes || note !== (m.note ?? "");
   return (
-    <div className="ad-card static">
+    <div className="pk-card static">
       <div className="small muted"><code>{m.id}</code> · {qs} question{qs === 1 ? "" : "s"} in {m.sections.length} section{m.sections.length === 1 ? "" : "s"}: {m.sections.map((s) => `${s.name} (${s.questions.length})`).join(", ") || "empty"}</div>
-      <label>Name<input className="ad-in" value={name} onChange={(e) => setName(e.target.value)} /></label>
-      <div className="ad-two">
-        <label>Minutes<input className="ad-in" inputMode="numeric" value={minutes} onChange={(e) => setMinutes(e.target.value)} /></label>
-        <label>Note on the card<input className="ad-in" value={note} onChange={(e) => setNote(e.target.value)} /></label>
+      <label>Name<input className="pk-in" value={name} onChange={(e) => setName(e.target.value)} /></label>
+      <div className="pk-two">
+        <label>Minutes<input className="pk-in" inputMode="numeric" value={minutes} onChange={(e) => setMinutes(e.target.value)} /></label>
+        <label>Note on the card<input className="pk-in" value={note} onChange={(e) => setNote(e.target.value)} /></label>
       </div>
       <div className="row">
         <button className="btn primary" onClick={onOpen}>Open questions ({qs})</button>
@@ -49,15 +49,15 @@ export default function MocksPanel({ profile, pack, save }: { profile: string; p
   return (
     <>
       <p className="muted">Each mock test owns its questions. Open a mock to edit its sections and questions.</p>
-      <div className="ad-grid">
+      <div className="pk-grid">
         {pack.mockTests.map((m) => <Card key={m.id + m.name + m.minutes} m={m} onSave={(n) => save({ ...pack, mockTests: pack.mockTests.map((x) => (x.id === m.id ? n : x)) })} onDelete={() => save({ ...pack, mockTests: pack.mockTests.filter((x) => x.id !== m.id) })} onOpen={() => setOpen(m.id)} />)}
         {pack.mockTests.length === 0 && <p className="muted">No mock tests yet.</p>}
       </div>
       <h3>Add a mock test</h3>
-      <div className="ad-bar">
-        <input className="ad-in" placeholder="id, e.g. mock3" value={id} onChange={(e) => setId(e.target.value)} spellCheck={false} />
-        <input className="ad-in" placeholder="Name, e.g. Mock test 3" value={name} onChange={(e) => setName(e.target.value)} />
-        <input className="ad-in" style={{ maxWidth: 110 }} inputMode="numeric" value={minutes} onChange={(e) => setMinutes(e.target.value)} aria-label="Minutes" />
+      <div className="pk-bar">
+        <input className="pk-in" placeholder="id, e.g. mock3" value={id} onChange={(e) => setId(e.target.value)} spellCheck={false} />
+        <input className="pk-in" placeholder="Name, e.g. Mock test 3" value={name} onChange={(e) => setName(e.target.value)} />
+        <input className="pk-in" style={{ maxWidth: 110 }} inputMode="numeric" value={minutes} onChange={(e) => setMinutes(e.target.value)} aria-label="Minutes" />
         <button className="btn primary" onClick={add}>Add mock test</button>
       </div>
       {err && <p className="pi-err" role="alert">{err}</p>}

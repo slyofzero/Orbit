@@ -30,9 +30,9 @@ export default function Admin() {
       <div className="callout">🔴 CAUTION: Changes here are saved straight away in that profile. Export its pack first if you want a copy of the old version.</div>
 
       <h2>Profiles</h2>
-      <div className="ad-grid">
+      <div className="pk-grid">
         {rows.map((r) => (
-          <button key={r.profile.id} className="ad-card" onClick={() => setPicked(r.profile.id)}>
+          <button key={r.profile.id} className="pk-card" onClick={() => setPicked(r.profile.id)}>
             <span className="pf-av">{r.profile.name.slice(0, 1).toUpperCase()}</span>
             <b>{r.profile.name}</b>
             <span className="small muted">{r.planName ? `Plan: ${r.planName} (${r.planDays} days)` : "No plan"}</span>
@@ -43,10 +43,10 @@ export default function Admin() {
 
       <h2>Find a question by ID</h2>
       <p className="small muted">Looks in every profile. Part of an id works too.</p>
-      <input className="ad-in" value={needle} onChange={(e) => setNeedle(e.target.value)} placeholder="e.g. alg-3 or mock1-q2" spellCheck={false} />
+      <input className="pk-in" value={needle} onChange={(e) => setNeedle(e.target.value)} placeholder="e.g. alg-3 or mock1-q2" spellCheck={false} />
       {needle.trim() && hits.length === 0 && <p className="small muted">No question has an id containing “{needle.trim()}”.</p>}
       {hits.length > 0 && (
-        <table className="t ad-table">
+        <table className="t pk-table">
           <thead><tr><th>Id</th><th>Profile</th><th>Where</th><th /></tr></thead>
           <tbody>
             {hits.map((h, i) => (
