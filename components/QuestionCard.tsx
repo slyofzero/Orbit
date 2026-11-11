@@ -9,7 +9,9 @@ import Rich from "./Rich";
 import { strHint } from "@/lib/strMatch";
 import { difficultyOf } from "@/lib/questionFilter";
 import CodeQuestion from "./CodeQuestion";
+import CopyIcon from "./CopyIcon";
 import EditQuestionDialog from "./EditQuestionDialog";
+import { copyQuestion } from "@/lib/copyQuestion";
 
 const TYPE_LABEL = { mcq: "MCQ", msq: "MSQ", nat: "NAT", str: "TEXT", code: "CODE" } as const;
 
@@ -19,6 +21,7 @@ export default function QuestionCard({
   const { topicById: TOPIC_BY_ID, subjects: SUBJECTS, byId } = usePack();
   const inPack = byId.has(q.id);
   const [editing, setEditing] = useState(false);
+  const [copied, setCopied] = useState(false);
   const subjectName = (x: Question) => { const id = x.subject ?? TOPIC_BY_ID[x.topic]?.subject ?? ""; return SUBJECTS[id] ?? id; };
   const [sel, setSel] = useState<Answer | undefined>(undefined);
   const [checked, setChecked] = useState(false);
@@ -79,11 +82,16 @@ export default function QuestionCard({
         {showTopic && TOPIC_BY_ID[q.topic] && (
           <Link href={q.type === "code" ? "/practice/programming" : `/practice/${q.topic}`} className="small right">{TOPIC_BY_ID[q.topic].name}</Link>
         )}
-        {inPack && (
-          <button type="button" className={`q-edit ${showTopic && TOPIC_BY_ID[q.topic] ? "" : "right"}`} title="Edit this question" aria-label="Edit this question" onClick={() => setEditing(true)}>
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z" /><path d="M14 7l3 3" /></svg>
+        <span className={`q-tools ${showTopic && TOPIC_BY_ID[q.topic] ? "" : "right"}`}>
+          <button type="button" className="q-edit" title="Copy this question (text, options and pictures)" aria-label="Copy this question" onClick={async () => { const ok = await copyQuestion(q); setCopied(ok); setTimeout(() => setCopied(false), 1600); }}>
+            <CopyIcon done={copied} />
           </button>
-        )}
+          {inPack && (
+            <button type="button" className="q-edit" title="Edit this question" aria-label="Edit this question" onClick={() => setEditing(true)}>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z" /><path d="M14 7l3 3" /></svg>
+            </button>
+          )}
+        </span>
       </div>
       <div className="qtext"><Rich text={q.text} /></div>
       {(TOPIC_BY_ID[q.topic] || q.tags?.length || difficultyOf(q)) && (

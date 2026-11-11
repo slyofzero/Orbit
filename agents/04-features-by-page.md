@@ -48,4 +48,12 @@ Its own page, reached from the "Manage pack" button on Practice and Programming.
 
 ## Calculator (day page and practice topic page)
 
-`components/CalculatorButton.tsx` is a pill pinned (position fixed) at the top right, so it stays while you scroll. It opens `components/ScientificCalc.tsx`, a draggable floating calculator (Deg/Rad, Inv for inverse functions, hyperbolics, log/ln, powers and roots, n!, mod, 1/x, memory keys; typing works; Esc closes). Maths is in `lib/calc.ts` (no eval) and is tested in `scripts/check.ts`. The exam arena keeps its own simpler `components/Calculator.tsx`. To add the button to another page, render `<CalculatorButton />` anywhere on it.
+`components/CalculatorButton.tsx` is a tab fixed to the right edge of the screen (icon + left arrow), so it stays while you scroll. It opens `components/ScientificCalc.tsx`, a draggable floating calculator (Deg/Rad, Inv for inverse functions, hyperbolics, log/ln, powers and roots, n!, mod, 1/x, memory keys; typing works; Esc closes). Maths is in `lib/calc.ts` (no eval) and is tested in `scripts/check.ts`. The exam arena keeps its own simpler `components/Calculator.tsx`. To add the button to another page, render `<CalculatorButton />` anywhere on it.
+
+## Copy / edit buttons on a question
+
+Top right of each question card: a copy icon and an edit icon (`.q-tools`). Copy (`lib/copyQuestion.ts`) puts the question, its options and its pictures on the clipboard in one click, as text/plain, text/html (pictures inline) and image/png (all pictures stacked). The answer and explanation are not copied. The calculator button is a small tab fixed to the right edge of the screen, halfway down (icon plus a subtle left arrow, `.calc-fab`). It sits in the page margin so it covers nothing, and is rendered in a portal so the page entrance animation and loading blur do not affect it.
+
+## Day page resume (`/day/<date>`)
+
+Same resume behaviour as a practice topic: questions already answered when you open the day are hidden (a snapshot taken on open, so one you answer now stays on screen), numbering keeps the original Q numbers, and an eye button beside the title (crossed out while hidden) shows them again. If every linked question is already answered, the solved-all dialog asks whether to view them or reset. "Answered" means there is a record for that question in `gate.practice`, so a question you answered in its topic also counts as answered here, and Reset clears those records for this day's questions only.

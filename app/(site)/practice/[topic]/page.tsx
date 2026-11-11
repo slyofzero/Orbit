@@ -128,9 +128,9 @@ export default function TopicPractice() {
           onReset={() => { setPractice((p) => Object.fromEntries(Object.entries(p).filter(([, r]) => r.topic !== topic))); setSeen({ topic, ids: new Set() }); setShowDone(false); setAskDone(false); setPage(1); }}
         />
       )}
+      <CalculatorButton />
       <p className="small"><Link href="/practice">← All topics</Link></p>
       <div className="row">
-        <CalculatorButton />
         <h1>{t.name}</h1>
         <span className={`pill ${t.status}`}>{t.status === "noidea" ? "no idea" : t.status}</span>
         {nDone > 0 && !askDone && (
