@@ -122,7 +122,7 @@ details > summary { cursor: pointer; font-weight: 700; }
 .track { position: relative; margin-top: 30px; padding-bottom: 58px; }
 .ticks { display: flex; align-items: flex-end; height: 54px; gap: 2px; }
 .tick { flex: 1; min-width: 2px; background: rgba(234, 241, 246, 0.2); border-radius: 2px; height: 22px; transform-origin: bottom; }
-.tick.done { background: var(--ink-soft); height: 30px; } .tick.miss { background: var(--red); height: 30px; }
+.tick.done { background: var(--green); height: 30px; } .tick.miss { background: var(--red); height: 30px; }
 .tick.past { background: rgba(127, 163, 189, 0.5); height: 26px; }
 .tick.today { background: var(--hi); height: 54px; box-shadow: 0 0 14px var(--hi); } .tick.ms { background: #fff; height: 54px; }
 .flag { position: absolute; top: 58px; display: flex; flex-direction: column; gap: 2px; padding-left: 10px; border-left: 2px solid #fff; min-width: 112px; }
@@ -1301,3 +1301,32 @@ html[data-page-loading] .page-enter { filter: blur(9px); opacity: 0.55; pointer-
 .sci-keys .eq:hover { filter: brightness(1.08); background: var(--accent); }
 .q-tools { display: inline-flex; gap: 6px; align-items: center; } .qmeta .q-tools.right { margin-left: auto; }
 .q-tools .q-edit { margin-left: 0; }
+/* planner list: days that have passed are crossed off (date too) and dimmed; hover or open brings them back to full strength */
+.drow.past:not(.open) .drow-head .pl-date b { text-decoration: line-through; text-decoration-thickness: 1.5px; }
+
+/* a successful day (tasks ticked and linked questions answered): green bar on the left, like the red one for a missed day */
+.drow.win { box-shadow: inset 3px 0 0 var(--green); background: color-mix(in srgb, var(--green) 7%, var(--sheet-2)); }
+
+.pl-seg { width: 140px; height: 8px; flex: none; display: flex; gap: 1px; border-radius: 8px; overflow: hidden; background: var(--line-2); }
+.pl-seg > i { flex-basis: 0; min-width: 1px; background: var(--line-2); }
+.pl-seg > i.win { background: var(--green); }
+.pl-seg > i.miss { background: var(--red); }
+.pl-seg > i.part { background: linear-gradient(90deg, var(--accent) var(--p), var(--line-2) var(--p)); }
+
+.pe-linkbar { display: flex; gap: 8px; flex-wrap: wrap; }
+.pe-linkhead { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; }
+.pe-linkbar .btn.inv { background: var(--ink); color: var(--sheet); border-color: var(--ink); }
+.pe-linkbar .btn.inv:hover:not(:disabled) { opacity: 0.85; }
+.pe-linkbar .btn.inv:disabled { opacity: 0.4; cursor: not-allowed; }
+.pe-linkbar { gap: 6px; }
+.pe-linkbar .btn.ic { position: relative; width: 38px; height: 38px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; }
+.pe-linkbar .btn.ic::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 6px); right: 0; padding: 4px 9px; border-radius: 8px; background: var(--ink); color: var(--sheet); font: 600 0.78rem var(--font-body); white-space: nowrap; opacity: 0; transform: translateY(3px); pointer-events: none; transition: opacity 0.15s, transform 0.15s; z-index: 5; }
+.pe-linkbar .btn.ic:hover::after, .pe-linkbar .btn.ic:focus-visible::after { opacity: 1; transform: none; }
+.pe-empty { display: grid; gap: 4px; justify-items: center; text-align: center; padding: 18px 16px; border: 1.5px dashed var(--line); border-radius: 14px; background: var(--sheet-2); color: var(--ink); }
+.pe-empty b { font-size: 0.95rem; }
+.pe-task .btn.ic { position: relative; flex: none; width: 38px; height: 38px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; }
+.pe-task .btn.ic::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 6px); right: 0; padding: 4px 9px; border-radius: 8px; background: var(--ink); color: var(--sheet); font: 600 0.78rem var(--font-body); white-space: nowrap; opacity: 0; transform: translateY(3px); pointer-events: none; transition: opacity 0.15s, transform 0.15s; z-index: 5; }
+.pe-task .btn.ic:hover::after, .pe-task .btn.ic:focus-visible::after { opacity: 1; transform: none; }
+.pe-linkbar .btn.ic.copied::after { opacity: 1; transform: none; }
+.pe-linkbar .btn.ic.copied { background: var(--green); border-color: var(--green); color: #fff; }
+.pe-ok { padding: 10px 14px; border-radius: 12px; background: color-mix(in srgb, var(--green) 14%, transparent); border: 1px solid var(--green); color: var(--ink); font-weight: 600; }

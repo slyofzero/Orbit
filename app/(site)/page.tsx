@@ -51,7 +51,9 @@ export default function Dashboard() {
   const tickState = (date: string) => {
     const d = DAYS.find((x) => x.date === date);
     if (!d || d.kind === "exam") return "plain" as const;
-    return isComplete(date) ? ("done" as const) : ("miss" as const);
+    // green only for a successful day: every task ticked and every linked question answered. Ticked tasks with questions still pending is neither green nor red.
+    if (dayFinished(d, done, links[date], pack, practice)) return "done" as const;
+    return isComplete(date) ? ("plain" as const) : ("miss" as const);
   };
 
   // plan stats

@@ -7,6 +7,8 @@ import ImprovePlan from "@/components/ImprovePlan";
 import PlanEdit from "@/components/PlanEdit";
 import LinkPlan from "@/components/LinkPlan";
 import PlanImport from "@/components/PlanImport";
+import { downloadJson, fileSafe } from "@/lib/download";
+import { planToJson } from "@/lib/customPlan";
 import { dayFinished, linkedDone, liveQuestionIds, Links } from "@/lib/links";
 import { KIND_LABEL, WEEKDAY_NAMES, addDays, daysBetween, fmtDate, fmtLong, todayIST, weekday } from "@/lib/plan";
 import { KEYS, usePack, usePersisted, usePlan } from "@/lib/store";
@@ -160,8 +162,9 @@ export default function Planner() {
     const isOpen = openDay[d.date] ?? false;
     const c = complete(d);
     const miss = d.date < today && !c && d.kind !== "exam";
+    const win = dayFinished(d, done, links[d.date], pack, practice); // every task ticked and every linked question answered
     return (
-      <div className={`drow ${d.date === today ? "today" : ""} ${miss ? "miss" : ""} ${isOpen ? "open" : ""}`}>
+      <div className={`drow ${win ? "win" : ""} ${d.date === today ? "today" : ""} ${d.date < today ? "past" : ""} ${miss ? "miss" : ""} ${isOpen ? "open" : ""}`}>
         <button className="drow-head" onClick={() => setOpenDay((p) => ({ ...p, [d.date]: !isOpen }))} aria-expanded={isOpen}>
           <span className="pl-date sm"><b>{Number(d.date.slice(8))}</b><small>{WEEKDAY_NAMES[weekday(d.date)]}</small></span>
           <span className="nm"><Rich text={d.title} /></span>
@@ -185,6 +188,7 @@ export default function Planner() {
           </>
         ) : <button className="btn soft" onClick={() => setAskUnlink(true)}>Unlink questions</button>)}
         <button className="btn soft" onClick={() => setView((v) => (v === "edit" ? "next" : "edit"))}>{view === "edit" ? "Back to planner" : "Edit plan"}</button>
+        <button className="btn soft" onClick={() => downloadJson(`${fileSafe(plan.name)}.json`, planToJson(plan, links))}>Export plan</button>
         <button className="btn soft" onClick={() => setView((v) => (v === "plan" ? "next" : "plan"))}>{view === "plan" ? "Back to planner" : "Upload plan"}</button>
         {view === "link" && <button className="btn soft" onClick={() => setView("next")}>Back to planner</button>}
       </div>
@@ -232,7 +236,14 @@ export default function Planner() {
                   <span className="chev" aria-hidden="true">›</span>
                   <h2>{PHASE_NAMES[ph]}</h2>
                   <span className="muted small">{fmtDate(ds[0].date)} to {fmtDate(ds[ds.length - 1].date)}</span>
-                  <span className="pl-mini bar"><div style={{ width: `${total ? (got / total) * 100 : 0}%` }} /></span>
+                  <span className="pl-seg" aria-label="Days won and missed">
+                    {ds.filter((d) => d.kind !== "exam").map((d) => {
+                      const won = dayFinished(d, done, links[d.date], pack, practice);
+                      const lost = d.date < today && !complete(d);
+                      const part = d.tasks.length ? nDone(d) / d.tasks.length : 0;
+                      return <i key={d.date} className={won ? "win" : lost ? "miss" : part > 0 ? "part" : ""} style={{ flexGrow: Math.max(d.tasks.length, 1), ["--p" as string]: `${part * 100}%` }} title={`${fmtDate(d.date)}: ${won ? "done" : lost ? "missed" : "pending"}`} />;
+                    })}
+                  </span>
                 </button>
                 {o && (
                   <div className="pl-phase-body">

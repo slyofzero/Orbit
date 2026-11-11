@@ -9,6 +9,7 @@ import { Day, DayKind } from "@/lib/types";
 
 type Row = { text: string; from: number | null }; // from = position before editing, so ticks follow their task
 const KINDS = Object.keys(KIND_LABEL) as DayKind[];
+let copiedLinks: string[] = []; // last copied set, kept in memory in case the clipboard can't be read
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 
 // Go through the plan day by day: edit, add or remove tasks, change a day's details, add or delete whole days.
@@ -22,6 +23,7 @@ export default function PlanEdit() {
   const [find, setFind] = useState("");
   const [newDate, setNewDate] = useState("");
   const [msg, setMsg] = useState("");
+  const [copied, setCopied] = useState(false);
   const [err, setErr] = useState("");
   const [askDel, setAskDel] = useState(false);
   const [pastShown, setPastShown] = useState(2); // how many past days are listed: the latest 2 first, then 5 more per click
@@ -32,6 +34,28 @@ export default function PlanEdit() {
     setFind("");
     const l = links[d.date];
     setDraft({ ...d, topics: d.topics.join(", "), rows: d.tasks.map((t, i) => ({ text: t, from: i })), linkQ: l?.q ?? [], mock: l?.mock ?? "", note: l?.note ?? "" });
+  };
+  // copy / paste / clear all linked questions of the open day, to move them to another day
+  const copyLinks = async () => {
+    if (!draft || !draft.linkQ.length) return;
+    const txt = draft.linkQ.join("\n");
+    copiedLinks = draft.linkQ;
+    try { await navigator.clipboard.writeText(txt); } catch { /* the in-app copy still works */ }
+    setCopied(true); setTimeout(() => setCopied(false), 1600);
+    setMsg(`Copied ${draft.linkQ.length} linked question${draft.linkQ.length === 1 ? "" : "s"}. Open another day and press Paste links.`);
+  };
+  const pasteLinks = async () => {
+    if (!draft) return;
+    let txt = "";
+    try { txt = await navigator.clipboard.readText(); } catch { /* fall back below */ }
+    let ids = txt.split(/[\s,;]+/).map((x) => x.trim()).filter(Boolean);
+    if (!ids.length || !ids.every((x) => pack.questions.some((q) => q.id === x))) ids = ids.filter((x) => pack.questions.some((q) => q.id === x)).length ? ids : copiedLinks;
+    const known = ids.filter((x) => pack.questions.some((q) => q.id === x));
+    const fresh = [...new Set(known)].filter((x) => !draft.linkQ.includes(x));
+    if (!fresh.length) { setErr(ids.length ? "Those questions are already linked here, or not in your pack." : "Nothing to paste. Press Copy all links on another day first."); return; }
+    setErr("");
+    setDraft({ ...draft, linkQ: [...draft.linkQ, ...fresh] });
+    setMsg(`Pasted ${fresh.length} link${fresh.length === 1 ? "" : "s"}${ids.length > known.length ? `, skipped ${ids.length - known.length} not in your pack` : ""}. Press Save changes to keep them.`);
   };
   const setRow = (i: number, v: Partial<Row>) => setDraft((p) => p && { ...p, rows: p.rows.map((r, j) => (j === i ? { ...r, ...v } : r)) });
 
@@ -60,7 +84,7 @@ export default function PlanEdit() {
       rows.forEach((r, i) => { if (r.from !== null && p[`${day.date}:${r.from}`]) n[`${day.date}:${i}`] = true; });
       return n;
     });
-    setErr(""); setMsg("Saved."); setDraft({ ...draft, topics: topics.join(", "), rows: rows.map((r, i) => ({ text: r.text, from: i })) });
+    setErr(""); setMsg(`✓ Saved ${fmtDate(day.date)}: ${rows.length} task${rows.length === 1 ? "" : "s"}, ${keepQ.length} linked question${keepQ.length === 1 ? "" : "s"}${draft.mock ? ", 1 mock test" : ""}. Your Today and Full plan pages are updated.`); setDraft({ ...draft, topics: topics.join(", "), rows: rows.map((r, i) => ({ text: r.text, from: i })) });
   };
 
   const del = () => {
@@ -122,20 +146,30 @@ export default function PlanEdit() {
                     {draft.rows.map((r, i) => (
                       <div key={i} className="pe-task">
                         <input className="pe-in" value={r.text} onChange={(e) => setRow(i, { text: e.target.value })} aria-label={`Task ${i + 1}`} />
-                        <button className="btn soft" onClick={() => setDraft({ ...draft, rows: draft.rows.filter((_, j) => j !== i) })} aria-label={`Remove task ${i + 1}`}>Remove</button>
+                        <button className="btn soft ic" data-tip="Remove task" onClick={() => setDraft({ ...draft, rows: draft.rows.filter((_, j) => j !== i) })} aria-label={`Remove task ${i + 1}`}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="M6 6l1 14h10l1-14" /><path d="M10 11v5M14 11v5" /></svg></button>
                       </div>
                     ))}
                     <button className="btn soft" style={{ justifySelf: "start" }} onClick={() => setDraft({ ...draft, rows: [...draft.rows, { text: "", from: null }] })}>Add a task</button>
                   </div>
-                  <div className="pe-f pe-links">Linked questions for this day
-                    {draft.linkQ.length === 0 && <span className="small muted">None. Add some below, or use Link with AI.</span>}
+                  <div className="pe-f pe-links"><div className="pe-linkhead"><span>Linked questions for this day</span>
+                    <div className="pe-linkbar">
+                      <button className={`btn inv ic ${copied ? "copied" : ""}`} data-tip={copied ? "Copied!" : "Copy all links"} aria-label="Copy all links" onClick={copyLinks} disabled={!draft.linkQ.length}>{copied ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7" /></svg> : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h10" /></svg>}</button>
+                      <button className="btn inv ic" data-tip="Paste links" aria-label="Paste links" onClick={pasteLinks}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="6" y="4" width="12" height="17" rx="2" /><path d="M9 4h6v3H9z" /><path d="M9.5 13h5M9.5 17h5" /></svg></button>
+                      <button className="btn inv ic" data-tip="Delete all links" aria-label="Delete all links" onClick={() => { setDraft({ ...draft, linkQ: [] }); setMsg("Removed all links. Press Save changes to keep that."); }} disabled={!draft.linkQ.length}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="M6 6l1 14h10l1-14" /><path d="M10 11v5M14 11v5" /></svg></button>
+                    </div></div>
+                    {draft.linkQ.length === 0 && (
+                      <div className="pe-empty">
+                        <b>No questions linked to this day yet</b>
+                        <span className="small muted">Search for questions below, use Link with AI, or press the paste icon above to bring over links copied from another day.</span>
+                      </div>
+                    )}
                     {draft.linkQ.map((id) => {
                       const q = pack.questions.find((x) => x.id === id);
                       return (
                         <div key={id} className="pe-task">
                           <span className="pe-qid">{id}</span>
                           <span className="small muted pe-qtext">{q ? `${topicById[q.topic]?.name ?? q.topic}: ${q.text.replace(/!\[[^\]]*\]\([^)]*\)/g, "[picture]").replace(/\s+/g, " ").slice(0, 80)}` : "No longer in your pack"}</span>
-                          <button className="btn soft" onClick={() => setDraft({ ...draft, linkQ: draft.linkQ.filter((x) => x !== id) })} aria-label={`Unlink ${id}`}>Unlink</button>
+                          <button className="btn soft ic" data-tip="Unlink" onClick={() => setDraft({ ...draft, linkQ: draft.linkQ.filter((x) => x !== id) })} aria-label={`Unlink ${id}`}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button>
                         </div>
                       );
                     })}
@@ -157,7 +191,7 @@ export default function PlanEdit() {
                     <label className="pe-f" style={{ gridColumn: "span 2" }}>Note shown with the questions<input className="pe-in" value={draft.note} maxLength={100} onChange={(e) => setDraft({ ...draft, note: e.target.value })} /></label>
                   </div>
                   {err && <div className="pi-err" role="alert"><b>🔴 Fix this first:</b><ul><li>{err}</li></ul></div>}
-                  {msg && <p className="small" role="status">{msg}</p>}
+                  {msg && <p className={`small ${msg.startsWith("✓") ? "pe-ok" : ""}`} role="status">{msg}</p>}
                   <div className="row">
                     <button className="btn primary" onClick={save}>Save this day</button>
                     {askDel ? (
