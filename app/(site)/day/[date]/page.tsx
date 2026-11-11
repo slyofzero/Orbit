@@ -5,8 +5,9 @@ import { useEffect, useState } from "react";
 import CalculatorButton from "@/components/CalculatorButton";
 import QuestionCard from "@/components/QuestionCard";
 import { liveQuestionIds, Links } from "@/lib/links";
+import { bonusFor } from "@/lib/bonus";
 import { attemptFrom, buildFixedMock } from "@/lib/mock";
-import { fmtLong } from "@/lib/plan";
+import { fmtDate, fmtLong, todayIST } from "@/lib/plan";
 import { KEYS, usePack, usePersisted, usePlan } from "@/lib/store";
 import { Attempt, PracticeRec } from "@/lib/types";
 import Rich from "@/components/Rich";
@@ -20,6 +21,7 @@ export default function DayPractice() {
   const { plan, ready: planReady } = usePlan();
   const { pack, byId, ready: packReady } = usePack();
   const [links, , lReady] = usePersisted<Links>(KEYS.links, {});
+  const [doneTasks] = usePersisted<Record<string, boolean>>(KEYS.done, {});
   const [practice, setPractice, pReady] = usePersisted<Record<string, PracticeRec>>(KEYS.practice, {});
   const [, setFixed] = usePersisted<Record<string, boolean>>(KEYS.fixed, {});
   const [, setAttempts] = usePersisted<Attempt[]>(KEYS.attempts, []);
@@ -42,6 +44,8 @@ export default function DayPractice() {
   if (!allReady) return <PageLoading />;
 
   const day = plan.days.find((d) => d.date === date);
+  const bonus = bonusFor(date, plan.days, doneTasks, links, pack, practice, todayIST());
+  const bonusQs = bonus.qs.map((b) => ({ ...b, q: byId.get(b.id)! })).filter((b) => b.q);
   const qs = ids.map((id) => byId.get(id)!).filter(Boolean);
   const got = ids.filter((id) => practice[id]);
   const right = ids.filter((id) => practice[id]?.correct).length;
@@ -106,6 +110,18 @@ export default function DayPractice() {
           }}
         />
       ))}
+      {bonusQs.length > 0 && (
+        <>
+          <h2 className="pl-bonus-h" style={{ marginTop: 24 }}>Bonus <span className="small muted">carried over from {bonus.from.map(fmtDate).join(", ")}. These do not count towards finishing this day.</span></h2>
+          {bonusQs.map(({ q }, i) => (
+            <QuestionCard key={q.id} q={q} index={i + 1} showTopic
+              onResult={(ok) => {
+                setPractice((p) => ({ ...p, [q.id]: { correct: ok, at: Date.now(), topic: q.topic } }));
+                setFixed((f) => ({ ...f, [q.id]: ok }));
+              }} />
+          ))}
+        </>
+      )}
     </>
   );
 }

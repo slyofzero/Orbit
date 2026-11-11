@@ -1,4 +1,5 @@
 "use client";
+import { keepLockedLinks } from "@/lib/lock";
 import { useEffect, useMemo, useState } from "react";
 import { isTooLong, linkPrompt, Links } from "@/lib/links";
 import { ExportButtons, FilesRoute } from "./LinkFiles";
@@ -107,7 +108,7 @@ export default function ImprovePlan({ onPaste }: { onPaste: () => void }) {
                     <span className="small">{linked} day{linked === 1 ? "" : "s"} already linked.</span>
                     {sure ? (
                       <>
-                        <button className="btn" onClick={() => { setLinks({}); setSure(false); setNote("Unlinked. Your plan is back to how it was."); }}>Yes, unlink all {linked} days</button>
+                        <button className="btn" onClick={() => { setLinks((cur) => keepLockedLinks({}, cur)); setSure(false); setNote("Unlinked. Your plan is back to how it was."); }}>Yes, unlink all {linked} days</button>
                         <button className="btn soft" onClick={() => setSure(false)}>Keep them</button>
                       </>
                     ) : <button className="btn soft" onClick={() => setSure(true)}>Unlink questions</button>}

@@ -32,3 +32,9 @@ Text fields (titles, tasks, notes, description) may hold LaTeX between `$`; in J
 
 ## Day prompt
 `dayHelpPrompt(day, pack, link, planName, milestones, description)` in `lib/dayPrompt.ts`; button `CopyDayPrompt.tsx` (Today agenda and every planner card). Includes plan name and description, the day, the linked questions' text, milestones, subject pace (`examPace`). Generic (no exam name).
+
+## Today is locked after 9 AM (IST)
+`lib/lock.ts`: `isDayLocked(date)` is true for today's date from 09:00 IST. A locked day cannot be edited in **Edit plan** (the whole editor is a disabled fieldset, with a banner and a "Copy today's links" button), cannot be changed by **Update only the dates in this file** (it is skipped with a notice), and keeps its links when links are bulk-cleared or re-applied (`keepLockedLinks`). Ticking tasks and solving questions still work. Past days and future days stay editable, so missed work can be rescheduled. Not locked on purpose: **Replace my whole plan** on the Upload plan page.
+
+## Bonus (carried-over work)
+`lib/bonus.ts` `bonusFor(date, …)`: for every day that has started (today or earlier), its still-pending tasks and linked questions are spread over its next 3 plan days (exam days skipped) and shown there as **Bonus** (`BonusBlock.tsx` on Today and the Planner cards, plus a section at the bottom of `/day/<date>`). The split uses each item's fixed position (task number mod days, link order in thirds), not the pending count, so an item never changes day. Nothing is stored: ticking the original task or answering the question clears it everywhere. Bonus never counts towards `dayFinished`, so a day's green/red status is unchanged. Yesterday's leftovers keep showing on the days still inside their 3-day window.

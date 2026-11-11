@@ -6,6 +6,7 @@ import { Links } from "@/lib/links";
 import PlanDescription from "./PlanDescription";
 import PlanImport from "./PlanImport";
 import { toast } from "@/lib/toast";
+import { isDayLocked, LOCK_MESSAGE, useLockClock } from "@/lib/lock";
 import Rich from "@/components/Rich";
 import { Day, DayKind } from "@/lib/types";
 
@@ -21,6 +22,7 @@ export default function PlanEdit() {
   const [done, setDone] = usePersisted<Record<string, boolean>>(KEYS.done, {});
   const [links, setLinks] = usePersisted<Links>(KEYS.links, {});
   const [open, setOpen] = useState<string | null>(null);
+  const clock = useLockClock();
   const [draft, setDraft] = useState<(Omit<Day, "tasks" | "topics"> & { topics: string; rows: Row[]; linkQ: string[]; mock: string; note: string }) | null>(null);
   const [find, setFind] = useState("");
   const [newDate, setNewDate] = useState("");
@@ -37,6 +39,7 @@ export default function PlanEdit() {
     setDraft({ ...d, topics: d.topics.join(", "), rows: d.tasks.map((t, i) => ({ text: t, from: i })), linkQ: l?.q ?? [], mock: l?.mock ?? "", note: l?.note ?? "" });
   };
   // copy / paste / clear all linked questions of the open day, to move them to another day
+  const locked = !!draft && isDayLocked(draft.date, clock);
   const copyLinks = async () => {
     if (!draft || !draft.linkQ.length) return;
     const txt = draft.linkQ.join("\n");
@@ -46,7 +49,7 @@ export default function PlanEdit() {
     toast(`Copied ${draft.linkQ.length} linked question${draft.linkQ.length === 1 ? "" : "s"}. Open another day and press Paste links.`);
   };
   const pasteLinks = async () => {
-    if (!draft) return;
+    if (!draft || locked) return;
     let txt = "";
     try { txt = await navigator.clipboard.readText(); } catch { /* fall back below */ }
     let ids = txt.split(/[\s,;]+/).map((x) => x.trim()).filter(Boolean);
@@ -61,7 +64,7 @@ export default function PlanEdit() {
   const setRow = (i: number, v: Partial<Row>) => setDraft((p) => p && { ...p, rows: p.rows.map((r, j) => (j === i ? { ...r, ...v } : r)) });
 
   const save = () => {
-    if (!draft) return;
+    if (!draft || locked) return;
     const rows = draft.rows.map((r) => ({ ...r, text: r.text.trim() })).filter((r) => r.text);
     if (!draft.title.trim()) return setErr("Give the day a title.");
     if (!rows.length) return setErr("Keep at least one task, or delete the day.");
@@ -89,7 +92,7 @@ export default function PlanEdit() {
   };
 
   const del = () => {
-    if (!draft) return;
+    if (!draft || locked) return;
     update({ ...plan, days: plan.days.filter((d) => d.date !== draft.date) });
     setLinks((p) => { const n = { ...p }; delete n[draft.date]; return n; });
     setDone((p) => { const n = { ...p }; Object.keys(n).forEach((k) => k.startsWith(`${draft.date}:`) && delete n[k]); return n; });
@@ -138,6 +141,13 @@ export default function PlanEdit() {
               </button>
               {isOpen && draft && (
                 <div className="drow-body pe">
+                  {locked && (
+                    <div className="pe-lock" role="status">
+                      <span>🔒 {LOCK_MESSAGE}</span>
+                      <button className="btn soft" onClick={copyLinks} disabled={!draft.linkQ.length}>Copy today's links</button>
+                    </div>
+                  )}
+                  <fieldset className="pe-fs" disabled={locked}>
                   <label className="pe-f">Title<input className="pe-in" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} /></label>
                   <div className="pe-grid">
                     <label className="pe-f">Type<select className="pe-in" value={draft.kind} onChange={(e) => setDraft({ ...draft, kind: e.target.value as DayKind })}>{KINDS.map((k) => <option key={k} value={k}>{KIND_LABEL[k]}</option>)}</select></label>
@@ -204,6 +214,7 @@ export default function PlanEdit() {
                       </>
                     ) : <button className="btn soft right" onClick={() => setAskDel(true)}>Delete this day</button>}
                   </div>
+                  </fieldset>
                 </div>
               )}
             </div>

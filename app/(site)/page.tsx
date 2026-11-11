@@ -1,4 +1,5 @@
 "use client";
+import BonusBlock from "@/components/BonusBlock";
 import Link from "next/link";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import Calendar from "@/components/Calendar";
@@ -224,6 +225,7 @@ export default function Dashboard() {
                   <div className="row" style={{ marginTop: 8 }}><Link className="btn pl-main-go" href={`/day/${day.date}`}>{lq.length ? "Practise these questions" : "Open this day"}</Link></div>
                 </div>
               )}
+              <BonusBlock date={day.date} />
               {day.targetQs > 0 && (
                 <div className="foot">
                   <div className="small muted">Practice target: {targetDone} of {day.targetQs} questions</div>

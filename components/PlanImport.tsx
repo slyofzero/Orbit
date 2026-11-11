@@ -9,6 +9,7 @@ import { usePack, usePlan } from "@/lib/store";
 import { checkImportedLinks, Links } from "@/lib/links";
 import { KEYS, usePersisted } from "@/lib/store";
 import { toast } from "@/lib/toast";
+import { isDayLocked } from "@/lib/lock";
 
 const nextMonday = () => { const t = todayIST(); return addDays(t, ((8 - new Date(t).getUTCDay()) % 7) || 7); };
 const save = (name: string, text: string) => {
@@ -51,7 +52,8 @@ export default function PlanImport({ onDone, editOnly = false }: { onDone: () =>
   const useIt = () => { if (!p) return; install(p, keep, importedLinks); setText(""); setAsk(null); toast(`"${p.name}" is now your plan${importedLinks ? ` with ${Object.keys(importedLinks).length} day${Object.keys(importedLinks).length === 1 ? "" : "s"} of linked questions` : ""}.`); onDone(); };
 
   // only the dates in the file: replace or add those days, leave everything else as it is
-  const merged = useMemo(() => (p && custom && mode === "dates" ? mergeDays(plan, p) : null), [p, custom, mode, plan]);
+  const lockedSkipped = useMemo(() => (p && custom && mode === "dates" ? p.days.filter((d) => isDayLocked(d.date)).map((d) => d.date) : []), [p, custom, mode]);
+  const merged = useMemo(() => (p && custom && mode === "dates" ? mergeDays(plan, { ...p, days: p.days.filter((d) => !lockedSkipped.includes(d.date)) }) : null), [p, custom, mode, plan, lockedSkipped]);
   const useDates = () => {
     if (!p || !merged) return;
     update(merged.plan);
@@ -170,6 +172,7 @@ export default function PlanImport({ onDone, editOnly = false }: { onDone: () =>
                 <p className="small" style={{ margin: "6px 0" }}>
                   <b>{merged.updated.length}</b> day{merged.updated.length === 1 ? "" : "s"} will be replaced{merged.updated.length ? ` (${merged.updated.slice(0, 6).map(fmtDate).join(", ")}${merged.updated.length > 6 ? ", …" : ""})` : ""} and <b>{merged.added.length}</b> new day{merged.added.length === 1 ? "" : "s"} added{merged.added.length ? ` (${merged.added.slice(0, 6).map(fmtDate).join(", ")}${merged.added.length > 6 ? ", …" : ""})` : ""}. Ticks stay on tasks whose wording is unchanged. If the file has links for a date, they replace that date's links; dates without links in the file keep theirs.
                 </p>
+                {lockedSkipped.length > 0 && <div className="callout">🔒 {lockedSkipped.map(fmtDate).join(", ")} is locked after 9 AM today, so that day is skipped. The other dates in the file still apply.</div>}
                 <div className="callout">🔴 CAUTION: the replaced days lose their old tasks and details. Other days, milestones and the plan name are not touched.</div>
                 <button className="btn primary" onClick={useDates} disabled={merged.updated.length + merged.added.length === 0}>Update these dates</button>
               </>

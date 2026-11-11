@@ -1,4 +1,5 @@
 "use client";
+import { keepLockedLinks } from "@/lib/lock";
 import { toast } from "@/lib/toast";
 import { useMemo, useState } from "react";
 import { downloadText, fileSafe } from "@/lib/download";
@@ -36,7 +37,7 @@ export default function LinkPlan({ onDone }: { onDone?: () => void }) {
         <div className="small muted">Plan and questions linked</div>
         <h2 style={{ margin: "2px 0 4px" }}>{linked ? `${linked} day${linked === 1 ? "" : "s"} linked` : "Not linked yet"}</h2>
         <p className="small muted" style={{ margin: 0 }}>Linked days show their exact questions in the Planner and open in one click.</p>
-        {linked > 0 && <div className="row" style={{ marginTop: 12 }}><button className="btn soft" onClick={() => { setLinks({}); toast("Links cleared."); }}>Clear all links</button></div>}
+        {linked > 0 && <div className="row" style={{ marginTop: 12 }}><button className="btn soft" onClick={() => { setLinks((cur) => keepLockedLinks({}, cur)); toast("Links cleared. Today's links stay if today is locked after 9 AM."); }}>Clear all links</button></div>}
       </section>
 
       <section className="panel">
@@ -72,7 +73,7 @@ export default function LinkPlan({ onDone }: { onDone?: () => void }) {
           <div className="pi-ok">
             <p className="small" style={{ margin: "4px 0" }}>{result.days} days linked · {result.questions} different questions · {result.mocks} mock test{result.mocks === 1 ? "" : "s"}</p>
             {linked > 0 && <div className="callout">🔴 CAUTION: Applying this replaces your current links. Your plan, ticks and answers are kept.</div>}
-            <button className="btn primary" onClick={() => { setLinks(result.links!); setText(""); toast(`${result.days} days linked.`); onDone?.(); }}>Apply links</button>
+            <button className="btn primary" onClick={() => { setLinks((cur) => keepLockedLinks(result.links!, cur)); setText(""); toast(`${result.days} days linked.`); onDone?.(); }}>Apply links</button>
           </div>
         )}
       </section>

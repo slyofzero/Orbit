@@ -1362,3 +1362,9 @@ html[data-page-loading] .page-enter { filter: blur(9px); opacity: 0.55; pointer-
 .pi-opt:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
 .pi-opt-t { font-weight: 700; color: var(--ink); } .pi-opt-d { font-size: 0.85rem; color: var(--ink-2); }
 @media (max-width: 700px) { .pi-mode { grid-template-columns: minmax(0, 1fr); } }
+.pe-fs { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.pe-fs:disabled { opacity: 0.55; pointer-events: none; }
+.pe-lock { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 12px; padding: 12px 14px; border-radius: 12px; border: 1.5px solid var(--amber, #f59e0b); background: color-mix(in srgb, var(--amber, #f59e0b) 12%, transparent); font-weight: 600; }
+.pl-bonus { margin: 12px 0; padding: 12px 14px; border-radius: 14px; border: 1.5px dashed var(--amber, #f59e0b); background: color-mix(in srgb, var(--amber, #f59e0b) 8%, transparent); display: grid; gap: 6px; }
+.pl-bonus-h { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.pill.bonus-pill { background: color-mix(in srgb, var(--amber, #f59e0b) 22%, transparent); color: var(--ink); font-size: 0.72rem; }

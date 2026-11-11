@@ -1,6 +1,8 @@
 "use client";
+import { keepLockedLinks } from "@/lib/lock";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import BonusBlock from "@/components/BonusBlock";
 import CopyDayPrompt from "@/components/CopyDayPrompt";
 import Rich from "@/components/Rich";
 import ImprovePlan from "@/components/ImprovePlan";
@@ -57,6 +59,7 @@ function DayBody({ d, done, setDone, qs }: { d: Day; done: Done; setDone: (u: (p
           <div className="row" style={{ marginTop: 8 }}><Link className="btn pl-main-go" href={`/day/${d.date}`}>{lq.length ? "Practise these questions" : "Open this day"}</Link><button className="btn soft" onClick={() => setLinks((p) => { const n = { ...p }; delete n[d.date]; return n; })}>Unlink this day</button></div>
         </div>
       )}
+      {d.date >= todayIST() && <BonusBlock date={d.date} />}
       {d.targetQs > 0 && (
         <div className="pl-target">
           <div className="small muted">Practice target: {Math.min(qs, d.targetQs)} of {d.targetQs} questions</div>
@@ -184,7 +187,7 @@ export default function Planner() {
         <ImprovePlan onPaste={() => setView("link")} />
         {Object.keys(links).length > 0 && (askUnlink ? (
           <>
-            <button className="btn" onClick={() => { setLinks({}); setAskUnlink(false); }}>Yes, unlink {Object.keys(links).length} days</button>
+            <button className="btn" onClick={() => { setLinks((cur) => keepLockedLinks({}, cur)); setAskUnlink(false); }}>Yes, unlink {Object.keys(links).length} days</button>
             <button className="btn soft" onClick={() => setAskUnlink(false)}>Keep</button>
           </>
         ) : <button className="btn soft" onClick={() => setAskUnlink(true)}>Unlink questions</button>)}
