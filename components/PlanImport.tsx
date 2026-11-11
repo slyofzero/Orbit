@@ -8,6 +8,7 @@ import { fmtDate, todayIST, addDays } from "@/lib/plan";
 import { usePack, usePlan } from "@/lib/store";
 import { checkImportedLinks, Links } from "@/lib/links";
 import { KEYS, usePersisted } from "@/lib/store";
+import { toast } from "@/lib/toast";
 
 const nextMonday = () => { const t = todayIST(); return addDays(t, ((8 - new Date(t).getUTCDay()) % 7) || 7); };
 const save = (name: string, text: string) => {
@@ -18,17 +19,17 @@ const save = (name: string, text: string) => {
 };
 
 // Where you swap the built-in plan for your own: a JSON file you upload, or text you paste.
-export default function PlanImport({ onDone }: { onDone: () => void }) {
+export default function PlanImport({ onDone, editOnly = false }: { onDone: () => void; editOnly?: boolean }) {
   const { plan, custom, install, update, remove } = usePlan();
   const { pack } = usePack();
   const [curLinks, setCurLinks] = usePersisted<Links>(KEYS.links, {});
   const [, setDone] = usePersisted<Record<string, boolean>>(KEYS.done, {});
-  const [mode, setMode] = useState<"all" | "dates">("all");
+  const [modeState, setMode] = useState<"all" | "dates">("all");
+  const mode = editOnly ? "dates" : modeState; // the Edit plan screen only ever updates the dates in the file
   const [linkChoice, setLinkChoice] = useState<"working" | "none">("working");
   const [text, setText] = useState("");
   const [keep, setKeep] = useState(false);
   const [ask, setAsk] = useState<null | "replace" | "remove">(null);
-  const [note, setNote] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const start = nextMonday();
 
@@ -47,7 +48,7 @@ export default function PlanImport({ onDone }: { onDone: () => void }) {
   const lc = useMemo(() => (p && rawLinks.length ? checkImportedLinks(rawLinks, p, pack) : null), [p, rawLinks, pack]); // eslint-disable-line react-hooks/exhaustive-deps
   const importedLinks: Links | undefined = lc?.good && (lc.broken === 0 || linkChoice === "working") ? lc.good : undefined;
 
-  const useIt = () => { if (!p) return; install(p, keep, importedLinks); setText(""); setAsk(null); setNote(`"${p.name}" is now your plan${importedLinks ? ` with ${Object.keys(importedLinks).length} day${Object.keys(importedLinks).length === 1 ? "" : "s"} of linked questions` : ""}.`); onDone(); };
+  const useIt = () => { if (!p) return; install(p, keep, importedLinks); setText(""); setAsk(null); toast(`"${p.name}" is now your plan${importedLinks ? ` with ${Object.keys(importedLinks).length} day${Object.keys(importedLinks).length === 1 ? "" : "s"} of linked questions` : ""}.`); onDone(); };
 
   // only the dates in the file: replace or add those days, leave everything else as it is
   const merged = useMemo(() => (p && custom && mode === "dates" ? mergeDays(plan, p) : null), [p, custom, mode, plan]);
@@ -64,16 +65,17 @@ export default function PlanImport({ onDone }: { onDone: () => void }) {
       return n;
     });
     if (importedLinks) setCurLinks((l) => { const n = { ...l }; for (const [date, v] of Object.entries(importedLinks)) if (merged.updated.includes(date) || merged.added.includes(date)) n[date] = v; return n; });
-    setText(""); setNote(`Updated ${merged.updated.length} day${merged.updated.length === 1 ? "" : "s"} and added ${merged.added.length}. Every other day, your milestones and your ticks on other days were left alone.`);
+    setText(""); toast(`Updated ${merged.updated.length} day${merged.updated.length === 1 ? "" : "s"} and added ${merged.added.length}. Every other day, your milestones and your ticks on other days were left alone.`);
     onDone();
   };
 
   const copy = async (what: string, value: string) => {
-    try { await navigator.clipboard.writeText(value); setNote(`${what} copied.`); } catch { setNote("Copy was blocked by the browser. Use Download instead."); }
+    try { await navigator.clipboard.writeText(value); toast(`${what} copied.`); } catch { toast("Copy was blocked by the browser. Use Download instead."); }
   };
 
   return (
     <div className="pi">
+      {!editOnly && (<>
       <section className="panel pi-now">
         <div className="small muted">Your current plan</div>
         <h2 style={{ margin: "2px 0 4px" }}>{custom ? plan.name : "None loaded"}</h2>
@@ -98,11 +100,22 @@ export default function PlanImport({ onDone }: { onDone: () => void }) {
           <button className="btn primary" onClick={() => copy("AI prompt", aiPrompt(start))}>Copy AI prompt</button>
           {custom && <button className="btn soft" onClick={() => copy("AI prompt for selected dates", aiUpdatePrompt(plan))}>Copy AI prompt for selected dates</button>}
         </div>
-        <p className="small muted" style={{ marginBottom: 0 }}>Copy AI prompt: paste it into any AI chat, fill in your goal and dates, and paste the JSON it gives back in step 2.{custom ? " To change only a few dates, use Copy AI prompt for selected dates, then choose \"Update only the dates in this file\" in step 2." : ""}</p>
+        <p className="small muted" style={{ margin: "14px 0 0" }}>Copy AI prompt: paste it into any AI chat, fill in your goal and dates, and paste the JSON it gives back in step 2.{custom ? " To change only a few dates, use Copy AI prompt for selected dates, then choose \"Update only the dates in this file\" in step 2." : ""}</p>
       </section>
 
+      </>)}
+
       <section className="panel">
-        <h2 style={{ marginTop: 0 }}>2. Upload or paste it</h2>
+        {editOnly ? (
+          <>
+            <h2 style={{ marginTop: 0 }}>Edit via JSON upload</h2>
+            <p className="muted small">Change only some dates by uploading or pasting a JSON file. Days in the file replace the same dates in your plan, new dates are added, and every other day, your milestones and your ticks stay as they are.</p>
+            <div className="row">
+              <button className="btn primary" onClick={() => copy("AI prompt for selected dates", aiUpdatePrompt(plan))}>Copy AI prompt for selected dates</button>
+              <button className="btn soft" onClick={() => downloadJson(`${fileSafe(plan.name)}.json`, planToJson(plan, curLinks))}>Export this plan</button>
+            </div>
+          </>
+        ) : <h2 style={{ marginTop: 0 }}>2. Upload or paste it</h2>}
         <div className="row">
           <button className="btn soft" onClick={() => fileRef.current?.click()}>Upload JSON file</button>
           <input ref={fileRef} type="file" accept="application/json,.json" hidden onChange={async (e) => { const f = e.target.files?.[0]; if (f) { setText(await f.text()); } e.target.value = ""; }} />
@@ -138,10 +151,18 @@ export default function PlanImport({ onDone }: { onDone: () => void }) {
                 )}
               </div>
             )}
-            {custom && (
-              <div className="pi-mode">
-                <label className="small pi-keep"><input type="radio" name="pmode" checked={mode === "all"} onChange={() => setMode("all")} /> Replace my whole plan with this file</label>
-                <label className="small pi-keep"><input type="radio" name="pmode" checked={mode === "dates"} onChange={() => setMode("dates")} /> Update only the dates in this file, and leave the rest of my plan alone</label>
+            {custom && !editOnly && (
+              <div className="pi-mode" role="radiogroup" aria-label="How to use this file">
+                <label className={`pi-opt ${mode === "all" ? "on" : ""}`}>
+                  <input type="radio" name="pmode" checked={mode === "all"} onChange={() => setMode("all")} />
+                  <span className="pi-opt-t">Replace my whole plan</span>
+                  <span className="pi-opt-d">Every day, milestone and link comes from this file.</span>
+                </label>
+                <label className={`pi-opt ${mode === "dates" ? "on" : ""}`}>
+                  <input type="radio" name="pmode" checked={mode === "dates"} onChange={() => setMode("dates")} />
+                  <span className="pi-opt-t">Update only the dates in this file</span>
+                  <span className="pi-opt-d">The rest of your plan, milestones and ticks stay as they are.</span>
+                </label>
               </div>
             )}
             {custom && mode === "dates" && merged ? (
@@ -162,11 +183,10 @@ export default function PlanImport({ onDone }: { onDone: () => void }) {
           </div>
         )}
       </section>
-      {note && <p className="small muted" role="status">{note}</p>}
       {ask && (
         <ExportFirstModal what="plan" action={ask} oldName={plan.name} newName={p?.name}
           onExport={() => downloadJson(`${fileSafe(plan.name)}.json`, planToJson(plan, curLinks))}
-          onGo={() => (ask === "replace" ? useIt() : (remove(), setAsk(null), setNote("Plan removed.")))}
+          onGo={() => (ask === "replace" ? useIt() : (remove(), setAsk(null), toast("Plan removed.")))}
           onCancel={() => setAsk(null)} />
       )}
     </div>

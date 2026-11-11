@@ -57,3 +57,7 @@ Top right of each question card: a copy icon and an edit icon (`.q-tools`). Copy
 ## Day page resume (`/day/<date>`)
 
 Same resume behaviour as a practice topic: questions already answered when you open the day are hidden (a snapshot taken on open, so one you answer now stays on screen), numbering keeps the original Q numbers, and an eye button beside the title (crossed out while hidden) shows them again. If every linked question is already answered, the solved-all dialog asks whether to view them or reset. "Answered" means there is a record for that question in `gate.practice`, so a question you answered in its topic also counts as answered here, and Reset clears those records for this day's questions only.
+
+## Planner sub-pages
+- `/planner/edit` (Edit plan: `PlanEdit.tsx`, with the "Edit via JSON upload" panel beside it) and `/planner/upload` (Upload plan: `PlanImport.tsx`) are their own routes. Both have a **Back to planner** button (`BackToPlanner.tsx`: white in dark mode, black in light mode, return arrow before the text).
+- The old `/planner?tab=plan` and `?tab=edit` links redirect to these pages. `?tab=link` (Link with AI) is still a view inside the Planner.

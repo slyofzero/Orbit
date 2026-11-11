@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import CopyDayPrompt from "@/components/CopyDayPrompt";
 import Rich from "@/components/Rich";
 import ImprovePlan from "@/components/ImprovePlan";
-import PlanEdit from "@/components/PlanEdit";
 import LinkPlan from "@/components/LinkPlan";
 import PlanImport from "@/components/PlanImport";
+import { useRouter } from "next/navigation";
 import { downloadJson, fileSafe } from "@/lib/download";
 import { planToJson } from "@/lib/customPlan";
 import { dayFinished, linkedDone, liveQuestionIds, Links } from "@/lib/links";
@@ -17,7 +17,7 @@ import { PracticeRec } from "@/lib/types";
 import { Day } from "@/lib/types";
 import PageLoading from "@/components/PageLoading";
 
-type View = "next" | "all" | "missed" | "plan" | "link" | "edit";
+type View = "next" | "all" | "missed" | "link";
 type Done = Record<string, boolean>;
 
 const istDay = (at: number) => new Date(at).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
@@ -87,12 +87,13 @@ export default function Planner() {
   const [practice] = usePersisted<Record<string, PracticeRec>>(KEYS.practice, {});
   const [links, setLinks] = usePersisted<Links>(KEYS.links, {});
   const [askUnlink, setAskUnlink] = useState(false);
+  const router = useRouter();
   const [view, setView] = useState<View>("next");
   const [off, setOff] = useState(0); // how many days the 3-day window is shifted from today
   const [openDay, setOpenDay] = useState<Record<string, boolean>>({});
   const [openPhase, setOpenPhase] = useState<Record<string, boolean> | null>(null);
   const today = todayIST();
-  useEffect(() => { const t = new URLSearchParams(window.location.search).get("tab"); if (t === "plan" || t === "link" || t === "edit") setView(t); }, []);
+  useEffect(() => { const t = new URLSearchParams(window.location.search).get("tab"); if (t === "link") setView(t); else if (t === "plan") router.replace("/planner/upload"); else if (t === "edit") router.replace("/planner/edit"); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!ready || !planReady) return <PageLoading />;
 
@@ -187,20 +188,18 @@ export default function Planner() {
             <button className="btn soft" onClick={() => setAskUnlink(false)}>Keep</button>
           </>
         ) : <button className="btn soft" onClick={() => setAskUnlink(true)}>Unlink questions</button>)}
-        <button className="btn soft" onClick={() => setView((v) => (v === "edit" ? "next" : "edit"))}>{view === "edit" ? "Back to planner" : "Edit plan"}</button>
+        <Link className="btn soft" href="/planner/edit">Edit plan</Link>
         <button className="btn soft" onClick={() => downloadJson(`${fileSafe(plan.name)}.json`, planToJson(plan, links))}>Export plan</button>
-        <button className="btn soft" onClick={() => setView((v) => (v === "plan" ? "next" : "plan"))}>{view === "plan" ? "Back to planner" : "Upload plan"}</button>
+        <Link className="btn soft" href="/planner/upload">Upload plan</Link>
         {view === "link" && <button className="btn soft" onClick={() => setView("next")}>Back to planner</button>}
       </div>
       <p className="muted small" style={{ marginTop: -6 }}>{plan.name}</p>
-      {view !== "plan" && view !== "link" && view !== "edit" && <div className="tabs">
+      {view !== "link" && <div className="tabs">
         <button className={view === "next" ? "on" : ""} onClick={() => setView("next")}>Next 3 days</button>
         <button className={view === "all" ? "on" : ""} onClick={() => setView("all")}>Full plan</button>
         <button className={view === "missed" ? "on" : ""} onClick={() => setView("missed")}>Missed{missed.length ? ` (${missed.length})` : ""}</button>
       </div>}
 
-      {view === "plan" && <PlanImport onDone={() => setView("next")} />}
-      {view === "edit" && <PlanEdit />}
       {view === "link" && <LinkPlan onDone={() => setView("next")} />}
 
       {view === "next" && (

@@ -1,4 +1,5 @@
 "use client";
+import { toast } from "@/lib/toast";
 import { useEffect, useState } from "react";
 import { parsePlan, planToJson, templateJson } from "@/lib/customPlan";
 import { readKey, readPack, readPlan, writeKey } from "@/lib/adminData";
@@ -12,14 +13,12 @@ export default function PlanPanel({ profile }: { profile: string }) {
   const [text, setText] = useState("");
   const [errors, setErrors] = useState<string[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
-  const [note, setNote] = useState("");
   const [ask, setAsk] = useState(false);
 
   useEffect(() => { const p = readPlan(profile); setPlan(p); setText(p ? JSON.stringify(planToJson(p, readKey<Links>(profile, KEYS.links) ?? {}), null, 2) : ""); }, [profile]);
   if (plan === undefined) return <p className="muted">Loading…</p>;
 
   const apply = () => {
-    setNote("");
     let json: unknown;
     try { json = JSON.parse(text); } catch (e) { setErrors([`This is not valid JSON: ${(e as Error).message}`]); setWarnings([]); return; }
     const r = parsePlan(json);
@@ -34,9 +33,9 @@ export default function PlanPanel({ profile }: { profile: string }) {
     writeKey(profile, KEYS.links, Object.keys(good).length ? good : null);
     setPlan(r.plan);
     setText(JSON.stringify(planToJson(r.plan, good), null, 2));
-    setNote(`Saved. The plan now has ${r.plan.days.length} days${Object.keys(good).length ? ` and ${Object.keys(good).length} day${Object.keys(good).length === 1 ? "" : "s"} of linked questions` : ""}.${lc && lc.broken ? ` ${lc.broken} link${lc.broken === 1 ? "" : "s"} in the text did not match this profile's questions and ${lc.broken === 1 ? "was" : "were"} dropped.` : ""} Ticked days are kept.`);
+    toast(`Saved. The plan now has ${r.plan.days.length} days${Object.keys(good).length ? ` and ${Object.keys(good).length} day${Object.keys(good).length === 1 ? "" : "s"} of linked questions` : ""}.${lc && lc.broken ? ` ${lc.broken} link${lc.broken === 1 ? "" : "s"} in the text did not match this profile's questions and ${lc.broken === 1 ? "was" : "were"} dropped.` : ""} Ticked days are kept.`);
   };
-  const remove = () => { writeKey(profile, KEYS.plan, null); writeKey(profile, KEYS.milestones, null); writeKey(profile, KEYS.done, null); setPlan(null); setText(""); setAsk(false); setNote("Plan removed."); };
+  const remove = () => { writeKey(profile, KEYS.plan, null); writeKey(profile, KEYS.milestones, null); writeKey(profile, KEYS.done, null); setPlan(null); setText(""); setAsk(false); toast("Plan removed."); };
 
   return (
     <>
@@ -51,7 +50,6 @@ export default function PlanPanel({ profile }: { profile: string }) {
       </div>
       {errors.length > 0 && <div className="pi-err" role="alert"><b>🔴 Fix this first:</b><ul>{errors.map((e, i) => <li key={i}>{e}</li>)}</ul></div>}
       {warnings.length > 0 && <ul className="pi-warn">{warnings.map((w, i) => <li key={i}>{w}</li>)}</ul>}
-      {note && <p className="small pk-note">{note}</p>}
     </>
   );
 }

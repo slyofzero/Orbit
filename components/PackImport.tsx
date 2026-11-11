@@ -3,6 +3,7 @@ import { useMemo, useRef, useState } from "react";
 import { mergeChanges, mergePack, packPrompt, packTemplateJson, parsePack, type PackData } from "@/lib/packs";
 import { exportPack } from "@/lib/imageStore";
 import { downloadJson, fileSafe } from "@/lib/download";
+import { toast } from "@/lib/toast";
 import { mergeFiles, type FileProblems } from "@/lib/packMerge";
 import PackBreakdown from "./PackBreakdown";
 import ExportFirstModal from "./ExportFirstModal";
@@ -24,7 +25,6 @@ export default function PackImport({ onDone }: { onDone?: (message: string) => v
   const [keep, setKeep] = useState(false);
   const [mode, setMode] = useState<"add" | "replace">("add"); // when you already have a pack, adding is the default
   const [ask, setAsk] = useState<null | "replace" | "remove">(null);
-  const [note, setNote] = useState("");
   const [newName, setNewName] = useState(""); // a name typed for the file being loaded; empty means keep the name inside the file
   const [renaming, setRenaming] = useState<string | null>(null); // the draft while the current pack is being renamed
   const [loadErrors, setLoadErrors] = useState<FileProblems[]>([]);
@@ -45,13 +45,13 @@ export default function PackImport({ onDone }: { onDone?: (message: string) => v
     setText("");
     const r = merged.report, added = r.newQuestions + r.newMockQuestions, replaced = r.updatedQuestions + r.updatedMockQuestions;
     const m = `Added ${added} question${added === 1 ? "" : "s"}${replaced ? ` and replaced ${replaced}` : ""} in "${pack.name}".`;
-    setNote(m);
+    toast(m);
     onDone?.(m);
   };
-  const useIt = async () => { if (!p || !result) return; const named = { ...p, name: chosen }; await install(named, keep, result.images); setNewName(""); setText(""); setAsk(null); const m = `"${chosen}" is now your pack: ${p.questions.length} practice question${p.questions.length === 1 ? "" : "s"}.`; setNote(m); onDone?.(m); };
+  const useIt = async () => { if (!p || !result) return; const named = { ...p, name: chosen }; await install(named, keep, result.images); setNewName(""); setText(""); setAsk(null); const m = `"${chosen}" is now your pack: ${p.questions.length} practice question${p.questions.length === 1 ? "" : "s"}.`; toast(m); onDone?.(m); };
 
   const copy = async (what: string, value: string) => {
-    try { await navigator.clipboard.writeText(value); setNote(`${what} copied.`); } catch { setNote("Copy was blocked by the browser. Use Download instead."); }
+    try { await navigator.clipboard.writeText(value); toast(`${what} copied.`); } catch { toast("Copy was blocked by the browser. Use Download instead."); }
   };
   const chosen = (newName.trim() || p?.name || "").slice(0, 60);
   const count = (t: string) => p?.questions.filter((q) => q.type === t).length ?? 0;
@@ -61,7 +61,7 @@ export default function PackImport({ onDone }: { onDone?: (message: string) => v
       <section className="panel pi-now">
         <div className="small muted">Your current question pack</div>
         {renaming === null ? <h2 style={{ margin: "2px 0 4px" }}>{custom ? pack.name : "None loaded"}</h2> : (
-          <form className="row" style={{ margin: "4px 0" }} onSubmit={async (e) => { e.preventDefault(); const n = renaming.trim().slice(0, 60); if (!n) return; await install({ ...pack, name: n }, true); setRenaming(null); const m = `Your pack is now called "${n}".`; setNote(m); onDone?.(m); }}>
+          <form className="row" style={{ margin: "4px 0" }} onSubmit={async (e) => { e.preventDefault(); const n = renaming.trim().slice(0, 60); if (!n) return; await install({ ...pack, name: n }, true); setRenaming(null); const m = `Your pack is now called "${n}".`; toast(m); onDone?.(m); }}>
             <input className="pk-in" autoFocus maxLength={60} value={renaming} onChange={(e) => setRenaming(e.target.value)} aria-label="Question pack name" style={{ minWidth: 260 }} onKeyDown={(e) => { if (e.key === "Escape") setRenaming(null); }} />
             <button className="btn primary" type="submit" disabled={!renaming.trim()}>Save name</button>
             <button className="btn soft" type="button" onClick={() => setRenaming(null)}>Cancel</button>
@@ -88,7 +88,7 @@ export default function PackImport({ onDone }: { onDone?: (message: string) => v
           <button className="btn primary" onClick={() => copy("AI prompt", packPrompt())}>Copy AI prompt</button>
           {custom && <button className="btn soft" onClick={() => copy("AI prompt for adding", packPrompt(pack))} title="Includes your current subject and topic ids, so the AI writes new questions that fit">Copy AI prompt for adding</button>}
         </div>
-        <p className="small muted" style={{ marginBottom: 0 }}>Copy AI prompt: paste it into any AI chat, fill in your subject and topics, and paste the JSON it gives back in step 2.</p>
+        <p className="small muted" style={{ margin: "14px 0 0" }}>Copy AI prompt: paste it into any AI chat, fill in your subject and topics, and paste the JSON it gives back in step 2.</p>
       </section>
 
       <section className="panel">
@@ -171,11 +171,10 @@ export default function PackImport({ onDone }: { onDone?: (message: string) => v
           </div>
         )}
       </section>
-      {note && <p className="small muted" role="status">{note}</p>}
       {ask && (
         <ExportFirstModal what="question pack" action={ask} oldName={pack.name} newName={p?.name}
           onExport={() => { exportPack(pack).then((j) => downloadJson(`${fileSafe(pack.name)}.json`, j)); }}
-          onGo={() => (ask === "replace" ? useIt() : (remove(), setAsk(null), setNote("Pack removed.")))}
+          onGo={() => (ask === "replace" ? useIt() : (remove(), setAsk(null), toast("Pack removed.")))}
           onCancel={() => setAsk(null)} />
       )}
     </div>

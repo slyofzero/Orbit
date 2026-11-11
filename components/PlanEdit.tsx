@@ -4,6 +4,8 @@ import { KIND_LABEL, WEEKDAY_NAMES, fmtDate, todayIST, weekday } from "@/lib/pla
 import { KEYS, usePack, usePersisted, usePlan } from "@/lib/store";
 import { Links } from "@/lib/links";
 import PlanDescription from "./PlanDescription";
+import PlanImport from "./PlanImport";
+import { toast } from "@/lib/toast";
 import Rich from "@/components/Rich";
 import { Day, DayKind } from "@/lib/types";
 
@@ -22,7 +24,6 @@ export default function PlanEdit() {
   const [draft, setDraft] = useState<(Omit<Day, "tasks" | "topics"> & { topics: string; rows: Row[]; linkQ: string[]; mock: string; note: string }) | null>(null);
   const [find, setFind] = useState("");
   const [newDate, setNewDate] = useState("");
-  const [msg, setMsg] = useState("");
   const [copied, setCopied] = useState(false);
   const [err, setErr] = useState("");
   const [askDel, setAskDel] = useState(false);
@@ -30,7 +31,7 @@ export default function PlanEdit() {
 
   const pick = (d: Day) => {
     if (open === d.date) { setOpen(null); setDraft(null); return; }
-    setOpen(d.date); setAskDel(false); setErr(""); setMsg("");
+    setOpen(d.date); setAskDel(false); setErr("");
     setFind("");
     const l = links[d.date];
     setDraft({ ...d, topics: d.topics.join(", "), rows: d.tasks.map((t, i) => ({ text: t, from: i })), linkQ: l?.q ?? [], mock: l?.mock ?? "", note: l?.note ?? "" });
@@ -42,7 +43,7 @@ export default function PlanEdit() {
     copiedLinks = draft.linkQ;
     try { await navigator.clipboard.writeText(txt); } catch { /* the in-app copy still works */ }
     setCopied(true); setTimeout(() => setCopied(false), 1600);
-    setMsg(`Copied ${draft.linkQ.length} linked question${draft.linkQ.length === 1 ? "" : "s"}. Open another day and press Paste links.`);
+    toast(`Copied ${draft.linkQ.length} linked question${draft.linkQ.length === 1 ? "" : "s"}. Open another day and press Paste links.`);
   };
   const pasteLinks = async () => {
     if (!draft) return;
@@ -55,7 +56,7 @@ export default function PlanEdit() {
     if (!fresh.length) { setErr(ids.length ? "Those questions are already linked here, or not in your pack." : "Nothing to paste. Press Copy all links on another day first."); return; }
     setErr("");
     setDraft({ ...draft, linkQ: [...draft.linkQ, ...fresh] });
-    setMsg(`Pasted ${fresh.length} link${fresh.length === 1 ? "" : "s"}${ids.length > known.length ? `, skipped ${ids.length - known.length} not in your pack` : ""}. Press Save changes to keep them.`);
+    toast(`Pasted ${fresh.length} link${fresh.length === 1 ? "" : "s"}${ids.length > known.length ? `, skipped ${ids.length - known.length} not in your pack` : ""}. Press Save changes to keep them.`);
   };
   const setRow = (i: number, v: Partial<Row>) => setDraft((p) => p && { ...p, rows: p.rows.map((r, j) => (j === i ? { ...r, ...v } : r)) });
 
@@ -84,7 +85,7 @@ export default function PlanEdit() {
       rows.forEach((r, i) => { if (r.from !== null && p[`${day.date}:${r.from}`]) n[`${day.date}:${i}`] = true; });
       return n;
     });
-    setErr(""); setMsg(`✓ Saved ${fmtDate(day.date)}: ${rows.length} task${rows.length === 1 ? "" : "s"}, ${keepQ.length} linked question${keepQ.length === 1 ? "" : "s"}${draft.mock ? ", 1 mock test" : ""}. Your Today and Full plan pages are updated.`); setDraft({ ...draft, topics: topics.join(", "), rows: rows.map((r, i) => ({ text: r.text, from: i })) });
+    setErr(""); toast(`Saved ${fmtDate(day.date)}: ${rows.length} task${rows.length === 1 ? "" : "s"}, ${keepQ.length} linked question${keepQ.length === 1 ? "" : "s"}${draft.mock ? ", 1 mock test" : ""}. Your Today and Full plan pages are updated.`); setDraft({ ...draft, topics: topics.join(", "), rows: rows.map((r, i) => ({ text: r.text, from: i })) });
   };
 
   const del = () => {
@@ -92,7 +93,7 @@ export default function PlanEdit() {
     update({ ...plan, days: plan.days.filter((d) => d.date !== draft.date) });
     setLinks((p) => { const n = { ...p }; delete n[draft.date]; return n; });
     setDone((p) => { const n = { ...p }; Object.keys(n).forEach((k) => k.startsWith(`${draft.date}:`) && delete n[k]); return n; });
-    setOpen(null); setDraft(null); setAskDel(false); setMsg(`Deleted ${fmtDate(draft.date)}.`);
+    setOpen(null); setDraft(null); setAskDel(false); toast(`Deleted ${fmtDate(draft.date)}.`);
   };
 
   const add = () => {
@@ -101,11 +102,12 @@ export default function PlanEdit() {
     const before = [...plan.days].reverse().find((d) => d.date < newDate) ?? plan.days[0];
     const day: Day = { date: newDate, phase: before?.phase ?? Object.keys(plan.phaseNames)[0] ?? "a", kind: "study", hours: 1, title: "New day", topics: [], tasks: ["New task"], targetQs: 0 };
     update({ ...plan, days: [...plan.days, day].sort((a, b) => a.date.localeCompare(b.date)) });
-    setNewDate(""); setErr(""); setMsg(`Added ${fmtDate(newDate)}. Edit it below.`); pick(day);
+    setNewDate(""); setErr(""); toast(`Added ${fmtDate(newDate)}. Edit it below.`); pick(day);
   };
 
   return (
-    <div className="pi">
+    <div className="pi pe-wide">
+      <div className="pe-top">
       <section className="panel">
         <h2 style={{ marginTop: 0 }}>Edit your plan</h2>
         <p className="muted small">Open a day to change its title, hours, tasks or practice target. Changes keep your ticks, milestones and question links.</p>
@@ -115,8 +117,9 @@ export default function PlanEdit() {
           <button className="btn soft" onClick={add}>Add a day</button>
         </div>
         {!draft && err && <div className="pi-err" role="alert"><b>🔴 Fix this first:</b><ul><li>{err}</li></ul></div>}
-        {!draft && msg && <p className="small" role="status">{msg}</p>}
       </section>
+      <PlanImport editOnly onDone={() => {}} />
+      </div>
 
       <div className="pr-list">
         {(() => {
@@ -155,7 +158,7 @@ export default function PlanEdit() {
                     <div className="pe-linkbar">
                       <button className={`btn inv ic ${copied ? "copied" : ""}`} data-tip={copied ? "Copied!" : "Copy all links"} aria-label="Copy all links" onClick={copyLinks} disabled={!draft.linkQ.length}>{copied ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7" /></svg> : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h10" /></svg>}</button>
                       <button className="btn inv ic" data-tip="Paste links" aria-label="Paste links" onClick={pasteLinks}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="6" y="4" width="12" height="17" rx="2" /><path d="M9 4h6v3H9z" /><path d="M9.5 13h5M9.5 17h5" /></svg></button>
-                      <button className="btn inv ic" data-tip="Delete all links" aria-label="Delete all links" onClick={() => { setDraft({ ...draft, linkQ: [] }); setMsg("Removed all links. Press Save changes to keep that."); }} disabled={!draft.linkQ.length}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="M6 6l1 14h10l1-14" /><path d="M10 11v5M14 11v5" /></svg></button>
+                      <button className="btn inv ic" data-tip="Delete all links" aria-label="Delete all links" onClick={() => { setDraft({ ...draft, linkQ: [] }); toast("Removed all links. Press Save changes to keep that."); }} disabled={!draft.linkQ.length}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="M6 6l1 14h10l1-14" /><path d="M10 11v5M14 11v5" /></svg></button>
                     </div></div>
                     {draft.linkQ.length === 0 && (
                       <div className="pe-empty">
@@ -191,7 +194,6 @@ export default function PlanEdit() {
                     <label className="pe-f" style={{ gridColumn: "span 2" }}>Note shown with the questions<input className="pe-in" value={draft.note} maxLength={100} onChange={(e) => setDraft({ ...draft, note: e.target.value })} /></label>
                   </div>
                   {err && <div className="pi-err" role="alert"><b>🔴 Fix this first:</b><ul><li>{err}</li></ul></div>}
-                  {msg && <p className={`small ${msg.startsWith("✓") ? "pe-ok" : ""}`} role="status">{msg}</p>}
                   <div className="row">
                     <button className="btn primary" onClick={save}>Save this day</button>
                     {askDel ? (

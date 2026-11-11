@@ -1,4 +1,5 @@
 "use client";
+import { toast } from "@/lib/toast";
 import { useMemo, useState } from "react";
 import { downloadText, fileSafe } from "@/lib/download";
 import { isTooLong, linkPrompt, parseLinks, readAnswer, Links } from "@/lib/links";
@@ -13,7 +14,6 @@ export default function LinkPlan({ onDone }: { onDone?: () => void }) {
   const [links, setLinks] = usePersisted<Links>(KEYS.links, {});
   const [withText, setWithText] = useState(true);
   const [text, setText] = useState("");
-  const [note, setNote] = useState("");
   const prompt = useMemo(() => (custom && hasPack ? linkPrompt(plan, pack, { withText }, links) : ""), [plan, pack, custom, hasPack, withText, links]);
   const tooLong = isTooLong(prompt);
   const result = useMemo(() => {
@@ -28,7 +28,7 @@ export default function LinkPlan({ onDone }: { onDone?: () => void }) {
   if (!custom || !hasPack) {
     return <div className="panel"><h2 style={{ marginTop: 0 }}>Link with AI</h2><p className="muted" style={{ margin: 0 }}>Upload a plan and a question pack first. Then an AI can match them.</p></div>;
   }
-  const copy = async () => { try { await navigator.clipboard.writeText(prompt); setNote("Copied. Paste it into your AI."); } catch { setNote("Copy was blocked. Use Download instead."); } };
+  const copy = async () => { try { await navigator.clipboard.writeText(prompt); toast("Copied. Paste it into your AI."); } catch { toast("Copy was blocked. Use Download instead."); } };
 
   return (
     <div className="pi">
@@ -36,13 +36,13 @@ export default function LinkPlan({ onDone }: { onDone?: () => void }) {
         <div className="small muted">Plan and questions linked</div>
         <h2 style={{ margin: "2px 0 4px" }}>{linked ? `${linked} day${linked === 1 ? "" : "s"} linked` : "Not linked yet"}</h2>
         <p className="small muted" style={{ margin: 0 }}>Linked days show their exact questions in the Planner and open in one click.</p>
-        {linked > 0 && <div className="row" style={{ marginTop: 12 }}><button className="btn soft" onClick={() => { setLinks({}); setNote("Links cleared."); }}>Clear all links</button></div>}
+        {linked > 0 && <div className="row" style={{ marginTop: 12 }}><button className="btn soft" onClick={() => { setLinks({}); toast("Links cleared."); }}>Clear all links</button></div>}
       </section>
 
       <section className="panel">
         <h2 style={{ marginTop: 0 }}>1. Give this to an AI</h2>
         {tooLong ? (
-          <FilesRoute plan={plan} pack={pack} links={links} size={prompt.length} onNote={setNote} />
+          <FilesRoute plan={plan} pack={pack} links={links} size={prompt.length} onNote={toast} />
         ) : (
           <>
             <p className="muted small">It holds the instructions, your plan and your question bank ({pack.questions.length} questions, {pack.mockTests.length} mock tests).</p>
@@ -53,7 +53,7 @@ export default function LinkPlan({ onDone }: { onDone?: () => void }) {
               <span className="small muted">{Math.round(prompt.length / 1000)}k characters</span>
             </div>
             <p className="small muted" style={{ margin: "10px 0 4px" }}>Prefer files? Export them and attach both to any AI:</p>
-            <ExportButtons plan={plan} pack={pack} links={links} onNote={setNote} />
+            <ExportButtons plan={plan} pack={pack} links={links} onNote={toast} />
           </>
         )}
       </section>
@@ -72,10 +72,9 @@ export default function LinkPlan({ onDone }: { onDone?: () => void }) {
           <div className="pi-ok">
             <p className="small" style={{ margin: "4px 0" }}>{result.days} days linked · {result.questions} different questions · {result.mocks} mock test{result.mocks === 1 ? "" : "s"}</p>
             {linked > 0 && <div className="callout">🔴 CAUTION: Applying this replaces your current links. Your plan, ticks and answers are kept.</div>}
-            <button className="btn primary" onClick={() => { setLinks(result.links!); setText(""); setNote(`${result.days} days linked.`); onDone?.(); }}>Apply links</button>
+            <button className="btn primary" onClick={() => { setLinks(result.links!); setText(""); toast(`${result.days} days linked.`); onDone?.(); }}>Apply links</button>
           </div>
         )}
-        {note && <p className="small" role="status">{note}</p>}
       </section>
     </div>
   );

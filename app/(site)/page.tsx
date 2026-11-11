@@ -168,7 +168,7 @@ export default function Dashboard() {
             <p className="muted" style={{ margin: 0 }}>Nothing is loaded yet, so the calendar, planner, practice and mocks are empty. Upload a plan for your daily targets and a question pack for practice and mock tests.</p>
           </div>
           <div className="row">
-            {!custom && <Link className="btn primary" href="/planner?tab=plan">Load a plan</Link>}
+            {!custom && <Link className="btn primary" href="/planner/upload">Load a plan</Link>}
             {!hasPack && <Link className="btn primary" href="/practice">Load a question pack</Link>}
           </div>
         </section>
@@ -345,7 +345,7 @@ export default function Dashboard() {
         <div className="row" style={{ marginTop: 14 }}>
           <label>Your name <input type="text" placeholder="Optional" value={settings.name} onChange={(e) => setSettings({ ...settings, name: e.target.value })} /></label>
           <button className="btn soft" onClick={() => ms.reset()}>Reset milestones to the plan's own</button>
-          <Link className="btn soft" href="/planner?tab=plan">Change plan</Link>
+          <Link className="btn soft" href="/planner/upload">Change plan</Link>
           {!wipe ? <button className="btn soft" onClick={() => setWipe(true)}>Start fresh</button> : (
             <>
               <span className="small">Deletes your plan, pack, ticks, practice, mocks and milestones.</span>

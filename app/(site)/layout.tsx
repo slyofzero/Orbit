@@ -3,6 +3,7 @@ import Ambient from "@/components/Ambient";
 import Cosmos from "@/components/Cosmos";
 import AdminGate from "@/components/AdminGate";
 import PageTransitions from "@/components/PageTransitions";
+import Toaster from "@/components/Toaster";
 
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -12,6 +13,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
       <PageTransitions />
       <AdminGate />
       <Nav />
+      <Toaster />
       <main className="page">{children}</main>
     </div>
   );

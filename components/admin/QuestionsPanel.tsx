@@ -1,4 +1,5 @@
 "use client";
+import { toast } from "@/lib/toast";
 import { useEffect, useMemo, useState } from "react";
 import { Loc, PackData, allQuestions } from "@/lib/packs";
 import { plain } from "@/components/stats/useStats";
@@ -14,7 +15,6 @@ export default function QuestionsPanel({ profile, pack, save, focusId }: Props) 
   const [show, setShow] = useState(PAGE);
   const [edit, setEdit] = useState<Loc | "new" | null>(null);
   const [confirm, setConfirm] = useState<string | null>(null);
-  const [note, setNote] = useState("");
   const all = useMemo(() => allQuestions(pack), [pack]);
 
   useEffect(() => {
@@ -37,7 +37,7 @@ export default function QuestionsPanel({ profile, pack, save, focusId }: Props) 
       questions: pack.questions.filter((q) => q.id !== id),
       mockTests: pack.mockTests.map((m) => ({ ...m, sections: m.sections.map((s) => ({ ...s, questions: s.questions.filter((q) => q.id !== id) })).filter((s) => s.questions.length) })),
     });
-    setConfirm(null); setNote(`Deleted ${id}.`);
+    setConfirm(null); toast(`Deleted ${id}.`);
   };
 
   return (
@@ -56,7 +56,6 @@ export default function QuestionsPanel({ profile, pack, save, focusId }: Props) 
         <button className="btn primary" onClick={() => setEdit("new")} disabled={pack.topics.length === 0}>+ Add question</button>
       </div>
       {pack.topics.length === 0 && <p className="small muted">Add a topic first (Topics tab). Every question needs one.</p>}
-      {note && <p className="small pk-note">{note}</p>}
       <p className="small muted">{rows.length} of {all.length} questions. Every question has one id that is unique across Practice and all mock tests.</p>
 
       <table className="t pk-table pk-qtable">
@@ -86,7 +85,7 @@ export default function QuestionsPanel({ profile, pack, save, focusId }: Props) 
 
       {edit && (
         <QuestionEditor profile={profile} pack={pack} loc={edit === "new" ? null : edit} onClose={() => setEdit(null)}
-          onSave={(next, id) => { save(next); setEdit(null); setNote(`Saved ${id}.`); }} />
+          onSave={(next, id) => { save(next); setEdit(null); toast(`Saved ${id}.`); }} />
       )}
     </>
   );

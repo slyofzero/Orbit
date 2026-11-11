@@ -1,4 +1,5 @@
 "use client";
+import { toast } from "@/lib/toast";
 import { useMemo, useRef, useState } from "react";
 import { saveImages } from "@/lib/imageStore";
 import { PackData, mergeChanges, mergePack, parsePack } from "@/lib/packs";
@@ -7,7 +8,6 @@ import { PackData, mergeChanges, mergePack, parsePack } from "@/lib/packs";
 export default function UploadPanel({ profile, pack, save }: { profile: string; pack: PackData | null; save: (p: PackData | null) => void }) {
   const [text, setText] = useState("");
   const [mode, setMode] = useState<"add" | "replace">("add");
-  const [note, setNote] = useState("");
   const [ask, setAsk] = useState(false);
   const file = useRef<HTMLInputElement>(null);
   const adding = !!pack && mode === "add";
@@ -22,8 +22,8 @@ export default function UploadPanel({ profile, pack, save }: { profile: string; 
   const apply = async () => {
     if (!p || !result) return;
     await saveImages(result.images, profile);
-    if (adding && merged) { save(merged.pack); setNote(`Done: ${r!.newQuestions + r!.newMockQuestions} added, ${r!.updatedQuestions + r!.updatedMockQuestions} replaced.`); }
-    else { save(p); setNote(`"${p.name}" is now this profile's pack.`); }
+    if (adding && merged) { save(merged.pack); toast(`Done: ${r!.newQuestions + r!.newMockQuestions} added, ${r!.updatedQuestions + r!.updatedMockQuestions} replaced.`); }
+    else { save(p); toast(`"${p.name}" is now this profile's pack.`); }
     setText(""); setAsk(false);
   };
   const big = text.length > 400_000;
@@ -70,7 +70,6 @@ export default function UploadPanel({ profile, pack, save }: { profile: string; 
           {adding && r && mergeChanges(r) === 0 && <span className="small muted"> Nothing to change.</span>}
         </div>
       )}
-      {note && <p className="small pk-note">{note}</p>}
     </>
   );
 }
