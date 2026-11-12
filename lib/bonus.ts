@@ -8,7 +8,7 @@ export const NO_BONUS: Bonus = { tasks: [], qs: [], from: [] };
 export const BONUS_DAYS = 3;
 
 /**
- * Bonus work on a day: the tasks and linked questions still pending on a day that has started (today or earlier) are spread over that day's next 3 plan days.
+ * Bonus work on a day: the tasks and linked questions still pending when a day has ENDED (any day before today) are spread over that day's next 3 plan days.
  * The split follows each item's fixed position (task number, link order), not the number still pending, so an item never jumps day when you finish another one.
  * Nothing is stored: ticking the task or answering the question on its original day or here clears it everywhere.
  */
@@ -17,7 +17,7 @@ export function bonusFor(date: string, days: Day[], done: Record<string, boolean
   const own = new Set(liveQuestionIds(links[date], pack).ids);
   const out: Bonus = { tasks: [], qs: [], from: [] };
   for (const src of days) {
-    if (src.date > today || src.date === date) continue;
+    if (src.date >= today || src.date === date) continue; // a day only carries work forward once it has ended
     const next = days.filter((x) => x.date > src.date && x.kind !== "exam").slice(0, BONUS_DAYS);
     const slot = next.findIndex((x) => x.date === date);
     if (slot < 0) continue;
