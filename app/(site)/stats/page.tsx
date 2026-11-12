@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useState } from "react";
+import { Suspense, useState } from "react";
+import { useTab } from "@/lib/useTab";
 import Explorer from "@/components/stats/Explorer";
 import MistakesPanel from "@/components/stats/MistakesPanel";
 import Overview from "@/components/stats/Overview";
@@ -15,12 +16,11 @@ import PageLoading from "@/components/PageLoading";
 type Tab = "overview" | "progress" | "explore" | "questions" | "mistakes";
 const TABS: [Tab, string][] = [["overview", "Overview"], ["progress", "Progress"], ["explore", "Explore"], ["questions", "Questions"], ["mistakes", "Mistakes"]];
 
-export default function Stats() {
+function StatsInner() {
   const { ready, pack, evs, attempts, views, plan, done, links } = useStats();
-  const [tab, setTab] = useState<Tab>("overview");
+  const [tab, setTab] = useTab<Tab>(TABS.map(([k]) => k), "overview");
   const [path, setPath] = useState<string[]>([]);
   const [note, setNote] = useState("");
-  useEffect(() => { const t = new URLSearchParams(window.location.search).get("tab"); if (TABS.some(([k]) => k === t)) setTab(t as Tab); }, []);
 
   if (!ready) return <PageLoading />;
 
@@ -50,5 +50,13 @@ export default function Stats() {
       {tab === "questions" && <QuestionsTab evs={evs} pack={pack} />}
       {tab === "mistakes" && <MistakesPanel />}
     </>
+  );
+}
+
+export default function Stats() {
+  return (
+    <Suspense fallback={<PageLoading />}>
+      <StatsInner />
+    </Suspense>
   );
 }

@@ -1,7 +1,8 @@
 "use client";
 import { toast } from "@/lib/toast";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
+import { useTab } from "@/lib/useTab";
 import { hasGenerator } from "@/lib/bank";
 import PackImport from "@/components/PackImport";
 import TagFilter from "@/components/TagFilter";
@@ -14,13 +15,16 @@ import PageLoading from "@/components/PageLoading";
 
 const STATUS_LABEL: Record<TopicStatus, string> = { noidea: "No idea", shaky: "Shaky", know: "Know" };
 
-export default function PracticeHome() {
+function PracticeHomeInner() {
   const { days: DAYS, ready: planReady } = usePlan();
   const { pack, custom: hasPack, ready: packReady } = usePack();
   const SUBJECTS = pack.subjects;
   const TOPICS = pack.topics;
   const [practice, , ready] = usePersisted<Record<string, PracticeRec>>(KEYS.practice, {});
-  const [only, setOnly] = useState<"all" | TopicStatus>("all");
+  // the status tabs live in the address: /practice, /practice?tab=no_idea, ?tab=shaky, ?tab=know
+  const [statusTab, setStatusTab] = useTab(["all", "no_idea", "shaky", "know"] as const, "all");
+  const only: "all" | TopicStatus = statusTab === "no_idea" ? "noidea" : statusTab;
+  const setOnly = (k: "all" | TopicStatus) => setStatusTab(k === "noidea" ? "no_idea" : (k as "all" | "shaky" | "know"));
   const [q, setQ] = useState("");
   const [picked, setPicked] = useState<string[]>([]);
   const [open, setOpen] = useState<Record<string, boolean> | null>(null);
@@ -148,5 +152,13 @@ export default function PracticeHome() {
       <p className="small muted">Dot colour is your own rating: red is new to you, amber is shaky, green is solid. A plus after the count means more generated questions.</p>
       </>}
     </>
+  );
+}
+
+export default function PracticeHome() {
+  return (
+    <Suspense fallback={<PageLoading />}>
+      <PracticeHomeInner />
+    </Suspense>
   );
 }

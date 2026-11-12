@@ -1,7 +1,8 @@
 "use client";
 import { keepLockedLinks } from "@/lib/lock";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useTab } from "@/lib/useTab";
 import BonusBlock from "@/components/BonusBlock";
 import CopyDayPrompt from "@/components/CopyDayPrompt";
 import Rich from "@/components/Rich";
@@ -19,7 +20,8 @@ import { PracticeRec } from "@/lib/types";
 import { Day } from "@/lib/types";
 import PageLoading from "@/components/PageLoading";
 
-type View = "next" | "all" | "missed" | "link";
+type View = "next" | "full_plan" | "missed" | "link";
+const VIEWS = ["next", "full_plan", "missed", "link"] as const;
 type Done = Record<string, boolean>;
 
 const istDay = (at: number) => new Date(at).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
@@ -81,7 +83,7 @@ function DayBody({ d, done, setDone, qs }: { d: Day; done: Done; setDone: (u: (p
   );
 }
 
-export default function Planner() {
+function PlannerInner() {
   const { plan, ready: planReady } = usePlan();
   const { pack } = usePack();
   const DAYS = plan.days;
@@ -91,12 +93,12 @@ export default function Planner() {
   const [links, setLinks] = usePersisted<Links>(KEYS.links, {});
   const [askUnlink, setAskUnlink] = useState(false);
   const router = useRouter();
-  const [view, setView] = useState<View>("next");
+  const [view, setView] = useTab<View>(VIEWS, "next");
   const [off, setOff] = useState(0); // how many days the 3-day window is shifted from today
   const [openDay, setOpenDay] = useState<Record<string, boolean>>({});
   const [openPhase, setOpenPhase] = useState<Record<string, boolean> | null>(null);
   const today = todayIST();
-  useEffect(() => { const t = new URLSearchParams(window.location.search).get("tab"); if (t === "link") setView(t); else if (t === "plan") router.replace("/planner/upload"); else if (t === "edit") router.replace("/planner/edit"); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { const t = new URLSearchParams(window.location.search).get("tab"); if (t === "plan") router.replace("/planner/upload"); else if (t === "edit") router.replace("/planner/edit"); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!ready || !planReady) return <PageLoading />;
 
@@ -199,7 +201,7 @@ export default function Planner() {
       <p className="muted small" style={{ marginTop: -6 }}>{plan.name}</p>
       {view !== "link" && <div className="tabs">
         <button className={view === "next" ? "on" : ""} onClick={() => setView("next")}>Next 3 days</button>
-        <button className={view === "all" ? "on" : ""} onClick={() => setView("all")}>Full plan</button>
+        <button className={view === "full_plan" ? "on" : ""} onClick={() => setView("full_plan")}>Full plan</button>
         <button className={view === "missed" ? "on" : ""} onClick={() => setView("missed")}>Missed{missed.length ? ` (${missed.length})` : ""}</button>
       </div>}
 
@@ -222,7 +224,7 @@ export default function Planner() {
         missed.length === 0 ? <div className="panel muted">No missed days. Nice.</div> : <div className="pl-rows">{missed.map((d) => <Row key={d.date} d={d} />)}</div>
       )}
 
-      {view === "all" && (
+      {view === "full_plan" && (
         <div className="pr-list">
           {phases.map(({ ph, ds, total, got, current }) => {
             const o = phaseOpen(ph, current);
@@ -263,5 +265,13 @@ export default function Planner() {
         </div>
       )}
     </>
+  );
+}
+
+export default function Planner() {
+  return (
+    <Suspense fallback={<PageLoading />}>
+      <PlannerInner />
+    </Suspense>
   );
 }
