@@ -1,8 +1,4 @@
 "use client";
-import { bonusQKey } from "@/lib/bonus";
-import { isDayLocked, LOCK_MESSAGE, useLockClock } from "@/lib/lock";
-import { toast } from "@/lib/toast";
-import { UnlinkIcon } from "@/components/BonusBlock";
 import BackToPlanner from "@/components/BackToPlanner";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -28,8 +24,7 @@ export default function DayPractice() {
   const [links, , lReady] = usePersisted<Links>(KEYS.links, {});
   const [doneTasks] = usePersisted<Record<string, boolean>>(KEYS.done, {});
   const [practice, setPractice, pReady] = usePersisted<Record<string, PracticeRec>>(KEYS.practice, {});
-  const [off, setOff] = usePersisted<Record<string, boolean>>(KEYS.bonusOff, {});
-  const locked = isDayLocked(date, useLockClock());
+  const [off] = usePersisted<Record<string, boolean>>(KEYS.bonusOff, {});
   const [, setFixed] = usePersisted<Record<string, boolean>>(KEYS.fixed, {});
   const [, setAttempts] = usePersisted<Attempt[]>(KEYS.attempts, []);
   const allReady = planReady && packReady && lReady && pReady;
@@ -55,11 +50,6 @@ export default function DayPractice() {
 
   const day = plan.days.find((d) => d.date === date);
   const bonus = bonusFor(date, plan.days, doneTasks, links, pack, practice, todayIST(), off);
-  const unlinkBonus = (items: { id: string; from: string }[]) => {
-    if (locked) { toast(LOCK_MESSAGE, "warn"); return; }
-    setOff((p) => ({ ...p, ...Object.fromEntries(items.map((x) => [bonusQKey(x.from, x.id), true])) }));
-    toast(`${items.length} bonus question${items.length === 1 ? "" : "s"} unlinked from this day`);
-  };
   const old = seen && seen.date === date ? seen.done : null;
   const allBonusQs = bonus.qs.map((b) => ({ ...b, q: byId.get(b.id)! })).filter((b) => b.q);
   const bonusQs = allBonusQs.filter((b) => !(old && !showDone && old.has(b.id)));
@@ -130,11 +120,9 @@ export default function DayPractice() {
       ))}
       {bonusQs.length > 0 && (
         <>
-          <h2 className="pl-bonus-h" style={{ marginTop: 24, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>Bonus <span className="small muted">carried over from {bonus.from.map(fmtDate).join(", ")}. Answer them all to finish this day.</span>
-            <button className="btn soft right" disabled={locked} title={locked ? "Locked after 9 AM" : "Remove every bonus question from this day"} onClick={() => unlinkBonus(bonus.qs)}><UnlinkIcon /> Unlink all</button></h2>
+          <h2 className="pl-bonus-h" style={{ marginTop: 24, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>Bonus <span className="small muted">carried over from {bonus.from.map(fmtDate).join(", ")}. Answer them all to finish this day.</span></h2>
           {bonusQs.map(({ q, from }, i) => (
-            <div key={q.id} className="bo-qwrap">
-              <div className="bo-qbar"><button className="btn soft bo-qbtn" disabled={locked} title={locked ? "Locked after 9 AM" : "Remove this question from this day"} aria-label="Unlink this bonus question" onClick={() => unlinkBonus([{ id: q.id, from }])}><UnlinkIcon /> Unlink</button></div>
+            <div key={q.id}>
             <QuestionCard q={q} index={i + 1} showTopic
               onResult={(ok) => {
                 setPractice((p) => ({ ...p, [q.id]: { correct: ok, at: Date.now(), topic: q.topic } }));
