@@ -41,9 +41,10 @@ export function bonusFor(date: string, days: Day[], done: Record<string, boolean
   return out;
 }
 
-/** dayFinished, plus: bonus questions carried onto this day must be answered too. Without them the day is not fully solved. */
+/** dayFinished, plus: bonus tasks and questions carried onto this day must be done too. Without them the day is not fully solved. */
 export function dayWon(day: Day | undefined, days: Day[], done: Record<string, boolean>, links: Links, pack: PackData, practice: Record<string, { at?: number } | undefined>, off: Record<string, boolean> = {}): boolean {
   if (!day) return false;
   if (!dayFinished(day, done, links[day.date], pack, practice)) return false;
-  return bonusFor(day.date, days, done, links, pack, practice, todayIST(), off).qs.every((b) => practice[b.id]);
+  const b = bonusFor(day.date, days, done, links, pack, practice, todayIST(), off);
+  return b.tasks.length === 0 && b.qs.every((x) => practice[x.id]);
 }

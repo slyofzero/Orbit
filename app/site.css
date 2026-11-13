@@ -1425,3 +1425,8 @@ ul.rich-list { list-style-type: disc; } ol.rich-list { list-style-type: decimal;
 .bo-qbar { display: flex; justify-content: flex-end; margin: 14px 0 -6px; }
 .bo-qbtn { display: inline-flex; gap: 6px; align-items: center; font-size: 0.8rem; padding: 6px 12px; }
 .bo-txt { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; text-align: left; }
+.dl { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; margin-left: 8px; vertical-align: middle; border-radius: 50%; border: 1.5px solid var(--line); background: var(--sheet); color: var(--green); cursor: help; padding: 0; }
+.dl.is-locked { color: var(--red); }
+.dl:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.dl-pop { position: fixed; z-index: 1000; width: 300px; padding: 12px 14px; border-radius: 12px; background: var(--sheet); color: var(--ink); border: 1.5px solid var(--line); box-shadow: 0 10px 30px rgba(0,0,0,.3); font-size: 0.85rem; line-height: 1.4; pointer-events: none; }
+.dl-pop p { margin: 4px 0 0; color: var(--ink-2); }

@@ -13,7 +13,7 @@ export const UnlinkIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18.84 12.25l1.72-1.71a5 5 0 0 0-7.07-7.07l-1.72 1.71M5.17 11.75l-1.71 1.71a5 5 0 0 0 7.07 7.07l1.71-1.71M8 2v3M2 8h3M16 22v-3M22 16h-3" /></svg>
 );
 
-// Pending work carried over from earlier days, shown as an extra on this day. Bonus questions must be answered for the day to count as solved (see dayWon in lib/bonus.ts); bonus tasks do not block it.
+// Pending work carried over from earlier days, shown as an extra on this day. Bonus tasks and questions must all be done for the day to count as solved (see dayWon in lib/bonus.ts).
 // Either kind can be unlinked from this day (stored in KEYS.bonusOff). Today's bonus can't be unlinked after 9 AM, like the rest of today's plan.
 export default function BonusBlock({ date }: { date: string }) {
   const { plan } = usePlan();

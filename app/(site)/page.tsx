@@ -1,4 +1,5 @@
 "use client";
+import DayLock from "@/components/DayLock";
 import { MainBar, bonusLine } from "@/components/MainBar";
 import { dayWon, bonusFor } from "@/lib/bonus";
 import BonusBlock from "@/components/BonusBlock";
@@ -192,7 +193,7 @@ export default function Dashboard() {
 
         <section className="agenda d-agenda" aria-live="polite" style={stag()}>
           <div className="d-agenda-head">
-            <div className="when">{selected === today ? "Today" : selected === addDays(today, 1) ? "Tomorrow" : fmtLong(selected)}</div>
+            <div className="when">{selected === today ? "Today" : selected === addDays(today, 1) ? "Tomorrow" : fmtLong(selected)}<DayLock date={selected} /></div>
             <span className="row" style={{ gap: 8 }}>
               {day && <CopyDayPrompt day={day} icon />}
               <Link className="btn soft" href="/planner">Go to planner</Link>

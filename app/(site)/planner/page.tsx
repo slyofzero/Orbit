@@ -1,4 +1,5 @@
 "use client";
+import DayLock from "@/components/DayLock";
 import { MainBar, bonusLine } from "@/components/MainBar";
 import { dayWon, bonusFor } from "@/lib/bonus";
 import { keepLockedLinks } from "@/lib/lock";
@@ -153,7 +154,7 @@ function PlannerInner() {
         <div className="pl-top">
           <span className="pl-date"><b>{Number(date.slice(8))}</b><small>{WEEKDAY_NAMES[weekday(date)]}</small></span>
           <div>
-            <h2>{labelFor(date)}</h2>
+            <h2>{labelFor(date)}<DayLock date={date} /></h2>
             <span className="muted small">{fmtLong(date)}</span>
           </div>
           {d && <span className="pl-side"><span className={`pill k-${d.kind}`}>{KIND_LABEL[d.kind]}</span><CopyDayPrompt day={d} icon /></span>}

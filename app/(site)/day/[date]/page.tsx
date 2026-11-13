@@ -42,7 +42,8 @@ export default function DayPractice() {
   const [askDone, setAskDone] = useState(false); // every linked question already answered: ask before showing them
   useEffect(() => {
     if (allReady && seen?.date !== date) {
-      const done = new Set(ids.filter((id) => practice[id]));
+      const bonusNow = bonusFor(date, plan.days, doneTasks, links, pack, practice, todayIST(), off).qs.map((x) => x.id);
+      const done = new Set([...ids, ...bonusNow].filter((id) => practice[id])); // own and bonus questions already answered are tucked away alike
       setSeen({ date, done }); setShowDone(false);
       // the bonus questions carried onto this day belong to it, so the day is only "solved" when they are answered too
       const bonusLeft = bonusFor(date, plan.days, doneTasks, links, pack, practice, todayIST(), off).qs.some((x) => !practice[x.id]);
@@ -59,14 +60,15 @@ export default function DayPractice() {
     setOff((p) => ({ ...p, ...Object.fromEntries(items.map((x) => [bonusQKey(x.from, x.id), true])) }));
     toast(`${items.length} bonus question${items.length === 1 ? "" : "s"} unlinked from this day`);
   };
-  const bonusQs = bonus.qs.map((b) => ({ ...b, q: byId.get(b.id)! })).filter((b) => b.q);
+  const old = seen && seen.date === date ? seen.done : null;
+  const allBonusQs = bonus.qs.map((b) => ({ ...b, q: byId.get(b.id)! })).filter((b) => b.q);
+  const bonusQs = allBonusQs.filter((b) => !(old && !showDone && old.has(b.id)));
   const qs = ids.map((id) => byId.get(id)!).filter(Boolean);
   const got = ids.filter((id) => practice[id]);
   const right = ids.filter((id) => practice[id]?.correct).length;
   const mock = link?.mock ? pack.mockTests.find((m) => m.id === link.mock) : undefined;
 
-  const old = seen && seen.date === date ? seen.done : null;
-  const nDone = old ? ids.filter((id) => old.has(id)).length : 0;
+  const nDone = old ? [...ids, ...allBonusQs.map((b) => b.id)].filter((id) => old.has(id)).length : 0;
   const shown = qs.map((q, i) => ({ q, n: i + 1 })).filter(({ q }) => !(old && !showDone && old.has(q.id)));
 
   const startMock = () => {
