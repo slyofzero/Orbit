@@ -11,6 +11,7 @@ import { difficultyOf } from "@/lib/questionFilter";
 import { editPrompt, pictureList } from "@/lib/editPrompt";
 import { copyPicture, downloadPicture } from "@/lib/imageClip";
 import { CODE_LANGUAGES, LANGUAGE_LABEL } from "@/lib/codeLanguages";
+import RichEditor from "@/components/RichEditor";
 import CopyIcon from "@/components/CopyIcon";
 
 type Field = "text" | "explanation" | `opt${number}`;
@@ -185,7 +186,8 @@ export default function QuestionEditor({ profile, pack, loc, preset, onClose, on
             <label>Marks<select value={marks} onChange={(e) => setMarks(Number(e.target.value) as 1 | 2)}><option value={1}>1</option><option value={2}>2</option></select></label>
           </div>
           <label>Question <span className="small muted">(LaTeX between $…$, pictures with the button below)</span>
-            <textarea className="pk-ta" rows={5} value={text} onFocus={() => (last.current = "text")} onChange={(e) => setText(e.target.value)} spellCheck={false} /></label>
+            </label>
+          <RichEditor label="Question" rows={5} value={text} onFocus={() => (last.current = "text")} onChange={setText} />
           {text.trim() && <div className="pk-prev"><Rich text={text} /></div>}
 
           {type === "code" ? (
@@ -233,7 +235,8 @@ export default function QuestionEditor({ profile, pack, loc, preset, onClose, on
             </div>
           )}
 
-          <label>Explanation<textarea className="pk-ta" rows={3} value={explanation} onFocus={() => (last.current = "explanation")} onChange={(e) => setExplanation(e.target.value)} spellCheck={false} /></label>
+          <label>Explanation</label>
+          <RichEditor label="Explanation" rows={3} value={explanation} onFocus={() => (last.current = "explanation")} onChange={setExplanation} />
           <label>Difficulty
             <select className="pk-in" value={difficulty} onChange={(e) => setDifficulty(e.target.value)}>
               <option value="">Pick one…</option>

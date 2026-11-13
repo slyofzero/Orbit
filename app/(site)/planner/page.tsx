@@ -1,4 +1,6 @@
 "use client";
+import { MainBar, bonusLine } from "@/components/MainBar";
+import { dayWon, bonusFor } from "@/lib/bonus";
 import { keepLockedLinks } from "@/lib/lock";
 import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
@@ -32,6 +34,10 @@ function DayBody({ d, done, setDone, qs }: { d: Day; done: Done; setDone: (u: (p
   const [prac] = usePersisted<Record<string, PracticeRec>>(KEYS.practice, {});
   const link = links[d.date];
   const lq = liveQuestionIds(link, pack).ids;
+  const { days: ALL } = usePlan();
+  const [doneAll] = usePersisted<Record<string, boolean>>(KEYS.done, {});
+  const bq = bonusFor(d.date, ALL, doneAll, links, pack, prac, todayIST()).qs;
+  const mainDone = linkedDone(link, pack, prac) && bq.every((b) => prac[b.id]);
   const lmock = link?.mock ? pack.mockTests.find((m) => m.id === link.mock) : undefined;
   const complete = d.tasks.every((_, i) => done[`${d.date}:${i}`]);
   const tick = (i: number, checked: boolean, el: HTMLInputElement) => {
@@ -50,14 +56,15 @@ function DayBody({ d, done, setDone, qs }: { d: Day; done: Done; setDone: (u: (p
         </label>
       ))}
       {(lq.length > 0 || lmock) && (
-        <div className={`pl-main ${linkedDone(link, pack, prac) ? "is-done" : ""}`}>
-          <b className="pl-main-h">{lq.length ? `${linkedDone(link, pack, prac) ? "Done: " : "Main event: "}your questions for this day` : "Main event: the mock for this day"}</b>
+        <div className={`pl-main ${mainDone ? "is-done" : ""}`}>
+          <b className="pl-main-h">{lq.length ? `${mainDone ? "Done: " : "Main event: "}your questions for this day` : "Main event: the mock for this day"}</b>
           <div className="small">
             {lq.length > 0 && `${lq.filter((id) => prac[id]).length} of ${lq.length} answered, ${lq.filter((id) => prac[id]?.correct).length} correct`}
             {lmock && `${lq.length ? " · " : ""}Mock: ${lmock.name}`}
           </div>
+          {bq.length > 0 && <div className="small pl-bonus-line">{bonusLine(bq, prac)}</div>}
           {link?.note && <div className="small pl-main-note"><Rich text={link.note} /></div>}
-          {lq.length > 0 && <div className="bar"><div style={{ width: `${(lq.filter((id) => prac[id]).length / lq.length) * 100}%` }} /></div>}
+          <MainBar own={lq} bonus={bq} practice={prac} />
           <div className="row" style={{ marginTop: 8 }}><Link className="btn pl-main-go" href={`/day/${d.date}`}>{lq.length ? "Practise these questions" : "Open this day"}</Link><button className="btn soft" onClick={() => setLinks((p) => { const n = { ...p }; delete n[d.date]; return n; })}>Unlink this day</button></div>
         </div>
       )}
@@ -72,7 +79,7 @@ function DayBody({ d, done, setDone, qs }: { d: Day; done: Done; setDone: (u: (p
         {d.topics.filter((t) => TOPIC_BY_ID[t]).slice(0, 4).map((t) => (
           <Link key={t} href={`/practice/${t}`} className={`pill ${TOPIC_BY_ID[t]?.status}`}>{TOPIC_BY_ID[t]?.name.split("(")[0].trim()}</Link>
         ))}
-        {d.kind === "mock" && <Link className="btn primary" href="/mocks">Start the mock</Link>}
+        {d.kind === "mock" && <Link className="btn primary" href="/practice/mocks">Start the mock</Link>}
         <button className="btn soft right" onClick={() => {
           setDone((p) => { const n = { ...p }; d.tasks.forEach((_, i) => (n[`${d.date}:${i}`] = !complete)); return n; });
         }}>
@@ -134,7 +141,7 @@ function PlannerInner() {
   const phaseOpen = (ph: string, current: boolean) => (openPhase ? !!openPhase[ph] : current);
 
   // the card that gets the highlight: today, or tomorrow once today's tasks and linked questions are all done
-  const focus = dayFinished(DAYS.find((x) => x.date === today), done, links[today], pack, practice) ? addDays(today, 1) : today;
+  const focus = dayWon(DAYS.find((x) => x.date === today), DAYS, done, links, pack, practice) ? addDays(today, 1) : today;
 
   const DayCard = ({ date }: { date: string }) => {
     const d = DAYS.find((x) => x.date === date);
@@ -168,7 +175,7 @@ function PlannerInner() {
     const isOpen = openDay[d.date] ?? false;
     const c = complete(d);
     const miss = d.date < today && !c && d.kind !== "exam";
-    const win = dayFinished(d, done, links[d.date], pack, practice); // every task ticked and every linked question answered
+    const win = dayWon(d, DAYS, done, links, pack, practice); // every task ticked and every linked question answered
     return (
       <div className={`drow ${win ? "win" : ""} ${d.date === today ? "today" : ""} ${d.date < today ? "past" : ""} ${miss ? "miss" : ""} ${isOpen ? "open" : ""}`}>
         <button className="drow-head" onClick={() => setOpenDay((p) => ({ ...p, [d.date]: !isOpen }))} aria-expanded={isOpen}>
@@ -242,7 +249,7 @@ function PlannerInner() {
                   <span className="muted small">{fmtDate(ds[0].date)} to {fmtDate(ds[ds.length - 1].date)}</span>
                   <span className="pl-seg" aria-label="Days won and missed">
                     {ds.filter((d) => d.kind !== "exam").map((d) => {
-                      const won = dayFinished(d, done, links[d.date], pack, practice);
+                      const won = dayWon(d, DAYS, done, links, pack, practice);
                       const lost = d.date < today && !complete(d);
                       const part = d.tasks.length ? nDone(d) / d.tasks.length : 0;
                       return <i key={d.date} className={won ? "win" : lost ? "miss" : part > 0 ? "part" : ""} style={{ flexGrow: Math.max(d.tasks.length, 1), ["--p" as string]: `${part * 100}%` }} title={`${fmtDate(d.date)}: ${won ? "done" : lost ? "missed" : "pending"}`} />;

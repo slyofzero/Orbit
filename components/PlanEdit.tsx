@@ -1,4 +1,6 @@
 "use client";
+import QPreview from "@/components/QPreview";
+import { plainText } from "@/lib/richText";
 import { useState } from "react";
 import { KIND_LABEL, WEEKDAY_NAMES, fmtDate, todayIST, weekday } from "@/lib/plan";
 import { KEYS, usePack, usePersisted, usePlan } from "@/lib/store";
@@ -181,7 +183,7 @@ export default function PlanEdit() {
                       return (
                         <div key={id} className="pe-task">
                           <span className="pe-qid">{id}</span>
-                          <span className="small muted pe-qtext">{q ? `${topicById[q.topic]?.name ?? q.topic}: ${q.text.replace(/!\[[^\]]*\]\([^)]*\)/g, "[picture]").replace(/\s+/g, " ").slice(0, 80)}` : "No longer in your pack"}</span>
+                          <span className="small muted pe-qtext">{q ? <>{topicById[q.topic]?.name ?? q.topic}: <QPreview text={q.text} max={80} /></> : "No longer in your pack"}</span>
                           <button className="btn soft ic" data-tip="Unlink" onClick={() => setDraft({ ...draft, linkQ: draft.linkQ.filter((x) => x !== id) })} aria-label={`Unlink ${id}`}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button>
                         </div>
                       );
@@ -189,11 +191,11 @@ export default function PlanEdit() {
                     <input className="pe-in" value={find} onChange={(e) => setFind(e.target.value)} placeholder="Find a question to add: type part of its id, topic or text" aria-label="Find a question to add" />
                     {find.trim() && (() => {
                       const n = find.trim().toLowerCase();
-                      const hits = pack.questions.filter((q) => !draft.linkQ.includes(q.id) && (q.id.toLowerCase().includes(n) || q.topic.toLowerCase().includes(n) || q.text.toLowerCase().includes(n))).slice(0, 8);
+                      const hits = pack.questions.filter((q) => !draft.linkQ.includes(q.id) && (q.id.toLowerCase().includes(n) || q.topic.toLowerCase().includes(n) || plainText(q.text).toLowerCase().includes(n))).slice(0, 8);
                       return hits.length === 0 ? <span className="small muted">No match in your practice questions.</span> : hits.map((q) => (
                         <div key={q.id} className="pe-task">
                           <span className="pe-qid">{q.id}</span>
-                          <span className="small muted pe-qtext">{q.text.replace(/!\[[^\]]*\]\([^)]*\)/g, "[picture]").replace(/\s+/g, " ").slice(0, 80)}</span>
+                          <span className="small muted pe-qtext"><QPreview text={q.text} max={80} /></span>
                           <button className="btn soft" onClick={() => setDraft({ ...draft, linkQ: [...draft.linkQ, q.id] })}>Add</button>
                         </div>
                       ));

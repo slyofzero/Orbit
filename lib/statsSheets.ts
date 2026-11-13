@@ -1,5 +1,6 @@
 import { bankSize } from "./packs";
 // Turns the statistics into the sheets of the Excel export.
+import { plainText } from "@/lib/richText";
 import { PackData } from "./packs";
 import { Ev, Filters, activity, breakdown, insights, mockScores, tagStats } from "./stats";
 import { Attempt } from "./types";
@@ -75,7 +76,7 @@ export function statsSheets(args: {
     name: "Questions", widths: [22, 20, 24, 26, 24, 7, 7, 11, 8, 8, 9, 11, 12, 18, 60],
     formats: [undefined, undefined, undefined, undefined, undefined, undefined, "int", "int", "int", "int", "int", "pct", "dec", undefined, undefined],
     rows: [["Question id", "Bank", "Subject", "Topic", "Tags", "Type", "Marks", "Encounters", "Right", "Wrong", "Skipped", "Accuracy", "Avg seconds", "Last seen", "Question text"],
-      ...b.questions.map((q) => [q.id, q.mock ? `Mock: ${q.mock}` : "Practice", subName(q.q?.subject ?? pack.topics.find((t) => t.id === q.parent)?.subject ?? "other"), topicName(q.parent), q.tags.join(", "), q.q?.type ?? "", q.q?.marks ?? null, q.m.n, q.m.right, q.m.wrong, q.m.skip, r4(q.m.acc), sec(q.m.avgMs), iso(q.m.last), (q.q?.text ?? "").replace(/\s+/g, " ").slice(0, 300)])],
+      ...b.questions.map((q) => [q.id, q.mock ? `Mock: ${q.mock}` : "Practice", subName(q.q?.subject ?? pack.topics.find((t) => t.id === q.parent)?.subject ?? "other"), topicName(q.parent), q.tags.join(", "), q.q?.type ?? "", q.q?.marks ?? null, q.m.n, q.m.right, q.m.wrong, q.m.skip, r4(q.m.acc), sec(q.m.avgMs), iso(q.m.last), plainText(q.q?.text ?? "").replace(/\s+/g, " ").slice(0, 300)])],
   };
 
   const tags: Sheet = {
@@ -101,7 +102,7 @@ export function statsSheets(args: {
     name: "Question detail", widths: [22, 20, 22, 26, 10, 7, 7, 8, 9, 8, 8, 9, 11, 11, 9, 11, 11, 10, 18, 11, 18, 9, 10, 10, 12, 60],
     formats: [undefined, undefined, undefined, undefined, undefined, undefined, "int", "int", "int", "int", "int", "int", undefined, undefined, "int", "int", "dec", "dec", undefined, "int", undefined, undefined, "int", undefined, "dec", undefined],
     rows: [["Question id", "Bank", "Subject", "Topic", "Difficulty", "Type", "Marks", "Views", "Answered", "Right", "Wrong", "Skipped", "First try", "Latest answer", "Right in a row", "Tries to first right", "Avg sec (right)", "Avg sec (wrong)", "Level", "Days since seen", "Next review", "Due now", "Overdue days", "Repeated wrong option", "Net marks", "Question text"],
-      ...details.map((d) => [d.id, d.bank, subName(d.subject), d.topicName, d.difficulty, d.type, d.marks, d.views, d.answered, d.right, d.wrong, d.skipped, d.firstTry, d.last, d.streak, d.triesToFirstRight, sec(d.avgSecRight === null ? null : d.avgSecRight * 1000), sec(d.avgSecWrong === null ? null : d.avgSecWrong * 1000), MASTERY_LABEL[d.mastery], d.daysSince, iso(d.nextReview), d.due ? "yes" : "", d.daysOverdue || null, d.trapCount >= 2 ? `${d.trap} (${d.trapCount}×)` : "", d.net, d.text.replace(/\s+/g, " ").slice(0, 200)])],
+      ...details.map((d) => [d.id, d.bank, subName(d.subject), d.topicName, d.difficulty, d.type, d.marks, d.views, d.answered, d.right, d.wrong, d.skipped, d.firstTry, d.last, d.streak, d.triesToFirstRight, sec(d.avgSecRight === null ? null : d.avgSecRight * 1000), sec(d.avgSecWrong === null ? null : d.avgSecWrong * 1000), MASTERY_LABEL[d.mastery], d.daysSince, iso(d.nextReview), d.due ? "yes" : "", d.daysOverdue || null, d.trapCount >= 2 ? `${d.trap} (${d.trapCount}×)` : "", d.net, plainText(d.text).replace(/\s+/g, " ").slice(0, 200)])],
   };
 
   const mastery: Sheet = {
@@ -117,7 +118,7 @@ export function statsSheets(args: {
     name: "Revision queue", widths: [22, 28, 14, 12, 12, 12, 18, 60],
     formats: [undefined, undefined, undefined, "int", "int", "int", undefined, undefined],
     rows: [["Question id", "Topic", "Level", "Overdue days", "Right in a row", "Wrong so far", "Was due", "Question text"],
-      ...revisionQueue(details).map((d) => [d.id, d.topicName, MASTERY_LABEL[d.mastery], d.daysOverdue, d.streak, d.wrong, iso(d.nextReview), d.text.replace(/\s+/g, " ").slice(0, 200)])],
+      ...revisionQueue(details).map((d) => [d.id, d.topicName, MASTERY_LABEL[d.mastery], d.daysOverdue, d.streak, d.wrong, iso(d.nextReview), plainText(d.text).replace(/\s+/g, " ").slice(0, 200)])],
   };
 
   const grp = (label: string, rows: ReturnType<typeof byType>) => rows.map((g) => [label, g.key, g.m.n, g.m.right, g.m.wrong, g.m.skip, r4(g.m.acc), r4(g.m.skipRate), sec(g.m.avgMs), g.net]);

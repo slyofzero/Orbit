@@ -1,4 +1,6 @@
 "use client";
+import QPreview from "@/components/QPreview";
+import { plainText } from "@/lib/richText";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import CodeLangPill from "@/components/CodeLangPill";
@@ -11,7 +13,7 @@ import { LANGUAGE_LABEL, type CodeLanguage } from "@/lib/codeLanguages";
 import { PracticeRec } from "@/lib/types";
 import PageLoading from "@/components/PageLoading";
 
-const firstLine = (t: string) => t.replace(/!\[[^\]\n]*\]\([^)\s]+\)/g, "").replace(/```[\s\S]*?```/g, " ").replace(/[`$]/g, "").split("\n").map((l) => l.trim()).find(Boolean)?.slice(0, 110) ?? "Programming question";
+const firstLine = (t: string) => t.replace(/!\[[^\]\n]*\]\([^)\s]+\)/g, "").replace(/```[\s\S]*?```/g, " ").split("\n").map((l) => l.trim()).find(Boolean)?.slice(0, 110) ?? "Programming question";
 
 export default function Programming() {
   const { pack, topicById, subjects, ready: packReady, custom } = usePack();
@@ -31,7 +33,7 @@ export default function Programming() {
     if (status === "solved" && !done) return false;
     if (status === "todo" && done) return false;
     const n = find.trim().toLowerCase();
-    return !n || q.text.toLowerCase().includes(n) || q.id.toLowerCase().includes(n) || (topicById[q.topic]?.name ?? "").toLowerCase().includes(n) || (q.tags ?? []).some((t) => t.includes(n));
+    return !n || plainText(q.text).toLowerCase().includes(n) || q.id.toLowerCase().includes(n) || (topicById[q.topic]?.name ?? "").toLowerCase().includes(n) || (q.tags ?? []).some((t) => t.includes(n));
   });
   const solved = all.filter((q) => practice[q.id]?.correct).length;
 
@@ -73,7 +75,7 @@ export default function Programming() {
                 <Link key={q.id} href={`/practice/programming/${encodeURIComponent(q.id)}`} className="pg-item pg-link">
                   <span className="pg-head">
                     <span className={`pg-state ${rec?.correct ? "ok" : rec ? "tried" : ""}`} title={rec?.correct ? "Solved" : rec ? "Tried, not solved" : "Not tried"}>{rec?.correct ? "✓" : rec ? "•" : ""}</span>
-                    <span className="nm">{firstLine(q.text)}</span>
+                    <span className="nm"><QPreview text={firstLine(q.text)} max={110} /></span>
                     <CodeLangPill language={q.code!.language} />
                     {q.code!.setup && <span className="pill">needs setup</span>}
                     <span className="small muted pg-meta">{q.marks} mark{q.marks > 1 ? "s" : ""} · {(() => { const sid = q.subject ?? topicById[q.topic]?.subject ?? ""; return subjects[sid] ?? sid; })()}{topicById[q.topic] ? `: ${topicById[q.topic].name}` : ""}</span>

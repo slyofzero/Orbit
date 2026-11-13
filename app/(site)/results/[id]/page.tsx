@@ -18,7 +18,7 @@ export default function Results() {
   const a = attempts.find((x) => x.id === id);
 
   if (!ready) return <PageLoading />;
-  if (!a) return <p>Attempt not found. <Link href="/mocks">Back to mocks</Link></p>;
+  if (!a) return <p>Attempt not found. <Link href="/practice/mocks">Back to mocks</Link></p>;
   if (!a.submittedAt) return <p>This attempt is not submitted yet. <Link href={`/exam/${a.id}`}>Resume it</Link></p>;
 
   const rows = a.questions.map((q, i) => {
@@ -47,7 +47,7 @@ export default function Results() {
 
   return (
     <>
-      <p className="small"><Link href="/mocks">← Mock tests</Link></p>
+      <p className="small"><Link href="/practice/mocks">← Mock tests</Link></p>
       <h1>{a.title}</h1>
       {a.failed && (
         <div className="callout warn">

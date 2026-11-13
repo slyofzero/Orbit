@@ -1,4 +1,6 @@
 "use client";
+import { MainBar, bonusLine } from "@/components/MainBar";
+import { dayWon, bonusFor } from "@/lib/bonus";
 import BonusBlock from "@/components/BonusBlock";
 import Link from "next/link";
 import { CSSProperties, useEffect, useRef, useState } from "react";
@@ -53,7 +55,7 @@ export default function Dashboard() {
     const d = DAYS.find((x) => x.date === date);
     if (!d || d.kind === "exam") return "plain" as const;
     // green only for a successful day: every task ticked and every linked question answered. Ticked tasks with questions still pending is neither green nor red.
-    if (dayFinished(d, done, links[date], pack, practice)) return "done" as const;
+    if (dayWon(d, DAYS, done, links, pack, practice)) return "done" as const;
     return isComplete(date) ? ("plain" as const) : ("miss" as const);
   };
 
@@ -94,7 +96,7 @@ export default function Dashboard() {
   const runwayStart = today < PLAN_START ? today : PLAN_START;
 
   // the agenda follows today, or tomorrow once today's tasks and linked questions are all done; picking a day yourself overrides it
-  const todayFinished = dayFinished(DAYS.find((d) => d.date === today), done, links[today], pack, practice);
+  const todayFinished = dayWon(DAYS.find((d) => d.date === today), DAYS, done, links, pack, practice);
   const focus = todayFinished && DAYS.some((d) => d.date === addDays(today, 1)) ? addDays(today, 1) : today;
   const selected = picked ?? focus;
   const setSelected = (d: string) => setPicked(d);
@@ -104,6 +106,8 @@ export default function Dashboard() {
   const upcoming = DAYS.filter((d) => d.date > today && d.date !== selected).slice(0, 4);
   const link = day ? links[day.date] : undefined;
   const lq = liveQuestionIds(link, pack).ids;
+  const bq = day ? bonusFor(day.date, DAYS, done, links, pack, practice, today).qs : [];
+  const mainDone = linkedDone(link, pack, practice) && bq.every((b) => practice[b.id]);
   const lmock = link?.mock ? pack.mockTests.find((m) => m.id === link.mock) : undefined;
   const targetDone = day ? Math.min(answeredOn(selected), day.targetQs) : 0;
 
@@ -214,14 +218,15 @@ export default function Dashboard() {
                 );
               })}
               {(lq.length > 0 || lmock) && (
-                <div className={`pl-main ${linkedDone(link, pack, practice) ? "is-done" : ""}`}>
-                  <b className="pl-main-h">{lq.length ? `${linkedDone(link, pack, practice) ? "Done: " : "Main event: "}your questions for this day` : "Main event: the mock for this day"}</b>
+                <div className={`pl-main ${mainDone ? "is-done" : ""}`}>
+                  <b className="pl-main-h">{lq.length ? `${mainDone ? "Done: " : "Main event: "}your questions for this day` : "Main event: the mock for this day"}</b>
                   <div className="small">
                     {lq.length > 0 && `${lq.filter((id) => practice[id]).length} of ${lq.length} answered, ${lq.filter((id) => practice[id]?.correct).length} correct`}
                     {lmock && `${lq.length ? " · " : ""}Mock: ${lmock.name}`}
                   </div>
+                  {bq.length > 0 && <div className="small pl-bonus-line">{bonusLine(bq, practice)}</div>}
                   {link?.note && <div className="small pl-main-note"><Rich text={link.note} /></div>}
-                  {lq.length > 0 && <div className="bar"><div style={{ width: `${(lq.filter((id) => practice[id]).length / lq.length) * 100}%` }} /></div>}
+                  <MainBar own={lq} bonus={bq} practice={practice} />
                   <div className="row" style={{ marginTop: 8 }}><Link className="btn pl-main-go" href={`/day/${day.date}`}>{lq.length ? "Practise these questions" : "Open this day"}</Link></div>
                 </div>
               )}
@@ -236,7 +241,7 @@ export default function Dashboard() {
                 {day.topics.filter((t) => TOPICS.some((x) => x.id === t)).slice(0, 3).map((t) => (
                   <Link key={t} className="btn soft" href={`/practice/${t}`}>Practise {TOPICS.find((x) => x.id === t)?.name.split("(")[0].trim()}</Link>
                 ))}
-                {day.kind === "mock" && <Link className="btn primary" href="/mocks">Start the mock</Link>}
+                {day.kind === "mock" && <Link className="btn primary" href="/practice/mocks">Start the mock</Link>}
               </div>
             </>
           ) : (
@@ -283,7 +288,7 @@ export default function Dashboard() {
       <section className="panel d-third" style={stag()}>
         <h2>Mock scores</h2>
         {finished.length === 0 ? (
-          <p className="muted">No mocks yet. <Link href="/mocks">Take a diagnostic mock</Link> to see where you start.</p>
+          <p className="muted">No mocks yet. <Link href="/practice/mocks">Take a diagnostic mock</Link> to see where you start.</p>
         ) : (
           <table className="t">
             <tbody>

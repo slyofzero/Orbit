@@ -1,4 +1,5 @@
 "use client";
+import QPreview from "@/components/QPreview";
 import { bankSize } from "@/lib/packs";
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -196,7 +197,7 @@ export default function Explorer({ evs, pack, initialPath = [] }: { evs: Ev[]; p
           <thead><tr>{head("name", level === 2 ? "Question" : "Name")}{head("n", "Tries")}{head("acc", "Accuracy")}<th>Right / wrong / skip</th>{head("skipRate", "Skips")}{head("avgMs", "Avg time")}{level < 2 && head("coverage", "Coverage")}{head("trend", "Trend")}</tr></thead>
           <tbody>{rows.map((n) => (
             <tr key={n.id} className="st-row" onClick={() => open(n)} onMouseEnter={() => setHover(n.id)} onMouseLeave={() => setHover(null)}>
-              <td><b>{n.kind === "question" ? plain(n.name, 70) : n.name}</b></td><td>{n.m.n}</td>
+              <td><b>{n.kind === "question" ? <QPreview text={n.name} max={70} /> : n.name}</b></td><td>{n.m.n}</td>
               <td><span className="st-acc"><i style={{ width: `${(n.m.acc ?? 0) * 100}%` }} />{fmtPct(n.m.acc)}</span></td>
               <td><Bar m={n.m} /></td><td>{n.m.n ? fmtPct(n.m.skipRate) : "n/a"}</td><td>{fmtMs(n.m.avgMs)}</td>
               {level < 2 && <td>{Math.round(n.m.coverage * 100)}%</td>}<td>{trendText(n.m.trend)}</td>

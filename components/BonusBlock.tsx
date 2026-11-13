@@ -7,7 +7,7 @@ import { fmtDate, todayIST } from "@/lib/plan";
 import { KEYS, usePack, usePersisted, usePlan } from "@/lib/store";
 import { PracticeRec } from "@/lib/types";
 
-// Pending work carried over from earlier days, shown as an extra on this day. It never counts towards finishing the day.
+// Pending work carried over from earlier days, shown as an extra on this day. Bonus questions must be answered for the day to count as solved (see dayWon in lib/bonus.ts); bonus tasks do not block it.
 export default function BonusBlock({ date }: { date: string }) {
   const { plan } = usePlan();
   const { pack } = usePack();
@@ -27,7 +27,7 @@ export default function BonusBlock({ date }: { date: string }) {
       ))}
       {b.qs.length > 0 && (
         <div className="row" style={{ marginTop: 6 }}>
-          <span className="small">{b.qs.length} bonus question{b.qs.length === 1 ? "" : "s"}</span>
+          <span className="small">{b.qs.length} bonus question{b.qs.length === 1 ? "" : "s"}{b.qs.some((x) => practice[x.id]) ? `, ${b.qs.filter((x) => practice[x.id]).length} solved` : ""}</span>
           <Link className="btn soft" href={`/day/${date}`}>Practise them</Link>
         </div>
       )}

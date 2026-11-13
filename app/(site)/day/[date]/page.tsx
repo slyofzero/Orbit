@@ -1,4 +1,5 @@
 "use client";
+import BackToPlanner from "@/components/BackToPlanner";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -37,9 +38,11 @@ export default function DayPractice() {
     if (allReady && seen?.date !== date) {
       const done = new Set(ids.filter((id) => practice[id]));
       setSeen({ date, done }); setShowDone(false);
-      setAskDone(ids.length > 0 && done.size === ids.length);
+      // the bonus questions carried onto this day belong to it, so the day is only "solved" when they are answered too
+      const bonusLeft = bonusFor(date, plan.days, doneTasks, links, pack, practice, todayIST()).qs.some((x) => !practice[x.id]);
+      setAskDone(ids.length > 0 && done.size === ids.length && !bonusLeft);
     }
-  }, [allReady, date, seen, ids, practice]);
+  }, [allReady, date, seen, ids, practice, plan.days, doneTasks, links, pack]);
 
   if (!allReady) return <PageLoading />;
 
@@ -73,13 +76,14 @@ export default function DayPractice() {
         />
       )}
       <CalculatorButton />
-      <p className="small"><Link href="/planner">← Planner</Link></p>
-      <div className="row">
+      <div className="row" style={{ alignItems: "center" }}>
         <h1>{day ? <Rich text={day.title} /> : date}</h1>
+        <div className="right row" style={{ alignItems: "center", gap: 10, flexWrap: "nowrap" }}>
+        <BackToPlanner />
         {nDone > 0 && !askDone && (
           <button
             key={`eye-${date}`}
-            className={`tp-eye right ${showDone ? "on" : ""}`}
+            className={`tp-eye ${showDone ? "on" : ""}`}
             onClick={() => setShowDone((v) => !v)}
             aria-pressed={showDone}
             aria-label={showDone ? "Showing all questions. Hide the ones you already answered" : `${nDone} question${nDone === 1 ? "" : "s"} you already answered ${nDone === 1 ? "is" : "are"} hidden. Show all`}
@@ -92,6 +96,7 @@ export default function DayPractice() {
             </svg>
           </button>
         )}
+        </div>
       </div>
       <p className="muted">{fmtLong(date)}{link?.note ? <>. <Rich text={link.note} /></> : ""}</p>
       {!link && <div className="card muted">No questions are linked to this day. Open Planner, then Link with AI.</div>}
@@ -112,7 +117,7 @@ export default function DayPractice() {
       ))}
       {bonusQs.length > 0 && (
         <>
-          <h2 className="pl-bonus-h" style={{ marginTop: 24 }}>Bonus <span className="small muted">carried over from {bonus.from.map(fmtDate).join(", ")}. These do not count towards finishing this day.</span></h2>
+          <h2 className="pl-bonus-h" style={{ marginTop: 24 }}>Bonus <span className="small muted">carried over from {bonus.from.map(fmtDate).join(", ")}. Answer them all to finish this day.</span></h2>
           {bonusQs.map(({ q }, i) => (
             <QuestionCard key={q.id} q={q} index={i + 1} showTopic
               onResult={(ok) => {

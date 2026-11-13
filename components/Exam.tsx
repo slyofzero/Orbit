@@ -125,7 +125,7 @@ export default function Exam({ id }: { id: string }) {
   }, [attempt, cur]);
 
   if (!ready) return <div className="instr">Loading…</div>;
-  if (!attempt) return <div className="instr"><p>Attempt not found.</p><Link href="/mocks">Back to mock tests</Link></div>;
+  if (!attempt) return <div className="instr"><p>Attempt not found.</p><Link href="/practice/mocks">Back to mock tests</Link></div>;
 
   const total = attempt.questions.length;
   const q = attempt.questions[cur];
@@ -220,7 +220,7 @@ export default function Exam({ id }: { id: string }) {
           <label className="row"><input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} /> I have read and understood the instructions.</label>
           <div className="row" style={{ marginTop: 14 }}>
             <button className="xb blue" disabled={!agree} onClick={begin}>I am ready to begin (enters full screen)</button>
-            <Link href="/mocks">Cancel</Link>
+            <Link href="/practice/mocks">Cancel</Link>
           </div>
         </div>
       </div>

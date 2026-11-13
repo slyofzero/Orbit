@@ -1368,3 +1368,39 @@ html[data-page-loading] .page-enter { filter: blur(9px); opacity: 0.55; pointer-
 .pl-bonus { margin: 12px 0; padding: 12px 14px; border-radius: 14px; border: 1.5px dashed var(--amber, #f59e0b); background: color-mix(in srgb, var(--amber, #f59e0b) 8%, transparent); display: grid; gap: 6px; }
 .pl-bonus-h { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
 .pill.bonus-pill { background: color-mix(in srgb, var(--amber, #f59e0b) 22%, transparent); color: var(--ink); font-size: 0.72rem; }
+
+/* custom radios and checkboxes (no browser defaults anywhere) */
+:where(input[type=radio], input[type=checkbox]) {
+  -webkit-appearance: none; appearance: none; flex: none;
+  width: 20px; height: 20px; margin: 0; padding: 0; vertical-align: middle;
+  border: 2px solid var(--gray); background: transparent center / 14px no-repeat; cursor: pointer;
+  transition: background-color 0.12s, border-color 0.12s, box-shadow 0.12s;
+}
+:where(input[type=radio]) { border-radius: 50%; }
+:where(input[type=checkbox]) { border-radius: 6px; }
+:where(input[type=radio], input[type=checkbox]):hover { border-color: var(--accent); }
+:where(input[type=radio], input[type=checkbox]):focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-soft); border-color: var(--accent); }
+:where(input[type=radio], input[type=checkbox]):checked { border-color: var(--accent); background-color: var(--accent); }
+:where(input[type=checkbox]):checked { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7'/%3E%3C/svg%3E"); }
+:where(input[type=radio]):checked { background-image: radial-gradient(circle, #fff 0 34%, transparent 38%); background-size: 100% 100%; }
+:where(input[type=radio], input[type=checkbox]):disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* rich text editor (question text, explanation) */
+.re { border: 1.5px solid var(--line); border-radius: 10px; background: var(--sheet); margin: 6px 0 12px; }
+.re:focus-within { border-color: var(--accent); }
+.re-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; padding: 5px 6px; border-bottom: 1.5px solid var(--line); background: var(--sheet-2); border-radius: 9px 9px 0 0; }
+.re-b { width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 6px; background: none; color: var(--ink); font: inherit; cursor: pointer; }
+.re-b:hover { background: var(--line); }
+.re-b.on { background: var(--accent); color: #fff; }
+.re-sep { width: 1px; height: 18px; background: var(--line); margin: 0 5px; }
+.re-body { padding: 10px 12px; outline: none; font: 0.95rem/1.45 inherit; color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; }
+.re-body ul, .re-body ol, .rich-list { margin: 4px 0; padding-left: 24px; white-space: normal; }
+.re-body li { white-space: pre-wrap; }
+.re-body a, .rich-a { color: var(--accent); text-decoration: underline; }
+ul.rich-list, ol.rich-list { display: block; margin: 6px 0; padding-left: 24px; list-style-position: outside; }
+ul.rich-list { list-style-type: disc; } ol.rich-list { list-style-type: decimal; }
+.re-pop { position: fixed; z-index: 1000; display: flex; gap: 6px; align-items: center; padding: 8px; background: var(--sheet); border: 1.5px solid var(--line); border-radius: 10px; box-shadow: 0 8px 28px rgba(0,0,0,.25); width: 330px; }
+.re-pop .pk-in { flex: 1; min-width: 0; }
+[data-theme="dark"] :where(input[type=checkbox]):checked { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2304201c' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7'/%3E%3C/svg%3E"); }
+[data-theme="dark"] :where(input[type=radio]):checked { background-image: radial-gradient(circle, #04201c 0 34%, transparent 38%); }
+.qprev .katex { font-size: 1em; }

@@ -1,4 +1,6 @@
 "use client";
+import QPreview from "@/components/QPreview";
+import { plainText } from "@/lib/richText";
 import { toast } from "@/lib/toast";
 import { useEffect, useMemo, useState } from "react";
 import { Loc, PackData, allQuestions } from "@/lib/packs";
@@ -27,7 +29,7 @@ export default function QuestionsPanel({ profile, pack, save, focusId }: Props) 
   const rows = all.filter((l) =>
     (bank === "all" || (bank === "practice" ? l.bank === "practice" : l.mockId === bank.slice(5))) &&
     (!topic || l.q.topic === topic) &&
-    (!n || l.q.id.toLowerCase().includes(n) || l.q.text.toLowerCase().includes(n)));
+    (!n || l.q.id.toLowerCase().includes(n) || plainText(l.q.text).toLowerCase().includes(n)));
   rows.sort((a, b) => Number(b.q.id.toLowerCase() === n) - Number(a.q.id.toLowerCase() === n));
   const topicName = (id: string) => pack.topics.find((t) => t.id === id)?.name ?? id;
 
@@ -68,7 +70,7 @@ export default function QuestionsPanel({ profile, pack, save, focusId }: Props) 
               <td className="muted pk-bank" title={l.bank === "practice" ? "Practice" : `${l.mockName} · ${l.section}`}>{l.bank === "practice" ? "Practice" : `${l.mockName} · ${l.section}`}</td>
               <td>{topicName(l.q.topic)}</td>
               <td className="pk-type">{l.q.type.toUpperCase()} · {l.q.marks}m</td>
-              <td className="pk-text">{plain(l.q.text, 90)}</td>
+              <td className="pk-text"><QPreview text={l.q.text} max={90} /></td>
               <td className="pk-act">
                 {confirm === l.q.id ? (
                   <>Delete? <button className="btn primary" onClick={() => remove(l.q.id)}>Yes</button> <button className="btn soft" onClick={() => setConfirm(null)}>No</button></>

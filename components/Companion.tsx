@@ -1,4 +1,5 @@
 "use client";
+import { dayWon } from "@/lib/bonus";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { QUOTES } from "@/lib/quotes";
@@ -75,7 +76,7 @@ export default function Companion() {
   const today = todayIST();
   const day = DAYS.find((d) => d.date === today);
   // the party is for a day that is really finished: every planner item ticked, and every linked question answered (a day with no links only needs the ticks)
-  const allDone = dayFinished(day, done, links[today], pack, practice);
+  const allDone = dayWon(day, DAYS, done, links, pack, practice);
   const hour = now ? istHour(now) : 12;
   const partyOn = party || partyActive(partyRec, today, now);
   const mood = petMode(hour, buddy.id, partyOn); // "active" | "night" | "sleep" | "party"

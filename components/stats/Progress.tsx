@@ -1,4 +1,5 @@
 "use client";
+import QPreview from "@/components/QPreview";
 import Link from "next/link";
 import { useMemo } from "react";
 import { PackData } from "@/lib/packs";
@@ -90,7 +91,7 @@ export default function Progress({ evs, pack, views, plan, done, links }: {
           <p className="small muted" style={{ marginTop: -6 }}>Most overdue first.</p>
           {queue.length === 0 ? <p className="muted small">Nothing is due. Come back tomorrow, or open something new.</p> : queue.slice(0, 10).map((d) => (
             <Link key={d.id} href={href(d.id, d.topic, d.type)} className="st-qrow">
-              <span className="t">{plain(d.text, 90)}<small className="muted"> {d.topicName}</small></span>
+              <span className="t"><QPreview text={d.text} max={90} /><small className="muted"> {d.topicName}</small></span>
               <span className="tags" />
               <span className="r"><span className="muted small">{MASTERY_LABEL[d.mastery]}{d.daysOverdue > 0 ? `, ${d.daysOverdue}d late` : ""}</span></span>
             </Link>
@@ -102,7 +103,7 @@ export default function Progress({ evs, pack, views, plan, done, links }: {
           <p className="small muted" style={{ marginTop: -6 }}>Questions where one wrong choice keeps winning. That usually means one specific misunderstanding.</p>
           {trapQs.length === 0 ? <p className="muted small">No repeated wrong picks yet. This fills in after you get the same MCQ or MSQ wrong twice.</p> : trapQs.map((d) => (
             <Link key={d.id} href={href(d.id, d.topic, d.type)} className="st-qrow">
-              <span className="t">{plain(d.text, 90)}<small className="muted"> {d.topicName}</small></span>
+              <span className="t"><QPreview text={d.text} max={90} /><small className="muted"> {d.topicName}</small></span>
               <span className="tags" />
               <span className="r"><b>{d.trap}</b> <span className="muted small">{d.trapCount}×</span></span>
             </Link>

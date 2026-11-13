@@ -1,4 +1,5 @@
 "use client";
+import QPreview from "@/components/QPreview";
 import Link from "next/link";
 import { ReactNode, useMemo, useState } from "react";
 import { PackData } from "@/lib/packs";
@@ -13,8 +14,8 @@ function List({ title, hint, rows, right, empty, topicName }: { title: string; h
       <h3>{title}</h3>
       <p className="small muted" style={{ marginTop: -6 }}>{hint}</p>
       {rows.length === 0 ? <p className="muted small">{empty}</p> : rows.map((q) => (
-        <Link key={q.id} href={q.mock ? "/mocks" : `/practice/${q.parent}`} className="st-qrow">
-          <span className="t">{plain(q.name, 100)}<small className="muted"> {topicName(q.parent)}</small></span>
+        <Link key={q.id} href={q.mock ? "/practice/mocks" : `/practice/${q.parent}`} className="st-qrow">
+          <span className="t"><QPreview text={q.name} max={100} /><small className="muted"> {topicName(q.parent)}</small></span>
           <span className="tags">{q.tags.slice(0, 3).map((t) => <i key={t} className="tg">#{t}</i>)}</span>
           <span className="r">{right(q)}</span>
         </Link>
@@ -51,7 +52,7 @@ export default function QuestionsTab({ evs, pack }: { evs: Ev[]; pack: PackData 
           <h3>Never seen</h3>
           <p className="small muted" style={{ marginTop: -6 }}>{never.length} of {qs.filter((q) => q.q).length} questions in your pack (practice and mock tests) have never been shown to you.</p>
           {never.length > 0 && <button className="btn soft" onClick={() => setShowNever((v) => !v)}>{showNever ? "Hide list" : "Show list"}</button>}
-          {showNever && never.slice(0, 40).map((q) => <Link key={q.id} href={q.mock ? "/mocks" : `/practice/${q.parent}`} className="st-qrow"><span className="t">{plain(q.name, 100)}</span><span className="tags" /><span className="r muted small">{q.mock ? `${q.mock} · ` : ""}{topicName(q.parent)}</span></Link>)}
+          {showNever && never.slice(0, 40).map((q) => <Link key={q.id} href={q.mock ? "/practice/mocks" : `/practice/${q.parent}`} className="st-qrow"><span className="t"><QPreview text={q.name} max={100} /></span><span className="tags" /><span className="r muted small">{q.mock ? `${q.mock} · ` : ""}{topicName(q.parent)}</span></Link>)}
         </section>
       </div>
 

@@ -1,4 +1,5 @@
 "use client";
+import QPreview from "@/components/QPreview";
 import { useState } from "react";
 import { plain } from "@/components/stats/useStats";
 import { Loc, PackData, allQuestions } from "@/lib/packs";
@@ -59,7 +60,7 @@ export default function MockDetail({ profile, pack, mockId, save, onBack }: { pr
                   <td><code>{q.id}</code></td>
                   <td>{topicName(q.topic)}</td>
                   <td>{q.type.toUpperCase()} · {q.marks}m</td>
-                  <td className="pk-text">{plain(q.text, 80)}</td>
+                  <td className="pk-text"><QPreview text={q.text} max={80} /></td>
                   <td className="pk-act">
                     {confirm === `q:${q.id}` ? <>Delete? <button className="btn primary" onClick={() => { save(removeQuestion(pack, q.id)); setConfirm(null); }}>Yes</button> <button className="btn soft" onClick={() => setConfirm(null)}>No</button></>
                       : <>
