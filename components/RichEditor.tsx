@@ -68,8 +68,8 @@ export default function RichEditor({ value, onChange, onFocus, rows = 5, label }
           <button key={b.cmd} type="button" className={"re-b" + (on[b.cmd] ? " on" : "")} title={b.label} aria-label={b.label} onMouseDown={(e) => e.preventDefault()} onClick={() => run(b.cmd)}>{b.icon}</button>
         ))}
         <span className="re-sep" />
-        <button type="button" className="re-b" title="Undo (Ctrl+Z)" aria-label="Undo" onMouseDown={(e) => e.preventDefault()} onClick={() => run("undo")}>{I("M3 7v6h6M3 13a9 9 0 1 0 3-7")}</button>
-        <button type="button" className="re-b" title="Redo (Ctrl+Y)" aria-label="Redo" onMouseDown={(e) => e.preventDefault()} onClick={() => run("redo")}>{I("M21 7v6h-6M21 13a9 9 0 1 1-3-7")}</button>
+        <button type="button" className="re-b" title="Undo (Ctrl+Z)" aria-label="Undo" onMouseDown={(e) => e.preventDefault()} onClick={() => run("undo")}>{I("M9 14L4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11")}</button>
+        <button type="button" className="re-b" title="Redo (Ctrl+Y)" aria-label="Redo" onMouseDown={(e) => e.preventDefault()} onClick={() => run("redo")}>{I("M15 14l5-5-5-5M20 9H9.5a5.5 5.5 0 0 0 0 11H13")}</button>
         <button type="button" className="re-b" title="Clear formatting" aria-label="Clear formatting" onMouseDown={(e) => e.preventDefault()} onClick={() => { run("removeFormat"); run("unlink"); }}>{I("M4 7V4h16v3M9 20h6M12 4v16M3 3l18 18")}</button>
       </div>
       <div

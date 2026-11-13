@@ -60,6 +60,7 @@ export default function Companion() {
   const [done, , doneReady] = usePersisted<Record<string, boolean>>(KEYS.done, {});
   const { pack, ready: packReady } = usePack();
   const [links, , linksReady] = usePersisted<Links>(KEYS.links, {});
+  const [bonusOff] = usePersisted<Record<string, boolean>>(KEYS.bonusOff, {});
   const [practice, , practiceReady] = usePersisted<Record<string, PracticeRec>>(KEYS.practice, {});
   const [partyRec, setPartyRec, partyReady] = usePersisted<PartyRec>(KEYS.party, null);
   const [now, setNow] = useState(0); // 0 until the browser has mounted (keeps the first render the same on server and client)
@@ -76,7 +77,7 @@ export default function Companion() {
   const today = todayIST();
   const day = DAYS.find((d) => d.date === today);
   // the party is for a day that is really finished: every planner item ticked, and every linked question answered (a day with no links only needs the ticks)
-  const allDone = dayWon(day, DAYS, done, links, pack, practice);
+  const allDone = dayWon(day, DAYS, done, links, pack, practice, bonusOff);
   const hour = now ? istHour(now) : 12;
   const partyOn = party || partyActive(partyRec, today, now);
   const mood = petMode(hour, buddy.id, partyOn); // "active" | "night" | "sleep" | "party"

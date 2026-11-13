@@ -35,6 +35,7 @@ export default function Dashboard() {
   const { pack, custom: hasPack, ready: packReady } = usePack();
   const TOPICS = pack.topics;
   const [links] = usePersisted<Links>(KEYS.links, {});
+  const [bonusOff] = usePersisted<Record<string, boolean>>(KEYS.bonusOff, {});
   const DAYS = plan.days;
   const PLAN_START = DAYS[0]?.date ?? today;
   const [toast, setToast] = useState<{ text: string; undo: Milestone[] } | null>(null);
@@ -55,7 +56,7 @@ export default function Dashboard() {
     const d = DAYS.find((x) => x.date === date);
     if (!d || d.kind === "exam") return "plain" as const;
     // green only for a successful day: every task ticked and every linked question answered. Ticked tasks with questions still pending is neither green nor red.
-    if (dayWon(d, DAYS, done, links, pack, practice)) return "done" as const;
+    if (dayWon(d, DAYS, done, links, pack, practice, bonusOff)) return "done" as const;
     return isComplete(date) ? ("plain" as const) : ("miss" as const);
   };
 
@@ -96,7 +97,7 @@ export default function Dashboard() {
   const runwayStart = today < PLAN_START ? today : PLAN_START;
 
   // the agenda follows today, or tomorrow once today's tasks and linked questions are all done; picking a day yourself overrides it
-  const todayFinished = dayWon(DAYS.find((d) => d.date === today), DAYS, done, links, pack, practice);
+  const todayFinished = dayWon(DAYS.find((d) => d.date === today), DAYS, done, links, pack, practice, bonusOff);
   const focus = todayFinished && DAYS.some((d) => d.date === addDays(today, 1)) ? addDays(today, 1) : today;
   const selected = picked ?? focus;
   const setSelected = (d: string) => setPicked(d);
@@ -106,7 +107,7 @@ export default function Dashboard() {
   const upcoming = DAYS.filter((d) => d.date > today && d.date !== selected).slice(0, 4);
   const link = day ? links[day.date] : undefined;
   const lq = liveQuestionIds(link, pack).ids;
-  const bq = day ? bonusFor(day.date, DAYS, done, links, pack, practice, today).qs : [];
+  const bq = day ? bonusFor(day.date, DAYS, done, links, pack, practice, today, bonusOff).qs : [];
   const mainDone = linkedDone(link, pack, practice) && bq.every((b) => practice[b.id]);
   const lmock = link?.mock ? pack.mockTests.find((m) => m.id === link.mock) : undefined;
   const targetDone = day ? Math.min(answeredOn(selected), day.targetQs) : 0;

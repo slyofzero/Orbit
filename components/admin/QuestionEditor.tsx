@@ -237,6 +237,7 @@ export default function QuestionEditor({ profile, pack, loc, preset, onClose, on
 
           <label>Explanation</label>
           <RichEditor label="Explanation" rows={3} value={explanation} onFocus={() => (last.current = "explanation")} onChange={setExplanation} />
+          {explanation.trim() && <div className="pk-prev"><Rich text={explanation} /></div>}
           <label>Difficulty
             <select className="pk-in" value={difficulty} onChange={(e) => setDifficulty(e.target.value)}>
               <option value="">Pick one…</option>

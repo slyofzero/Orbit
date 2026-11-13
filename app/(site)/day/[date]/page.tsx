@@ -1,4 +1,8 @@
 "use client";
+import { bonusQKey } from "@/lib/bonus";
+import { isDayLocked, LOCK_MESSAGE, useLockClock } from "@/lib/lock";
+import { toast } from "@/lib/toast";
+import { UnlinkIcon } from "@/components/BonusBlock";
 import BackToPlanner from "@/components/BackToPlanner";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -24,6 +28,8 @@ export default function DayPractice() {
   const [links, , lReady] = usePersisted<Links>(KEYS.links, {});
   const [doneTasks] = usePersisted<Record<string, boolean>>(KEYS.done, {});
   const [practice, setPractice, pReady] = usePersisted<Record<string, PracticeRec>>(KEYS.practice, {});
+  const [off, setOff] = usePersisted<Record<string, boolean>>(KEYS.bonusOff, {});
+  const locked = isDayLocked(date, useLockClock());
   const [, setFixed] = usePersisted<Record<string, boolean>>(KEYS.fixed, {});
   const [, setAttempts] = usePersisted<Attempt[]>(KEYS.attempts, []);
   const allReady = planReady && packReady && lReady && pReady;
@@ -39,15 +45,20 @@ export default function DayPractice() {
       const done = new Set(ids.filter((id) => practice[id]));
       setSeen({ date, done }); setShowDone(false);
       // the bonus questions carried onto this day belong to it, so the day is only "solved" when they are answered too
-      const bonusLeft = bonusFor(date, plan.days, doneTasks, links, pack, practice, todayIST()).qs.some((x) => !practice[x.id]);
+      const bonusLeft = bonusFor(date, plan.days, doneTasks, links, pack, practice, todayIST(), off).qs.some((x) => !practice[x.id]);
       setAskDone(ids.length > 0 && done.size === ids.length && !bonusLeft);
     }
-  }, [allReady, date, seen, ids, practice, plan.days, doneTasks, links, pack]);
+  }, [allReady, date, seen, ids, practice, plan.days, doneTasks, links, pack, off]);
 
   if (!allReady) return <PageLoading />;
 
   const day = plan.days.find((d) => d.date === date);
-  const bonus = bonusFor(date, plan.days, doneTasks, links, pack, practice, todayIST());
+  const bonus = bonusFor(date, plan.days, doneTasks, links, pack, practice, todayIST(), off);
+  const unlinkBonus = (items: { id: string; from: string }[]) => {
+    if (locked) { toast(LOCK_MESSAGE, "warn"); return; }
+    setOff((p) => ({ ...p, ...Object.fromEntries(items.map((x) => [bonusQKey(x.from, x.id), true])) }));
+    toast(`${items.length} bonus question${items.length === 1 ? "" : "s"} unlinked from this day`);
+  };
   const bonusQs = bonus.qs.map((b) => ({ ...b, q: byId.get(b.id)! })).filter((b) => b.q);
   const qs = ids.map((id) => byId.get(id)!).filter(Boolean);
   const got = ids.filter((id) => practice[id]);
@@ -117,13 +128,17 @@ export default function DayPractice() {
       ))}
       {bonusQs.length > 0 && (
         <>
-          <h2 className="pl-bonus-h" style={{ marginTop: 24 }}>Bonus <span className="small muted">carried over from {bonus.from.map(fmtDate).join(", ")}. Answer them all to finish this day.</span></h2>
-          {bonusQs.map(({ q }, i) => (
-            <QuestionCard key={q.id} q={q} index={i + 1} showTopic
+          <h2 className="pl-bonus-h" style={{ marginTop: 24, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>Bonus <span className="small muted">carried over from {bonus.from.map(fmtDate).join(", ")}. Answer them all to finish this day.</span>
+            <button className="btn soft right" disabled={locked} title={locked ? "Locked after 9 AM" : "Remove every bonus question from this day"} onClick={() => unlinkBonus(bonus.qs)}><UnlinkIcon /> Unlink all</button></h2>
+          {bonusQs.map(({ q, from }, i) => (
+            <div key={q.id} className="bo-qwrap">
+              <div className="bo-qbar"><button className="btn soft bo-qbtn" disabled={locked} title={locked ? "Locked after 9 AM" : "Remove this question from this day"} aria-label="Unlink this bonus question" onClick={() => unlinkBonus([{ id: q.id, from }])}><UnlinkIcon /> Unlink</button></div>
+            <QuestionCard q={q} index={i + 1} showTopic
               onResult={(ok) => {
                 setPractice((p) => ({ ...p, [q.id]: { correct: ok, at: Date.now(), topic: q.topic } }));
                 setFixed((f) => ({ ...f, [q.id]: ok }));
               }} />
+            </div>
           ))}
         </>
       )}

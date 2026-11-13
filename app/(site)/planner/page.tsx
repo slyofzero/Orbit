@@ -36,7 +36,8 @@ function DayBody({ d, done, setDone, qs }: { d: Day; done: Done; setDone: (u: (p
   const lq = liveQuestionIds(link, pack).ids;
   const { days: ALL } = usePlan();
   const [doneAll] = usePersisted<Record<string, boolean>>(KEYS.done, {});
-  const bq = bonusFor(d.date, ALL, doneAll, links, pack, prac, todayIST()).qs;
+  const [off] = usePersisted<Record<string, boolean>>(KEYS.bonusOff, {});
+  const bq = bonusFor(d.date, ALL, doneAll, links, pack, prac, todayIST(), off).qs;
   const mainDone = linkedDone(link, pack, prac) && bq.every((b) => prac[b.id]);
   const lmock = link?.mock ? pack.mockTests.find((m) => m.id === link.mock) : undefined;
   const complete = d.tasks.every((_, i) => done[`${d.date}:${i}`]);
@@ -97,6 +98,7 @@ function PlannerInner() {
   const PHASE_NAMES = plan.phaseNames;
   const [done, setDone, ready] = usePersisted<Done>(KEYS.done, {});
   const [practice] = usePersisted<Record<string, PracticeRec>>(KEYS.practice, {});
+  const [bonusOff] = usePersisted<Record<string, boolean>>(KEYS.bonusOff, {});
   const [links, setLinks] = usePersisted<Links>(KEYS.links, {});
   const [askUnlink, setAskUnlink] = useState(false);
   const router = useRouter();
@@ -141,7 +143,7 @@ function PlannerInner() {
   const phaseOpen = (ph: string, current: boolean) => (openPhase ? !!openPhase[ph] : current);
 
   // the card that gets the highlight: today, or tomorrow once today's tasks and linked questions are all done
-  const focus = dayWon(DAYS.find((x) => x.date === today), DAYS, done, links, pack, practice) ? addDays(today, 1) : today;
+  const focus = dayWon(DAYS.find((x) => x.date === today), DAYS, done, links, pack, practice, bonusOff) ? addDays(today, 1) : today;
 
   const DayCard = ({ date }: { date: string }) => {
     const d = DAYS.find((x) => x.date === date);
@@ -175,7 +177,7 @@ function PlannerInner() {
     const isOpen = openDay[d.date] ?? false;
     const c = complete(d);
     const miss = d.date < today && !c && d.kind !== "exam";
-    const win = dayWon(d, DAYS, done, links, pack, practice); // every task ticked and every linked question answered
+    const win = dayWon(d, DAYS, done, links, pack, practice, bonusOff); // every task ticked and every linked question answered
     return (
       <div className={`drow ${win ? "win" : ""} ${d.date === today ? "today" : ""} ${d.date < today ? "past" : ""} ${miss ? "miss" : ""} ${isOpen ? "open" : ""}`}>
         <button className="drow-head" onClick={() => setOpenDay((p) => ({ ...p, [d.date]: !isOpen }))} aria-expanded={isOpen}>
@@ -249,7 +251,7 @@ function PlannerInner() {
                   <span className="muted small">{fmtDate(ds[0].date)} to {fmtDate(ds[ds.length - 1].date)}</span>
                   <span className="pl-seg" aria-label="Days won and missed">
                     {ds.filter((d) => d.kind !== "exam").map((d) => {
-                      const won = dayWon(d, DAYS, done, links, pack, practice);
+                      const won = dayWon(d, DAYS, done, links, pack, practice, bonusOff);
                       const lost = d.date < today && !complete(d);
                       const part = d.tasks.length ? nDone(d) / d.tasks.length : 0;
                       return <i key={d.date} className={won ? "win" : lost ? "miss" : part > 0 ? "part" : ""} style={{ flexGrow: Math.max(d.tasks.length, 1), ["--p" as string]: `${part * 100}%` }} title={`${fmtDate(d.date)}: ${won ? "done" : lost ? "missed" : "pending"}`} />;

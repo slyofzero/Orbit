@@ -21,6 +21,7 @@ export const KEYS = {
   plog: "gate.plog", // LogEntry[]  (every practice answer / skip, for statistics)
   drafts: "gate.drafts", // Record<qid, code you were writing>  (programming questions)
   views: "gate.views", // {q, at}[]  (every time a practice question was on screen; skips = views minus answers)
+  bonusOff: "gate.bonusOff", // Record<key, true>  (bonus tasks/questions the person unlinked from the day they were carried to)
   links: "gate.links", // Record<date, {q, mock?, note?}>  (which questions go with which plan day)
   party: "gate.party", // {date, at} | null  (when today's last planned task was ticked: the study buddies party for 15 minutes)
 } as const;
