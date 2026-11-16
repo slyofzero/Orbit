@@ -1,4 +1,5 @@
 "use client";
+import { isDayLocked, useLockClock } from "@/lib/lock";
 import DayLock from "@/components/DayLock";
 import { MainBar, bonusLine } from "@/components/MainBar";
 import { dayWon, bonusFor } from "@/lib/bonus";
@@ -36,6 +37,7 @@ function DayBody({ d, done, setDone, qs }: { d: Day; done: Done; setDone: (u: (p
   const link = links[d.date];
   const lq = liveQuestionIds(link, pack).ids;
   const { days: ALL } = usePlan();
+  const dayLocked = isDayLocked(d.date, useLockClock());
   const [doneAll] = usePersisted<Record<string, boolean>>(KEYS.done, {});
   const [off] = usePersisted<Record<string, boolean>>(KEYS.bonusOff, {});
   const bq = bonusFor(d.date, ALL, doneAll, links, pack, prac, todayIST(), off).qs;
@@ -67,7 +69,7 @@ function DayBody({ d, done, setDone, qs }: { d: Day; done: Done; setDone: (u: (p
           {bq.length > 0 && <div className="small pl-bonus-line">{bonusLine(bq, prac)}</div>}
           {link?.note && <div className="small pl-main-note"><Rich text={link.note} /></div>}
           <MainBar own={lq} bonus={bq} practice={prac} />
-          <div className="row" style={{ marginTop: 8 }}><Link className="btn pl-main-go" href={`/day/${d.date}`}>{lq.length ? "Practise these questions" : "Open this day"}</Link><button className="btn soft" onClick={() => setLinks((p) => { const n = { ...p }; delete n[d.date]; return n; })}>Unlink this day</button></div>
+          <div className="row" style={{ marginTop: 8 }}><Link className="btn pl-main-go" href={`/day/${d.date}`}>{lq.length ? "Practise these questions" : "Open this day"}</Link>{!dayLocked && <button className="btn soft" onClick={() => setLinks((p) => { const n = { ...p }; delete n[d.date]; return n; })}>Unlink this day</button>}</div>
         </div>
       )}
       {d.date >= todayIST() && <BonusBlock date={d.date} />}

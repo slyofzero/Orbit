@@ -14,7 +14,7 @@ export const UnlinkIcon = () => (
 );
 
 // Pending work carried over from earlier days, shown as an extra on this day. Bonus tasks and questions must all be done for the day to count as solved (see dayWon in lib/bonus.ts).
-// Either kind can be unlinked from this day (stored in KEYS.bonusOff). Today's bonus can't be unlinked after 9 AM, like the rest of today's plan.
+// Either kind can be unlinked from this day (stored in KEYS.bonusOff). After 9 AM the unlink buttons on today's bonus disappear, like the rest of today's edit tools.
 export default function BonusBlock({ date }: { date: string }) {
   const { plan } = usePlan();
   const { pack } = usePack();
@@ -30,7 +30,6 @@ export default function BonusBlock({ date }: { date: string }) {
     setOff((p) => ({ ...p, ...Object.fromEntries(keys.map((k) => [k, true])) }));
     toast(`${what} unlinked from this day`);
   };
-  const tip = locked ? "Locked after 9 AM" : "";
   return (
     <div className="pl-bonus">
       <b className="pl-bonus-h">Bonus <span className="small muted">carried over from {b.from.map(fmtDate).join(", ")}</span></b>
@@ -40,14 +39,14 @@ export default function BonusBlock({ date }: { date: string }) {
             <input type="checkbox" checked={false} onChange={() => setDone((p) => ({ ...p, [`${t.from}:${t.idx}`]: true }))} />
             <span className="bo-txt"><span className="pill bonus-pill">from {fmtDate(t.from)}</span><span><Rich text={t.text} /></span></span>
           </label>
-          <button className="bo-x" disabled={locked} data-tip={tip || "Unlink this bonus task"} aria-label="Unlink this bonus task" onClick={() => unlink([bonusTaskKey(t.from, t.idx)], "Bonus task")}><UnlinkIcon /></button>
+          {!locked && <button className="bo-x" data-tip="Unlink this bonus task" aria-label="Unlink this bonus task" onClick={() => unlink([bonusTaskKey(t.from, t.idx)], "Bonus task")}><UnlinkIcon /></button>}
         </div>
       ))}
       {b.qs.length > 0 && (
         <div className="row" style={{ marginTop: 6 }}>
           <span className="small">{b.qs.length} bonus question{b.qs.length === 1 ? "" : "s"}{b.qs.some((x) => practice[x.id]) ? `, ${b.qs.filter((x) => practice[x.id]).length} solved` : ""}</span>
           <Link className="btn soft" href={`/day/${date}`}>Practise them</Link>
-          <button className="bo-x right" style={{ marginLeft: "auto" }} disabled={locked} data-tip={tip || "Unlink all bonus questions"} aria-label="Unlink all bonus questions" onClick={() => unlink(b.qs.map((x) => bonusQKey(x.from, x.id)), `${b.qs.length} bonus question${b.qs.length === 1 ? "" : "s"}`)}><UnlinkIcon /></button>
+          {!locked && <button className="bo-x right" style={{ marginLeft: "auto" }} data-tip="Unlink all bonus questions" aria-label="Unlink all bonus questions" onClick={() => unlink(b.qs.map((x) => bonusQKey(x.from, x.id)), `${b.qs.length} bonus question${b.qs.length === 1 ? "" : "s"}`)}><UnlinkIcon /></button>}
         </div>
       )}
     </div>
