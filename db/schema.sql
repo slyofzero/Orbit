@@ -66,7 +66,7 @@ CREATE TABLE topics (
 CREATE INDEX topics_by_subject ON topics(subject_id, sort);
 
 -- One row per question. The answer is NOT a polymorphic blob:
---   mcq / msq -> question_options.is_correct
+--   mcq / msq -> question_options + question_correct_options
 --   nat       -> nat_value + nat_tol (columns below)
 --   str       -> question_text_answers (one row per accepted answer) + str_* columns
 --   code      -> code_specs + code_tests
@@ -79,7 +79,8 @@ CREATE TABLE questions (
   pool                TEXT NOT NULL DEFAULT 'practice'
                         CHECK (pool IN ('practice', 'mock')),   -- 'mock' = only appears inside mock tests
   type                TEXT NOT NULL CHECK (type IN ('mcq', 'msq', 'nat', 'str', 'code')),
-  marks               INTEGER NOT NULL CHECK (marks IN (1, 2)),
+  marks               REAL NOT NULL CHECK (marks > 0),            -- any positive value: 1, 2, 0.5, 4, …
+  negative_marks      REAL NOT NULL DEFAULT 0 CHECK (negative_marks >= 0),  -- deducted for a wrong answer; 0 = no negative marking
   difficulty          TEXT NOT NULL CHECK (difficulty IN ('easy', 'medium', 'hard')),
   stem                TEXT NOT NULL,      -- markdown + $tex$; pictures as ![alt](img:<hash>)
   explanation         TEXT NOT NULL DEFAULT '',
@@ -109,9 +110,18 @@ CREATE TABLE question_options (
   question_id  TEXT NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
   position     INTEGER NOT NULL,          -- 0 = A, 1 = B, …
   body         TEXT NOT NULL,
-  is_correct   INTEGER NOT NULL CHECK (is_correct IN (0, 1))
+  UNIQUE (question_id, id)                -- target of the same-question FK below
 ) STRICT;
 CREATE INDEX question_options_by_question ON question_options(question_id, position);
+
+-- Which choices are correct. Kept on the question, not on the options.
+-- The composite FK means a correct option must belong to the same question.
+CREATE TABLE question_correct_options (
+  question_id  TEXT NOT NULL,
+  option_id    INTEGER NOT NULL,
+  PRIMARY KEY (question_id, option_id),
+  FOREIGN KEY (question_id, option_id) REFERENCES question_options(question_id, id) ON DELETE CASCADE
+) STRICT, WITHOUT ROWID;
 
 -- Accepted answers for 'str' questions (several rows = several accepted answers).
 CREATE TABLE question_text_answers (
@@ -605,5 +615,6 @@ CREATE VIEW v_traps AS
 SELECT o.question_id, o.id AS option_id, o.position, COUNT(*) AS times_picked
 FROM practice_event_picks p
 JOIN question_options o ON o.id = p.option_id
-WHERE o.is_correct = 0
+WHERE NOT EXISTS (SELECT 1 FROM question_correct_options c
+                  WHERE c.question_id = o.question_id AND c.option_id = o.id)
 GROUP BY o.id HAVING COUNT(*) >= 2;

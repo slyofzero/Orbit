@@ -61,7 +61,8 @@ Why not IndexedDB (via Dexie)? It would also stay off the main thread for storag
 **Content** (what things *are*; re-importing content never touches state):
 
 ```
-subjects ─< topics ─< questions ─< question_options        (mcq/msq: is_correct)
+subjects ─< topics ─< questions ─< question_options        (mcq/msq choices)
+                         │      ─< question_correct_options (mcq/msq: which choices are right)
                          │      ─< question_text_answers   (str: accepted answers)
                          │      ── code_specs ─< code_tests (code)
                          │      ─< question_tags >─ tags
@@ -98,7 +99,7 @@ code_drafts, settings
 | Problem in v2 | Fix in v1 schema |
 |---|---|
 | Images as base64 = 92% of export; pack text near the 5 MB localStorage cap; failed writes silent | Binary `image_data` BLOBs in OPFS (GB-scale limit), metadata split into `images`; write errors surface |
-| `answer` had 5 shapes + `match` flag; code fields loose at top level | `question_options.is_correct`, `nat_value/nat_tol`, `question_text_answers`, `code_specs`/`code_tests`; `CHECK`s make half-filled questions impossible |
+| `answer` had 5 shapes + `match` flag; code fields loose at top level | `question_correct_options`, `nat_value/nat_tol`, `question_text_answers`, `code_specs`/`code_tests`; `CHECK`s make half-filled questions impossible |
 | Questions copied into mocks and into every attempt; responses keyed by index | `mock_items` and `attempt_items` reference `questions.id`; `question_rev` + `question_history` keep the as-taken version |
 | IDs encode topic (`t20-4`); 5 ID schemes | Opaque IDs (`q_…`, `tp_…`, `mk_…`); old IDs kept in `legacy_id` for imports and AI links |
 | Overlapping subjects `dsa` / `prog` / `code` | Still data, not schema: merge them during import (decision for you) |

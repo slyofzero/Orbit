@@ -1,6 +1,6 @@
 # Orbit: instructions for AI agents
 
-Read this first. Then read `docs/HANDOFF.md` (what is done and what is next) and `docs/STORAGE.md` (the storage design and its rules).
+Read this first. Then read `docs/HANDOFF.md` (what is done and what is next) and `docs/STORAGE.md` (the storage design and its rules). Read `docs/STATS.md` before touching anything that records answers or shows statistics. Table shapes are in `types/tables/` (one file per table).
 
 ## What Orbit is
 Orbit is a personal, **exam-agnostic study hub**: a day-by-day planner, topic-wise practice, mock tests that copy a real exam screen, a mistake log, rich statistics and an admin area. It is a Next.js 15 / React 19 / TypeScript app. There is no server database and no login: everything the user owns lives in the **browser**.
@@ -14,6 +14,14 @@ The `rehaul` branch is a rebuild. The old localStorage app is on `main` and in g
 - `bunx tsc --noEmit`: type check (must be clean)
 - `bun run check`: `scripts/check.ts`, the logic test suite. It must print `ALL OK`.
 - `bun run build` / `bun run start`: production build
+
+## Hosting: zero budget, Vercel free tier only
+The owner has **no hosting budget**. Orbit is deployed on **Vercel's free (Hobby) plan** and nothing else.
+- No paid services, no hosted database, no paid APIs, no third-party backends. All user data stays in the browser.
+- Prefer static pages and client-side code. Only add serverless functions or edge middleware if there is no client-side way; they count against free-tier limits.
+- Anything that needs custom response headers goes in `next.config.mjs` (or `vercel.json`), so it works on Vercel without extra setup.
+- Large assets (e.g. WASM) are served as static files from `public/` or bundled; never fetched from a paid CDN.
+- Before adding a dependency or feature, check it works on Vercel's free plan. If it would need a paid plan, stop and ask the owner.
 
 ## Rules that always apply
 1. **Storage follows `docs/STORAGE.md`.** SQLite WASM in one Web Worker, OPFS `opfs-sahpool`, one file per profile. The UI thread never touches the database; it uses named queries through `lib/db/client.ts`. Every list has a `LIMIT`; every write is one transaction.
