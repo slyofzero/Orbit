@@ -1,8 +1,10 @@
+import { Heading, Text } from "@/components/ui";
+
 export default function Home() {
   return (
     <main className="home-wrap">
-      <h1 className="home-title">Orbit</h1>
-      <p className="home-note">Fresh start. Storage is being rebuilt on SQLite (see docs/STORAGE.md).</p>
+      <Heading level={1} className="home-title">Orbit</Heading>
+      <Text variant="muted">Fresh start. Storage is being rebuilt on SQLite (see `docs/STORAGE.md`).</Text>
     </main>
   );
 }
