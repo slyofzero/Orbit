@@ -1,0 +1,166 @@
+# Orbit UI components and the `/dev` workbench
+
+Every screen in Orbit is built from a small set of shared components. This file explains **what each one is for**, **its main options**, and **the rules** that keep the app consistent. Each component is also shown live, in both themes, at **`/dev/components`**.
+
+- Shared components: `components/ui/` (one file each; everything is exported from `components/ui/index.ts`)
+- Question components: `components/question/`
+- All styles: `app/site.css` (class prefixes: `ui-` shared, `qz-` questions, `dv-` the `/dev` pages)
+
+---
+
+## 1. The `/dev` route
+
+`/dev` is a **workbench for developers**, not part of the app the learner uses.
+
+| Page | What it is |
+|---|---|
+| `/dev` | Index of the workbench pages |
+| `/dev/components` | Every shared component and question type, live and interactive, with its normal, **special** (cool) and **warm** variants |
+
+**Why it exists**
+- To see and try every component in one place, in light and dark (toggle in the top bar), on a phone width and a desktop width.
+- To catch regressions quickly. Every component on the page renders some maths, so a component that stops rendering markdown + LaTeX shows raw `$…$` text and stands out at once.
+- To give new screens a reference: copy the usage from the demo.
+
+**It only exists in development**
+- `app/dev/layout.tsx` calls `notFound()` unless `NODE_ENV` is `development`, so in a production build (and on Vercel) **every `/dev` page returns 404**.
+- It is marked `noindex`, and picture uploads on it are kept in memory only (lost on reload).
+
+**Using it**
+```
+bun run dev
+open http://localhost:3000/dev/components
+```
+
+**Rule:** when you add or change a shared component, add or update its demo on `/dev/components` in the same change (file: `app/dev/components/Showcase.tsx`).
+
+🔴 **CAUTION:** never run a second dev server, or `bun run build`, against the same `.next` folder as a dev server that is already running; they corrupt each other ("`__webpack_modules__[moduleId] is not a function`"). For a second, throwaway server use its own folder: `NEXT_DIST_DIR=.next-check bun --bun next dev -p 3127`. Next.js then adds `.next-check/types/**/*.ts` to `tsconfig.json`; revert that afterwards and delete `.next-check`.
+
+---
+
+## 2. Rules every screen follows
+
+1. **Only shared components.** No raw `<button>`, `<input>`, `<select>`, `<a>`, `<h1>`–`<h3>`, `<p>`, `<details>`, `<table>` or `<hr>` in pages. If something is missing, add it to `components/ui` (with a demo) first.
+2. **No native `<select>`.** Its pop-up list is drawn by the browser: it can't be themed and can't show maths. Use `Dropdown`.
+3. **All text is markdown + LaTeX.** Every component renders its text props through `txt()` automatically. In your own JSX, wrap text in `<Text>`, `<Rich>` or `txt()`. See §4.
+4. **Colours only through theme variables** (`--sheet --ink --accent --line …`); light and dark are both required.
+5. **Special sparingly.** The animated gradient ("special") is for moments worth celebrating: one or two per screen.
+6. **Never start a class with `ad-`, `ads-`, `banner` or `sponsor`:** ad blockers hide those on the deployed site.
+
+---
+
+## 3. Theme, "special" and "warm"
+
+- **Theme:** light by default, dark when the system says so, unless the user picks one with `ThemeToggle` (Light / System / Dark). The choice is saved as `localStorage["orbit.theme"]` and applied before the first paint (`lib/theme.ts`), so there is no flash. Switching reveals the new theme as a circle growing from where you clicked.
+- **Special:** many components take `special` (or `variant`/`tone="special"`). Filled parts get a slowly flowing gradient; bordered parts a flowing gradient border; headings gradient text. Larger components also show a sparkle badge. Motion stops for users with "reduce motion" on.
+- **Cool vs warm:** the default special gradient is **cool** (teal, blue, violet). Wrap anything in `<Warm>` and every special style inside it becomes **warm** (rose-red, red-orange, orange, a touch of amber, the v1 quote-banner colours). Toasts, which render outside your layout, use `toast("…", "warm")` instead.
+
+```tsx
+<Button variant="special">Cool</Button>
+<Warm inline><Button variant="special">Warm</Button></Warm>
+```
+
+---
+
+## 4. Text, markdown and maths
+
+| | |
+|---|---|
+| **`Rich`** · `Rich.tsx` | Renders a string as markdown + LaTeX. `block` for full markdown (paragraphs, lists, headings, quotes, code blocks, `$$display$$`); without it, one inline run (bold, italic, `$maths$`, links, pictures). Raw HTML in the text is shown as text, never run. |
+| **`txt(node)`** · `txt.tsx` | What every component calls on its text: a string → `<Rich>`; JSX text with `{…}` pieces (`Score: {n}%`) is joined first; elements pass through. Safe to call from server components. |
+| **`Text`** · `Text.tsx` | Running text. `variant`: `body` · `muted` · `small` · `hint` · `caption` (small uppercase group label) · `error`. `as`: `p` (default) / `span` / `div`. `block` = full markdown. |
+| **`Code`** · `Text.tsx` | Inline code, shown exactly as typed (no markdown or maths inside). |
+| **`Heading`** · `Heading.tsx` | `level` 1–3, optional `special`, optional `id`. |
+
+**Syntax** (parser: `lib/markdown.ts`): `**bold**` · `*italic*` · `++underline++` · `~~strike~~` · `` `code` `` · `$x^2$` · `$$…$$` · `[text](https://…)` · `![alt](img:<hash>)` · `- list` · `1. list` · `## heading` · `> quote` · `---` · `\$` for a literal dollar sign.
+
+- Links allow only `https://`, `http://`, `mailto:` and `#anchors`; pictures only `img:<hash>` (stored pictures) and web addresses. Never base64.
+- **Cost:** plain text skips parsing; parsed text and rendered maths are cached. About 2 µs per label and 50 µs per new formula.
+- **Writing maths in JSX:** inside an attribute string (`label="$\frac{1}{2}$"`) backslashes and braces are literal. As JSX children use a JS string: `{"$\\frac{1}{2}$"}`. A bare `{1}` in JSX text is a JavaScript expression and its braces vanish.
+- **Pictures:** `img:<hash>` is turned into a URL by the nearest `ImageProvider` (`images.tsx`). The app will provide one backed by the database; `/dev` uses an in-memory one.
+
+---
+
+## 5. Component catalogue
+
+### Actions
+| Component | File | Use it for | Main options |
+|---|---|---|---|
+| `Button` | `Button.tsx` | Any action | `variant`: `primary` (one per screen) · `secondary` · `soft` · `ghost` · `danger` · `special`; `size` sm/md/lg; `icon`, `iconAfter`, `loading`, `block` |
+| `IconButton` | `Button.tsx` | An action shown as an icon only | `label` (required: read aloud and shown on hover); `size` sm/md; `variant` `outline` / `ghost` (toolbars, inside other components) |
+| `Spinner` | `Button.tsx` | Something is loading | `label`, `special` (gradient ring) |
+| `CopyButton` | `CopyButton.tsx` | Copy text to the clipboard | `text` (string or a function, so long text is built only when clicked); `label` (omit for an icon button); icon turns into ✓ "Copied!" (✗ if the browser blocks it) |
+| `Link` | `Link.tsx` | Navigation | `variant`: `inline` (underlined, in text) · `nav` (menu item, `active`) · `subtle`; `http(s)`/`mailto` open in a new tab |
+
+### Form fields
+All fields take `label`, `hint`, `error` and **`help`** (a "?" tip beside the label), and are wired up for screen readers.
+
+| Component | File | Use it for | Main options |
+|---|---|---|---|
+| `TextField` | `Field.tsx` | One line of text or a number | all `<input>` props (`inputMode="decimal"` for numbers) |
+| `TextArea` | `Field.tsx` | A few lines of plain text | all `<textarea>` props |
+| `RichEditor` | `RichEditor.tsx` | Writing formatted notes / questions | toolbar (bold, italic, underline, strike, heading, lists, quote, divider, link, picture, maths, code); Write / Preview / Both; shortcuts Ctrl+B/I/U/K/M/E; `onAddImage(file) → "img:<hash>"` enables upload and paste; every action undoable with Ctrl+Z |
+| `CodeEditor` | `CodeEditor.tsx` | Writing code | language picker (Python, C, C++, Java, JavaScript, SQL, plain text; `language`/`onLanguageChange` or `defaultLanguage`); highlighting, line numbers, indent guides; Enter keeps indent (+1 after `:` or `{ ( [`), Tab/Shift+Tab, Backspace removes a level, `}` outdents; rules in `lib/codeIndent.ts` |
+| `Dropdown` | `Dropdown.tsx` | Choosing one item from a list | `options` (`label`, `description`, `icon`, `disabled`); `searchable` adds a filter box; keyboard ↑/↓, Home/End, type a letter to jump |
+| `DatePicker` | `DatePicker.tsx` | Choosing a day | values are `YYYY-MM-DD` (IST); `min`, `max`, `clearable`; keyboard arrows, PageUp/PageDown, Home/End |
+| `FileInput` | `FileInput.tsx` | Picking files | `files` / `onChange(files)`; `multiple`; `accept`; `title`, `description`, `buttonLabel`; drop zone lights up with the special gradient while dragging; chosen files become cards (type tile or picture thumbnail, size, ✓ Ready, remove) |
+| `Checkbox` | `Choice.tsx` | On/off inside a form | `label`, `description`, `disabled` |
+| `RadioGroup` | `Choice.tsx` | One of a few options, all visible | `legend`, `options` (`label`, `description`, `disabled`) |
+| `Switch` | `Switch.tsx` | A setting that applies at once | `label` |
+| `Segmented` | `Segmented.tsx` | 2–4 mutually exclusive options side by side | `segments` (`label`, `icon`); arrow keys; `special`: `true` (all) or a list of values (just those) |
+| `ThemeToggle` | `ThemeToggle.tsx` | Light / System / Dark | none; switching plays v1's ripple (the new theme spreads in a circle from the click; `applyThemeWithRipple` in `lib/theme.ts`, skipped with reduce motion or without View Transitions) |
+
+### Showing information
+| Component | File | Use it for | Main options |
+|---|---|---|---|
+| `Card` | `Card.tsx` | A sheet holding one idea | `title`, `subtitle`, `actions`; `hero` (the one dark panel per screen); `special` |
+| `Pill` | `Pill.tsx` | Status, difficulty, counts, tags | `tone`: neutral · accent · green · red · amber · blue · ink · special |
+| `Kbd` | `Pill.tsx` | A keyboard key | text shown literally |
+| `Tabs` | `Tabs.tsx` | Switching between views | `tabs` (`label`, `count`); arrow keys; `special`: `true` or a list of values |
+| `Callout` | `Callout.tsx` | A highlighted message | `tone`: info · success · warn · **caution** (title always starts "CAUTION:", for anything destructive) · special |
+| `ProgressBar` | `Progress.tsx` | Progress towards a total | `value`, `max`, `label`; `tone`: accent · green · red · amber · special |
+| `Stat` | `Progress.tsx` | One big number | `value`, `label`, `hint`, `trend` up/down |
+| `Table` | `Table.tsx` | Rows of data | `columns` (`header`, `cell`, `align`, `sortValue` makes it sortable, `special` highlights the column); `rowKey`; `empty`; `specialRow(row)`; scrolls sideways on phones; keep to one page of rows |
+| `Divider` | `Divider.tsx` | A line between sections | `variant`: solid · dashed · dotted · double · thick · accent · fade · special; `label` (and `align="start"`) |
+| `EmptyState` | `EmptyState.tsx` | A list or page with nothing yet | `title`, text, `action`; say why it is empty and offer the next step |
+| `Disclosure` | `Disclosure.tsx` | Show / hide extra content in place | `title`, `defaultOpen` |
+
+### Overlays and feedback
+| Component | File | Use it for | Main options |
+|---|---|---|---|
+| `Dialog` | `Dialog.tsx` | A focused task or confirmation | `open`, `onClose`, `title`, `footer`, `special`; closes on Esc, ×, or a click outside; fades in and out over a frosted backdrop |
+| `Tooltip` | `Tooltip.tsx` | A short label for a button or link | `content`, `placement` top/bottom/left/right |
+| `HelpTip` | `Tooltip.tsx` | A "?" explaining the text beside it | hover, keyboard focus or tap; Esc or a tap elsewhere closes it |
+| `HelpDialog` | `Tooltip.tsx` | Help too long for a bubble (tables, examples) | same "?" (optionally with a `label`), opens a `Dialog`; e.g. the editor's Formatting help |
+| `ToastProvider` + `useToast()` | `Toast.tsx` | Short feedback ("Saved", "Copied") | `toast(text, tone)`; tones neutral · success · error · special · warm; bottom-right, slides in and out, others glide into the gap, at most 3 |
+| `SparkleBadge`, `Warm` | `Special.tsx` | The special style's badge; switching special to warm | `Warm inline` for inline content |
+
+### Helpers (not visual)
+`cx()` joins class names · `useDismiss()` closes a pop-up on Esc or an outside click · `FieldLabel` is the label + "?" row used by every field · `copyText()` · `CODE_LANGS` · icons in `icons.tsx` (24×24 line icons, always paired with a label).
+
+---
+
+## 6. Question components (`components/question/`)
+
+Each takes `question` (a `questions` row), `detail` (the matching type row from `types/tables/`), optional `number` (shows "Q3"), `special`, and `onAnswer(verdict)`.
+
+| Component | Answer area | Checking (`lib/grade.ts`) |
+|---|---|---|
+| `McqQuestion` | lettered options, pick one | right if the picked index = `correct` |
+| `MsqQuestion` | lettered options, pick several | all-or-nothing: the picked set must equal `correct` |
+| `NatQuestion` | number field | right if within `± tolerance` of `value` |
+| `StrQuestion` | text field | `exact` / `list` (in order) / `set` (any order); case rule from the question; any accepted answer counts |
+| `CodeQuestion` | `CodeEditor` with the starter code | no automatic check: the learner marks it right or wrong |
+
+They all share **`QuestionFrame`**: type, difficulty and marks (+marks, −negative marks or "No negative marking"), the stem, the answer area, **Check answer** → verdict with marks gained or lost → **Try again**, then the explanation. `OptionList` is the A/B/C/D list shared by MCQ and MSQ.
+
+---
+
+## 7. Adding a new component
+
+1. Make sure no existing component already does the job (see §5).
+2. Add `components/ui/<Name>.tsx`; export it from `components/ui/index.ts`.
+3. Render every piece of text through `txt()` (or `Text` / `Heading`); support `special` if it is a component people would celebrate with.
+4. Style it in `app/site.css` with a `ui-` class and theme variables only; check light and dark.
+5. Pure logic (parsing, maths, rules) goes in `lib/` with a test in `scripts/check.ts`.
+6. Add a demo to `/dev/components` that includes some LaTeX, and a row to this file.

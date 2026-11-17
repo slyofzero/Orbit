@@ -880,3 +880,12 @@ h1 .ui-help svg, h2 .ui-help svg { width: 15px; height: 15px; }
 .ui-ce .hljs-meta, .ui-ce .hljs-meta .hljs-keyword, .ui-ce .hljs-operator, .ui-ce .hljs-punctuation { color: var(--syn-meta); }
 .ui-ce .hljs-attr, .ui-ce .hljs-attribute, .ui-ce .hljs-variable, .ui-ce .hljs-params { color: var(--syn-attr); }
 .ui-ce .hljs-subst, .ui-ce .hljs-property { color: var(--code-fg); }
+
+/* ---------- theme ripple (lib/theme.ts applyThemeWithRipple) ----------
+   The browser's default cross-fade is switched off; the new theme is revealed by a growing circle instead. */
+::view-transition-old(root), ::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
+::view-transition-new(root) {
+  z-index: 9998;
+  clip-path: circle(0px at var(--ripple-x, 50%) var(--ripple-y, 0px));   /* hidden from the first frame; the script grows it */
+}
+.ui-theme { display: inline-flex; }

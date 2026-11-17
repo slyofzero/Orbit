@@ -20,6 +20,30 @@ export function readTheme(): ThemeChoice {
   }
 }
 
+/** Switches theme with v1's ripple: the new theme is revealed as a circle growing from (x, y) until it
+ *  covers the screen. Uses View Transitions; without them, or with "reduce motion" on, it just switches. */
+export function applyThemeWithRipple(choice: ThemeChoice, x: number, y: number): void {
+  const d = document as Document & { startViewTransition?: (cb: () => void) => { ready: Promise<void> } };
+  const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (calm || !d.startViewTransition) { applyTheme(choice); return; }
+  const r = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));   // reach the farthest corner
+  // The new-theme layer exists one frame before `ready` fires. app/site.css clips it to a zero-size
+  // circle at this point from the very first frame; without that it flashes full-screen and then
+  // snaps to nothing, which looks like a jitter.
+  const root = document.documentElement;
+  root.style.setProperty("--ripple-x", `${x}px`);
+  root.style.setProperty("--ripple-y", `${y}px`);
+  const t = d.startViewTransition(() => applyTheme(choice));
+  t.ready.then(() =>
+    root.animate(
+      { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${r}px at ${x}px ${y}px)`] },
+      // slow, gentle ease-in-out: a fast burst at the start felt jarring.
+      // fill "forwards" holds the full circle until the transition ends, so the end can't flash either.
+      { duration: 1100, easing: "cubic-bezier(0.45, 0, 0.25, 1)", fill: "forwards", pseudoElement: "::view-transition-new(root)" },
+    ),
+  ).catch(() => { /* transition skipped (e.g. tab hidden): the theme has still changed */ });
+}
+
 export function applyTheme(choice: ThemeChoice): void {
   const root = document.documentElement;
   if (choice === "system") delete root.dataset.theme;

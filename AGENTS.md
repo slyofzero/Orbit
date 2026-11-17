@@ -1,6 +1,6 @@
 # Orbit: instructions for AI agents
 
-Read this first. Then read `docs/HANDOFF.md` (what is done and what is next) and `docs/STORAGE.md` (the storage design and its rules). Read `docs/STATS.md` before touching anything that records answers or shows statistics. Table shapes are in `types/tables/` (one file per table).
+Read this first. Then read `docs/HANDOFF.md` (what is done and what is next) and `docs/STORAGE.md` (the storage design and its rules). Read `docs/STATS.md` before touching anything that records answers or shows statistics. Read `docs/COMPONENTS.md` before building or changing any screen (every shared component, the UI rules, and what the dev-only `/dev` route is for). Table shapes are in `types/tables/` (one file per table).
 
 ## What Orbit is
 Orbit is a personal, **exam-agnostic study hub**: a day-by-day planner, topic-wise practice, mock tests that copy a real exam screen, a mistake log, rich statistics and an admin area. It is a Next.js 15 / React 19 / TypeScript app. There is no server database and no login: everything the user owns lives in the **browser**.
