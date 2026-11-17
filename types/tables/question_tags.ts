@@ -4,6 +4,6 @@
 import type { QuestionId, RowId } from "./common";
 
 export interface QuestionTagRow {
-  question_id: QuestionId;          // → questions.id
-  tag_id: RowId;                    // → tags.id
+  question_id: QuestionId; // → questions.id
+  tag_id: RowId; // → tags.id
 }

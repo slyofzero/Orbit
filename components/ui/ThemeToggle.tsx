@@ -14,7 +14,7 @@ export function ThemeToggle() {
 
   const origin = () => {
     const p = pointer.current;
-    if (p && Date.now() - p.at < 1000) return p;                   // a click just happened: start there
+    if (p && Date.now() - p.at < 1000) return p; // a click just happened: start there
     const r = (document.activeElement as HTMLElement | null)?.getBoundingClientRect();
     return r ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : { x: innerWidth / 2, y: 0 };
   };
@@ -26,12 +26,22 @@ export function ThemeToggle() {
   };
 
   return (
-    <span className="ui-theme" onPointerDownCapture={(e) => { pointer.current = { x: e.clientX, y: e.clientY, at: Date.now() }; }}>
-      <Segmented label="Theme" value={choice} onChange={pick} segments={[
-        { value: "light", label: "Light", icon: <IconSun /> },
-        { value: "system", label: "System", icon: <IconMonitor /> },
-        { value: "dark", label: "Dark", icon: <IconMoon /> },
-      ]} />
+    <span
+      className="inline-flex"
+      onPointerDownCapture={(e) => {
+        pointer.current = { x: e.clientX, y: e.clientY, at: Date.now() };
+      }}
+    >
+      <Segmented
+        label="Theme"
+        value={choice}
+        onChange={pick}
+        segments={[
+          { value: "light", label: "Light", icon: <IconSun /> },
+          { value: "system", label: "System", icon: <IconMonitor /> },
+          { value: "dark", label: "Dark", icon: <IconMoon /> },
+        ]}
+      />
     </span>
   );
 }

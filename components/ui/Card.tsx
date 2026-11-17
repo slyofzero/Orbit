@@ -6,17 +6,47 @@ import { Heading } from "./Heading";
 
 /** A white sheet. `hero` = the dark navy panel (at most one per screen).
  *  `special` = animated gradient border and a sparkle badge. */
-export function Card({ title, subtitle, actions, hero = false, special = false, className, children }: {
-  title?: ReactNode; subtitle?: ReactNode; actions?: ReactNode; hero?: boolean; special?: boolean; className?: string; children?: ReactNode;
+export function Card({
+  title,
+  subtitle,
+  actions,
+  hero = false,
+  special = false,
+  className,
+  children,
+}: {
+  title?: ReactNode;
+  subtitle?: ReactNode;
+  actions?: ReactNode;
+  hero?: boolean;
+  special?: boolean;
+  className?: string;
+  children?: ReactNode;
 }) {
   return (
-    <section className={cx("ui-card", hero && "ui-card-hero", special && "is-special", className)}>
+    <section
+      className={cx(
+        "rounded-lg px-[22px] py-5",
+        special
+          ? "special-border animate-flow-border border-2 shadow-[0_14px_34px_-22px_var(--special-c)]"
+          : hero
+            ? "border border-hero bg-hero text-on-hero"
+            : "border border-line bg-sheet",
+        className,
+      )}
+    >
       {(title || actions || special) && (
-        <header className="ui-card-head">
+        <header className="mb-3.5 flex flex-wrap items-center gap-3">
           {special && <SparkleBadge />}
-          <div className="ui-card-titles">
-            {title && <Heading level={3} special={special}>{title}</Heading>}
-            {subtitle && <p className="ui-card-sub">{txt(subtitle)}</p>}
+          <div className="min-w-0 flex-1">
+            {title && (
+              <Heading level={3} special={special}>
+                {title}
+              </Heading>
+            )}
+            {subtitle && (
+              <p className={cx("mt-0.5 text-[0.9rem]", hero ? "text-on-hero/70" : "text-gray")}>{txt(subtitle)}</p>
+            )}
           </div>
           {actions}
         </header>

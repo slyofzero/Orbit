@@ -7,8 +7,8 @@
 import type { QuestionId } from "./common";
 
 export interface QuestionStatRow {
-  question_id: QuestionId;          // PRIMARY KEY → questions.id
-  visited: number;                  // sittings the question was shown in (= its question_answers rows)
-  correct: number;                  // times answered right
-  incorrect: number;                // times answered wrong
+  question_id: QuestionId; // PRIMARY KEY → questions.id
+  visited: number; // sittings the question was shown in (= its question_answers rows)
+  correct: number; // times answered right
+  incorrect: number; // times answered wrong
 }

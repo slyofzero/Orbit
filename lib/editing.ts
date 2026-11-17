@@ -6,19 +6,30 @@ export type Edit = { from: number; to: number; insert: string; selStart: number;
 
 /** Wraps the selection in `before`…`after` (e.g. ** for bold). If it is already wrapped, unwraps it.
  *  With nothing selected, inserts `placeholder` wrapped and selects it so typing replaces it. */
-export function wrap(text: string, start: number, end: number, before: string, after: string, placeholder: string): Edit {
+export function wrap(
+  text: string,
+  start: number,
+  end: number,
+  before: string,
+  after: string,
+  placeholder: string,
+): Edit {
   const selected = text.slice(start, end);
-  const isWrapped = start !== end
-    && text.slice(start - before.length, start) === before
-    && text.slice(end, end + after.length) === after;
+  const isWrapped =
+    start !== end &&
+    text.slice(start - before.length, start) === before &&
+    text.slice(end, end + after.length) === after;
   if (isWrapped) {
     const from = start - before.length;
     return { from, to: end + after.length, insert: selected, selStart: from, selEnd: from + selected.length };
   }
   const inner = selected || placeholder;
   return {
-    from: start, to: end, insert: before + inner + after,
-    selStart: start + before.length, selEnd: start + before.length + inner.length,
+    from: start,
+    to: end,
+    insert: before + inner + after,
+    selStart: start + before.length,
+    selEnd: start + before.length + inner.length,
   };
 }
 
@@ -46,7 +57,14 @@ export function toggleLines(text: string, start: number, end: number, kind: Line
 }
 
 /** Inserts a multi-line block (code block, display maths) on its own lines around the selection. */
-export function insertBlock(text: string, start: number, end: number, before: string, after: string, placeholder: string): Edit {
+export function insertBlock(
+  text: string,
+  start: number,
+  end: number,
+  before: string,
+  after: string,
+  placeholder: string,
+): Edit {
   const inner = text.slice(start, end) || placeholder;
   const pre = start > 0 && text[start - 1] !== "\n" ? "\n" : "";
   const post = end < text.length && text[end] !== "\n" ? "\n" : "";

@@ -16,8 +16,19 @@ export type Column<T> = {
 
 /** A data table. Scrolls sideways on narrow screens. Keep `rows` to one page (≤ a few hundred).
  *  `specialRow` highlights the rows it returns true for (e.g. your best topic). */
-export function Table<T>({ columns, rows, rowKey, empty = "Nothing here yet.", caption, specialRow }: {
-  columns: Column<T>[]; rows: T[]; rowKey: (row: T) => string | number; empty?: ReactNode; caption?: string;
+export function Table<T>({
+  columns,
+  rows,
+  rowKey,
+  empty = "Nothing here yet.",
+  caption,
+  specialRow,
+}: {
+  columns: Column<T>[];
+  rows: T[];
+  rowKey: (row: T) => string | number;
+  empty?: ReactNode;
+  caption?: string;
   specialRow?: (row: T) => boolean;
 }) {
   const [sort, setSort] = useState<{ key: string; dir: 1 | -1 } | null>(null);
@@ -26,32 +37,51 @@ export function Table<T>({ columns, rows, rowKey, empty = "Nothing here yet.", c
     if (!sort || !col?.sortValue) return rows;
     const get = col.sortValue;
     return [...rows].sort((a, b) => {
-      const x = get(a), y = get(b);
+      const x = get(a),
+        y = get(b);
       return (x < y ? -1 : x > y ? 1 : 0) * sort.dir;
     });
   }, [rows, columns, sort]);
 
   const toggle = (key: string) =>
     setSort((s) => (s?.key !== key ? { key, dir: 1 } : s.dir === 1 ? { key, dir: -1 } : null));
-  const cellClass = (c: Column<T>) =>
-    cx(c.align === "right" && "is-right", c.align === "center" && "is-center", c.special && "is-special-col") || undefined;
+  const cellClass = (c: Column<T>, head = false) =>
+    cx(
+      "border-b border-line-2 px-3.5 py-[11px] align-top",
+      c.align === "right" ? "text-right tabular-nums" : c.align === "center" ? "text-center" : "text-left",
+      head && "sticky top-0 bg-sheet text-[0.82rem] font-bold whitespace-nowrap text-gray",
+      head && c.special && "shadow-[inset_0_-2px_0_var(--special-b)]",
+      !head && c.special && "bg-linear-to-b from-special-a/9 to-special-c/9 font-bold",
+    );
 
   return (
-    <div className="ui-table-wrap">
-      <table className="ui-table">
-        {caption && <caption className="ui-sr">{caption}</caption>}
+    <div className="overflow-x-auto rounded-lg border border-line bg-sheet">
+      <table className="w-full border-collapse text-[0.95rem]">
+        {caption && <caption className="sr-only">{caption}</caption>}
         <thead>
           <tr>
             {columns.map((c) => {
               const dir = sort?.key === c.key ? (sort.dir === 1 ? "ascending" : "descending") : undefined;
-              const head = c.special ? <span className="ui-special-text">{txt(c.header)}</span> : txt(c.header);
+              const head = c.special ? (
+                <span className="special-text animate-flow">{txt(c.header)}</span>
+              ) : (
+                txt(c.header)
+              );
               return (
-                <th key={c.key} className={cellClass(c)} aria-sort={c.sortValue ? dir ?? "none" : undefined}>
+                <th key={c.key} className={cellClass(c, true)} aria-sort={c.sortValue ? (dir ?? "none") : undefined}>
                   {c.sortValue ? (
-                    <button type="button" className="ui-table-sort" data-dir={dir} onClick={() => toggle(c.key)}>
-                      {head}<span aria-hidden="true">{dir === "ascending" ? "▲" : dir === "descending" ? "▼" : "↕"}</span>
+                    <button
+                      type="button"
+                      className="inline-flex cursor-pointer items-center gap-1 hover:text-ink data-dir:text-ink"
+                      data-dir={dir}
+                      onClick={() => toggle(c.key)}
+                    >
+                      {head}
+                      <span aria-hidden="true">{dir === "ascending" ? "▲" : dir === "descending" ? "▼" : "↕"}</span>
                     </button>
-                  ) : head}
+                  ) : (
+                    head
+                  )}
                 </th>
               );
             })}
@@ -59,12 +89,29 @@ export function Table<T>({ columns, rows, rowKey, empty = "Nothing here yet.", c
         </thead>
         <tbody>
           {sorted.length === 0 ? (
-            <tr><td className="ui-table-empty" colSpan={columns.length}>{txt(empty)}</td></tr>
-          ) : sorted.map((r) => (
-            <tr key={rowKey(r)} className={specialRow?.(r) ? "is-special-row" : undefined}>
-              {columns.map((c) => <td key={c.key} className={cellClass(c)}>{txt(c.cell(r))}</td>)}
+            <tr>
+              <td className="px-3.5 py-7 text-center text-gray" colSpan={columns.length}>
+                {txt(empty)}
+              </td>
             </tr>
-          ))}
+          ) : (
+            sorted.map((r) => (
+              <tr
+                key={rowKey(r)}
+                className={cx(
+                  "hover:bg-sheet-2 [&:last-child>td]:border-b-0",
+                  specialRow?.(r) &&
+                    "special-tint animate-flow [&>td:first-child]:font-bold [&>td:first-child]:shadow-[inset_3px_0_0_var(--special-b)]",
+                )}
+              >
+                {columns.map((c) => (
+                  <td key={c.key} className={cellClass(c)}>
+                    {txt(c.cell(r))}
+                  </td>
+                ))}
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
     </div>

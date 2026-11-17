@@ -5,6 +5,6 @@
 import type { ImageHash, QuestionId } from "./common";
 
 export interface QuestionImageRow {
-  question_id: QuestionId;          // → questions.id
-  hash: ImageHash;                  // → images.hash
+  question_id: QuestionId; // → questions.id
+  hash: ImageHash; // → images.hash
 }

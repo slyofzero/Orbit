@@ -8,15 +8,15 @@
 //   } ) ]       typed on an empty indented line outdents it
 // Every one of these is a single native change, so Ctrl+Z undoes it.
 // How it works: a transparent <textarea> (caret, selection, typing) sits exactly on top of a
-// highlighted <pre> and an indent-guide layer that scroll with it.
+// highlighted <pre> and an indent-guide layer that scroll with it. That overlay must line up to the pixel,
+// so it is plain CSS (the ui-ce-* rules in app/site.css); the toolbar and frame are utilities.
 
 import { useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { INDENT, backspace, indent, indentLevels, newline, typeCloser, type CodeLang } from "@/lib/codeIndent";
 import { Dropdown } from "./Dropdown";
-import { FieldLabel } from "./Field";
+import { FieldLabel, FieldMessage } from "./Field";
 import { highlight } from "./highlight";
 import { applyToTextarea } from "./textareaEdit";
-import { txt } from "./txt";
 import { cx } from "./cx";
 
 export const CODE_LANGS: { value: CodeLang; label: string }[] = [
@@ -29,18 +29,43 @@ export const CODE_LANGS: { value: CodeLang; label: string }[] = [
   { value: "text", label: "Plain text" },
 ];
 
-export function CodeEditor({ label, help, hint, error, value, onChange, language, onLanguageChange, defaultLanguage = "python",
-  showLanguage = true, rows = 10, readOnly = false, id }: {
-  label?: ReactNode; help?: ReactNode; hint?: ReactNode; error?: ReactNode;
-  value: string; onChange: (v: string) => void;
-  language?: CodeLang; onLanguageChange?: (l: CodeLang) => void; defaultLanguage?: CodeLang;
-  showLanguage?: boolean; rows?: number; readOnly?: boolean; id?: string;
+export function CodeEditor({
+  label,
+  help,
+  hint,
+  error,
+  value,
+  onChange,
+  language,
+  onLanguageChange,
+  defaultLanguage = "python",
+  showLanguage = true,
+  rows = 10,
+  readOnly = false,
+  id,
+}: {
+  label?: ReactNode;
+  help?: ReactNode;
+  hint?: ReactNode;
+  error?: ReactNode;
+  value: string;
+  onChange: (v: string) => void;
+  language?: CodeLang;
+  onLanguageChange?: (l: CodeLang) => void;
+  defaultLanguage?: CodeLang;
+  showLanguage?: boolean;
+  rows?: number;
+  readOnly?: boolean;
+  id?: string;
 }) {
   const auto = useId();
   const fid = id ?? auto;
   const [ownLang, setOwnLang] = useState<CodeLang>(defaultLanguage);
   const lang = language ?? ownLang;
-  const setLang = (l: CodeLang) => { setOwnLang(l); onLanguageChange?.(l); };
+  const setLang = (l: CodeLang) => {
+    setOwnLang(l);
+    onLanguageChange?.(l);
+  };
   const size = INDENT[lang];
 
   const ta = useRef<HTMLTextAreaElement>(null);
@@ -72,21 +97,23 @@ export function CodeEditor({ label, help, hint, error, value, onChange, language
   };
 
   return (
-    <div className={cx("ui-field", error ? "has-error" : null)}>
+    <div className="grid gap-1.5">
       <FieldLabel htmlFor={fid} label={label} help={help} />
-      <div className="ui-ce">
+      <div className={cx("ui-ce", !!error && "is-error")}>
         {showLanguage && (
-          <div className="ui-ce-bar">
-            <div className="ui-ce-lang">
-              <Dropdown value={lang} onChange={(v) => setLang(v as CodeLang)} options={CODE_LANGS} />
+          <div className="flex flex-wrap items-center justify-between gap-2.5 rounded-t-[calc(var(--r-md)-2px)] border-b border-line bg-sheet-2 px-2.5 py-2">
+            <div className="w-[170px]">
+              <Dropdown size="sm" value={lang} onChange={(v) => setLang(v as CodeLang)} options={CODE_LANGS} />
             </div>
-            <span className="ui-ce-keys">Tab indents · Shift+Tab outdents · {size} spaces per level</span>
+            <span className="text-[0.8rem] text-gray">Tab indents · Shift+Tab outdents · {size} spaces per level</span>
           </div>
         )}
         <div className="ui-ce-body" style={{ height: `calc(${rows} * var(--ce-lh) + 2 * var(--ce-pad))` }}>
           <div className="ui-ce-gutter" aria-hidden="true">
             <div ref={gutter} className="ui-ce-move">
-              {levels.map((_, i) => <div key={i}>{i + 1}</div>)}
+              {levels.map((_, i) => (
+                <div key={i}>{i + 1}</div>
+              ))}
             </div>
           </div>
           <div className="ui-ce-code">
@@ -95,22 +122,38 @@ export function CodeEditor({ label, help, hint, error, value, onChange, language
                 <div className="ui-ce-guides">
                   {levels.map((n, i) => (
                     <div key={i} className="ui-ce-gline">
-                      {Array.from({ length: n }, (_, k) => <span key={k} style={{ left: `${k * size}ch` }} />)}
+                      {Array.from({ length: n }, (_, k) => (
+                        <span key={k} style={{ left: `${k * size}ch` }} />
+                      ))}
                     </div>
                   ))}
                 </div>
-                <pre className="ui-ce-pre"><code className="hljs" dangerouslySetInnerHTML={{ __html: html + "\n" }} /></pre>
+                <pre className="ui-ce-pre">
+                  <code className="hljs" dangerouslySetInnerHTML={{ __html: html + "\n" }} />
+                </pre>
               </div>
             </div>
-            <textarea ref={ta} id={fid} className="ui-ce-input" value={value} readOnly={readOnly} wrap="off"
-              spellCheck={false} autoCapitalize="off" autoComplete="off" autoCorrect="off"
-              onChange={(e) => onChange(e.target.value)} onKeyDown={onKeyDown} onScroll={sync}
-              aria-describedby={hint || error ? `${fid}-msg` : undefined} aria-invalid={error ? true : undefined} />
+            <textarea
+              ref={ta}
+              id={fid}
+              className="ui-ce-input"
+              value={value}
+              readOnly={readOnly}
+              wrap="off"
+              spellCheck={false}
+              autoCapitalize="off"
+              autoComplete="off"
+              autoCorrect="off"
+              onChange={(e) => onChange(e.target.value)}
+              onKeyDown={onKeyDown}
+              onScroll={sync}
+              aria-describedby={hint || error ? `${fid}-msg` : undefined}
+              aria-invalid={error ? true : undefined}
+            />
           </div>
         </div>
       </div>
-      {error ? <span className="ui-error" id={`${fid}-msg`}>{txt(error)}</span>
-        : hint ? <span className="ui-hint" id={`${fid}-msg`}>{txt(hint)}</span> : null}
+      <FieldMessage id={fid} hint={hint} error={error} />
     </div>
   );
 }

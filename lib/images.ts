@@ -1,7 +1,7 @@
 // Picture references. A picture is stored once, named by a hash of its bytes, and text refers to it
 // as `img:<hash>` (e.g. ![graph](img:h3f9a…)). Never put base64 picture data inside text.
 
-export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;   // 5 MB per picture
+export const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5 MB per picture
 
 /** "h" + the first 32 hex characters of the SHA-256 of the bytes. Same picture → same name. */
 export async function hashImage(bytes: ArrayBuffer | Uint8Array): Promise<string> {

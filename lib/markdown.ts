@@ -50,7 +50,10 @@ const isWordChar = (ch: string | undefined) => !!ch && /[\p{L}\p{N}]/u.test(ch);
 /** Index of the closing `fence` for maths, skipping escaped characters; -1 if none. */
 function findMathClose(src: string, from: number, fence: string): number {
   for (let j = from; j < src.length; j++) {
-    if (src[j] === "\\") { j++; continue; }
+    if (src[j] === "\\") {
+      j++;
+      continue;
+    }
     if (src.startsWith(fence, j)) return j;
   }
   return -1;
@@ -61,12 +64,21 @@ function findMathClose(src: string, from: number, fence: string): number {
 function findDelimClose(src: string, from: number, d: string): number {
   for (let j = from; j < src.length; j++) {
     const ch = src[j];
-    if (ch === "\\") { j++; continue; }
+    if (ch === "\\") {
+      j++;
+      continue;
+    }
     if (ch === "`") {
       const end = src.indexOf("`", j + 1);
-      if (end > j) { j = end; continue; }
+      if (end > j) {
+        j = end;
+        continue;
+      }
     }
-    if (d === "*" && src.startsWith("**", j)) { j++; continue; }
+    if (d === "*" && src.startsWith("**", j)) {
+      j++;
+      continue;
+    }
     if (src.startsWith(d, j)) return j;
   }
   return -1;
@@ -77,7 +89,10 @@ function matchBracketLink(src: string, open: number): { text: string; url: strin
   let depth = 0;
   for (let j = open; j < src.length; j++) {
     const ch = src[j];
-    if (ch === "\\") { j++; continue; }
+    if (ch === "\\") {
+      j++;
+      continue;
+    }
     if (ch === "[") depth++;
     else if (ch === "]" && --depth === 0) {
       if (src[j + 1] !== "(") return null;
@@ -89,7 +104,13 @@ function matchBracketLink(src: string, open: number): { text: string; url: strin
   return null;
 }
 
-const EMPHASIS: [string, "strong" | "u" | "del" | "em"][] = [["**", "strong"], ["++", "u"], ["~~", "del"], ["*", "em"], ["_", "em"]];
+const EMPHASIS: [string, "strong" | "u" | "del" | "em"][] = [
+  ["**", "strong"],
+  ["++", "u"],
+  ["~~", "del"],
+  ["*", "em"],
+  ["_", "em"],
+];
 
 export function parseInline(src: string): Inline[] {
   // fast path: no character that could start formatting, maths, a link or a line break → plain text
@@ -106,12 +127,24 @@ export function parseInline(src: string): Inline[] {
   outer: while (i < src.length) {
     const c = src[i];
 
-    if (c === "\\" && i + 1 < src.length && ESCAPABLE.includes(src[i + 1])) { buf += src[i + 1]; i += 2; continue; }
-    if (c === "\n") { push({ t: "br" }); i++; continue; }
+    if (c === "\\" && i + 1 < src.length && ESCAPABLE.includes(src[i + 1])) {
+      buf += src[i + 1];
+      i += 2;
+      continue;
+    }
+    if (c === "\n") {
+      push({ t: "br" });
+      i++;
+      continue;
+    }
 
     if (c === "`") {
       const end = src.indexOf("`", i + 1);
-      if (end > i + 1) { push({ t: "code", v: src.slice(i + 1, end) }); i = end + 1; continue; }
+      if (end > i + 1) {
+        push({ t: "code", v: src.slice(i + 1, end) });
+        i = end + 1;
+        continue;
+      }
     }
 
     if (c === "$") {
@@ -119,30 +152,44 @@ export function parseInline(src: string): Inline[] {
       const fence = display ? "$$" : "$";
       const start = i + fence.length;
       const end = findMathClose(src, start, fence);
-      if (end > start) { push({ t: "math", v: src.slice(start, end), display }); i = end + fence.length; continue; }
-      buf += fence; i = start; continue;
+      if (end > start) {
+        push({ t: "math", v: src.slice(start, end), display });
+        i = end + fence.length;
+        continue;
+      }
+      buf += fence;
+      i = start;
+      continue;
     }
 
     if (c === "!" && src[i + 1] === "[") {
       const m = matchBracketLink(src, i + 1);
       const s = m && safeImageSrc(m.url);
-      if (m && s) { push({ t: "img", src: s, alt: m.text }); i = m.end; continue; }
+      if (m && s) {
+        push({ t: "img", src: s, alt: m.text });
+        i = m.end;
+        continue;
+      }
     }
 
     if (c === "[") {
       const m = matchBracketLink(src, i);
       const h = m && safeHref(m.url);
-      if (m && h) { push({ t: "link", href: h, c: parseInline(m.text) }); i = m.end; continue; }
+      if (m && h) {
+        push({ t: "link", href: h, c: parseInline(m.text) });
+        i = m.end;
+        continue;
+      }
     }
 
     for (const [d, t] of EMPHASIS) {
       if (!src.startsWith(d, i)) continue;
-      if (d === "_" && isWordChar(src[i - 1])) break;                 // snake_case stays text
+      if (d === "_" && isWordChar(src[i - 1])) break; // snake_case stays text
       const start = i + d.length;
       const end = findDelimClose(src, start, d);
       if (end <= start) break;
       const inner = src.slice(start, end);
-      if (/^\s|\s$/.test(inner)) break;                               // "2 * 3 * 4" stays text
+      if (/^\s|\s$/.test(inner)) break; // "2 * 3 * 4" stays text
       if (d === "_" && isWordChar(src[end + 1])) break;
       push({ t, c: parseInline(inner) });
       i = end + d.length;
@@ -169,7 +216,15 @@ const RE = {
 
 function startsBlock(line: string): boolean {
   const t = line.trim();
-  return RE.fence.test(t) || t.startsWith("$$") || RE.heading.test(t) || RE.hr.test(t) || t.startsWith(">") || RE.ul.test(line) || RE.ol.test(line);
+  return (
+    RE.fence.test(t) ||
+    t.startsWith("$$") ||
+    RE.heading.test(t) ||
+    RE.hr.test(t) ||
+    t.startsWith(">") ||
+    RE.ul.test(line) ||
+    RE.ol.test(line)
+  );
 }
 
 function parseBlocks(lines: string[]): Block[] {
@@ -178,14 +233,17 @@ function parseBlocks(lines: string[]): Block[] {
   while (i < lines.length) {
     const line = lines[i];
     const t = line.trim();
-    if (t === "") { i++; continue; }
+    if (t === "") {
+      i++;
+      continue;
+    }
 
     const fence = RE.fence.exec(t);
     if (fence) {
       const body: string[] = [];
       i++;
       while (i < lines.length && lines[i].trim() !== "```") body.push(lines[i++]);
-      i++;                                                             // closing ``` (or end of text)
+      i++; // closing ``` (or end of text)
       out.push({ t: "code", lang: fence[1], v: body.join("\n") });
       continue;
     }
@@ -205,19 +263,36 @@ function parseBlocks(lines: string[]): Block[] {
         let closed = false;
         while (j < lines.length) {
           const k = lines[j].indexOf("$$");
-          if (k >= 0) { body.push(lines[j].slice(0, k)); closed = lines[j].slice(k + 2).trim() === ""; j++; break; }
+          if (k >= 0) {
+            body.push(lines[j].slice(0, k));
+            closed = lines[j].slice(k + 2).trim() === "";
+            j++;
+            break;
+          }
           body.push(lines[j++]);
         }
         const v = body.join("\n").trim();
-        if (closed && v) { out.push({ t: "math", v }); i = j; continue; }
+        if (closed && v) {
+          out.push({ t: "math", v });
+          i = j;
+          continue;
+        }
       }
       // not a clean maths block: falls through to a paragraph
     }
 
     const h = RE.heading.exec(t);
-    if (h) { out.push({ t: "h", level: h[1].length as 1 | 2 | 3, c: parseInline(h[2]) }); i++; continue; }
+    if (h) {
+      out.push({ t: "h", level: h[1].length as 1 | 2 | 3, c: parseInline(h[2]) });
+      i++;
+      continue;
+    }
 
-    if (RE.hr.test(t)) { out.push({ t: "hr" }); i++; continue; }
+    if (RE.hr.test(t)) {
+      out.push({ t: "hr" });
+      i++;
+      continue;
+    }
 
     if (t.startsWith(">")) {
       const inner: string[] = [];
@@ -229,7 +304,10 @@ function parseBlocks(lines: string[]): Block[] {
     if (RE.ul.test(line)) {
       const items: Inline[][] = [];
       let m: RegExpExecArray | null;
-      while (i < lines.length && (m = RE.ul.exec(lines[i]))) { items.push(parseInline(m[1])); i++; }
+      while (i < lines.length && (m = RE.ul.exec(lines[i]))) {
+        items.push(parseInline(m[1]));
+        i++;
+      }
       out.push({ t: "ul", items });
       continue;
     }
@@ -238,7 +316,10 @@ function parseBlocks(lines: string[]): Block[] {
     if (ol) {
       const items: Inline[][] = [];
       let m: RegExpExecArray | null;
-      while (i < lines.length && (m = RE.ol.exec(lines[i]))) { items.push(parseInline(m[2])); i++; }
+      while (i < lines.length && (m = RE.ol.exec(lines[i]))) {
+        items.push(parseInline(m[2]));
+        i++;
+      }
       out.push({ t: "ol", start: Number(ol[1]), items });
       continue;
     }

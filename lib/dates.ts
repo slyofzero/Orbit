@@ -6,7 +6,20 @@ export type IsoDate = string; // "2026-11-18"
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
-export const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+export const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
 export const WEEKDAYS_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 /** Today's date in India (UTC+5:30), whatever timezone the device is in. */

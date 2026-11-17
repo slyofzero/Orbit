@@ -8,9 +8,17 @@ export function useDismiss(open: boolean, onClose: () => void, inside: RefObject
     const onDown = (e: PointerEvent) => {
       if (!inside.some((r) => r.current?.contains(e.target as Node))) onClose();
     };
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") { e.stopPropagation(); onClose(); } };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        onClose();
+      }
+    };
     document.addEventListener("pointerdown", onDown);
     document.addEventListener("keydown", onKey);
-    return () => { document.removeEventListener("pointerdown", onDown); document.removeEventListener("keydown", onKey); };
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
   }, [open, onClose, inside]);
 }

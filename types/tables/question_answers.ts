@@ -8,11 +8,11 @@
 import type { AnswerOutcome, AnswerSource, QuestionId } from "./common";
 
 export interface QuestionAnswerRow {
-  id: number;                       // PRIMARY KEY
-  question_id: QuestionId;          // → questions.id
-  recorded_at: number;              // when it was answered, or when the sitting ended (skipped)
-  outcome: AnswerOutcome;           // correct | incorrect | skipped
-  time_ms: number;                  // ACTIVE time on this question, summed over all visits in the
-                                    // sitting; paused when the tab is hidden or the user is idle
-  source: AnswerSource;             // practice | mock
+  id: number; // PRIMARY KEY
+  question_id: QuestionId; // → questions.id
+  recorded_at: number; // when it was answered, or when the sitting ended (skipped)
+  outcome: AnswerOutcome; // correct | incorrect | skipped
+  time_ms: number; // ACTIVE time on this question, summed over all visits in the
+  // sitting; paused when the tab is hidden or the user is idle
+  source: AnswerSource; // practice | mock
 }

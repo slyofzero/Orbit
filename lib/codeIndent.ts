@@ -18,7 +18,10 @@ export function opensBlock(lang: CodeLang, lineBeforeCursor: string): boolean {
 }
 
 const lineStartOf = (text: string, pos: number) => text.lastIndexOf("\n", pos - 1) + 1;
-const lineEndOf = (text: string, pos: number) => { const n = text.indexOf("\n", pos); return n === -1 ? text.length : n; };
+const lineEndOf = (text: string, pos: number) => {
+  const n = text.indexOf("\n", pos);
+  return n === -1 ? text.length : n;
+};
 
 /** Width of a line's leading whitespace, a tab counting as one indent level. */
 export function leadingWidth(line: string, size: number): number {
@@ -38,9 +41,18 @@ export function indentLevels(text: string, size: number): number[] {
   const raw = lines.map((l) => (l.trim() === "" ? -1 : Math.floor(leadingWidth(l, size) / size)));
   return raw.map((lv, i) => {
     if (lv >= 0) return lv;
-    let prev = -1, next = -1;
-    for (let j = i - 1; j >= 0; j--) if (raw[j] >= 0) { prev = raw[j]; break; }
-    for (let j = i + 1; j < raw.length; j++) if (raw[j] >= 0) { next = raw[j]; break; }
+    let prev = -1,
+      next = -1;
+    for (let j = i - 1; j >= 0; j--)
+      if (raw[j] >= 0) {
+        prev = raw[j];
+        break;
+      }
+    for (let j = i + 1; j < raw.length; j++)
+      if (raw[j] >= 0) {
+        next = raw[j];
+        break;
+      }
     return prev < 0 || next < 0 ? 0 : Math.min(prev, next);
   });
 }
@@ -74,18 +86,20 @@ export function indent(text: string, start: number, end: number, lang: CodeLang,
     const pad = " ".repeat(n);
     return { from: start, to: end, insert: pad, selStart: start + n, selEnd: start + n };
   }
-  const stop = end > start && text[end - 1] === "\n" ? end - 1 : end;   // a selection ending at a line start excludes that line
+  const stop = end > start && text[end - 1] === "\n" ? end - 1 : end; // a selection ending at a line start excludes that line
   const le = lineEndOf(text, stop);
   const lines = text.slice(ls, le).split("\n");
   let firstShift = 0;
-  const out = lines.map((l, i) => {
-    let next: string;
-    if (dir === 1) next = l.trim() === "" ? l : " ".repeat(size) + l;
-    else if (l.startsWith("\t")) next = l.slice(1);
-    else next = l.slice(Math.min(size, /^ */.exec(l)![0].length));
-    if (i === 0) firstShift = next.length - l.length;
-    return next;
-  }).join("\n");
+  const out = lines
+    .map((l, i) => {
+      let next: string;
+      if (dir === 1) next = l.trim() === "" ? l : " ".repeat(size) + l;
+      else if (l.startsWith("\t")) next = l.slice(1);
+      else next = l.slice(Math.min(size, /^ */.exec(l)![0].length));
+      if (i === 0) firstShift = next.length - l.length;
+      return next;
+    })
+    .join("\n");
   if (start === end) {
     const cursor = Math.max(ls, start + firstShift);
     return { from: ls, to: le, insert: out, selStart: cursor, selEnd: cursor };

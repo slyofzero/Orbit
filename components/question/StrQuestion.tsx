@@ -2,8 +2,8 @@
 import { useState } from "react";
 import type { QuestionRow, QuestionStrRow } from "@/types/tables";
 import { gradeStr, type Verdict } from "@/lib/grade";
-import { Rich, TextField, cx } from "@/components/ui";
-import { QuestionFrame, type FrameResult } from "./QuestionFrame";
+import { Rich, TextField } from "@/components/ui";
+import { QuestionFrame, typedClass, type FrameResult } from "./QuestionFrame";
 
 const HOW = {
   exact: "Type your answer.",
@@ -11,25 +11,69 @@ const HOW = {
   set: "Separate items with commas, in any order.",
 } as const;
 
-export function StrQuestion({ question, detail, number, onAnswer, special }: {
-  question: QuestionRow; detail: QuestionStrRow; number?: number; onAnswer?: (v: Verdict) => void; special?: boolean;
+export function StrQuestion({
+  question,
+  detail,
+  number,
+  onAnswer,
+  special,
+}: {
+  question: QuestionRow;
+  detail: QuestionStrRow;
+  number?: number;
+  onAnswer?: (v: Verdict) => void;
+  special?: boolean;
 }) {
   const [input, setInput] = useState("");
   const [result, setResult] = useState<FrameResult | null>(null);
   const check = () => {
     const verdict = gradeStr(detail.match, detail.case_sensitive, detail.accepted, input);
-    const list = detail.accepted.map((a, i) => <span key={i}>{i > 0 && " · "}<strong><Rich text={a} /></strong></span>);
-    setResult({ verdict, detail: <>{detail.accepted.length > 1 ? "Accepted answers: " : "Correct answer: "}{list}</> });
+    const list = detail.accepted.map((a, i) => (
+      <span key={i}>
+        {i > 0 && " · "}
+        <strong>
+          <Rich text={a} />
+        </strong>
+      </span>
+    ));
+    setResult({
+      verdict,
+      detail: (
+        <>
+          {detail.accepted.length > 1 ? "Accepted answers: " : "Correct answer: "}
+          {list}
+        </>
+      ),
+    });
     onAnswer?.(verdict);
   };
   return (
-    <QuestionFrame question={question} number={number} special={special} instruction={HOW[detail.match]} result={result}
-      canCheck={input.trim() !== ""} onCheck={check} onReset={() => { setInput(""); setResult(null); }}>
-      <div className={cx("qz-typed", result?.verdict === "correct" && "is-right", result?.verdict === "incorrect" && "is-wrong")}>
-        <TextField label="Your answer" autoComplete="off" spellCheck={false} value={input} disabled={!!result}
+    <QuestionFrame
+      question={question}
+      number={number}
+      special={special}
+      instruction={HOW[detail.match]}
+      result={result}
+      canCheck={input.trim() !== ""}
+      onCheck={check}
+      onReset={() => {
+        setInput("");
+        setResult(null);
+      }}
+    >
+      <div className={typedClass(result?.verdict)}>
+        <TextField
+          label="Your answer"
+          autoComplete="off"
+          spellCheck={false}
+          value={input}
+          disabled={!!result}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter" && !result && input.trim()) check(); }}
-          hint={detail.case_sensitive ? "Capital letters matter." : "Capital letters don't matter."} />
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !result && input.trim()) check();
+          }}
+          hint={detail.case_sensitive ? "Capital letters matter." : "Capital letters don't matter."}
+        />
       </div>
     </QuestionFrame>
   );

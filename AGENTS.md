@@ -13,6 +13,7 @@ The `rehaul` branch is a rebuild. The old localStorage app is on `main` and in g
 - `bun install`, then `bun run dev`, open http://localhost:3000
 - `bunx tsc --noEmit`: type check (must be clean)
 - `bun run check`: `scripts/check.ts`, the logic test suite. It must print `ALL OK`.
+- `bun run format`: Prettier on every `.tsx` file (`.prettierrc.json`: 120 columns, double quotes, semicolons, trailing commas). `bun run format:check` must pass.
 - `bun run build` / `bun run start`: production build
 - http://localhost:3000/dev/components: every shared UI component (`components/ui`) and question component (`components/question`), live, in both themes. **Dev mode only**: `app/dev/layout.tsx` returns 404 in production. When you add or change a shared component, add or update its demo there.
 
@@ -32,7 +33,7 @@ The owner has **no hosting budget**. Orbit is deployed on **Vercel's free (Hobby
 5. **Plans and question packs are user data.** Imports are validated first and refuse or warn; never save unchecked data.
 6. **ALL user-visible text renders as markdown + LaTeX, everywhere** (headings, labels, table cells, tooltips, options, buttons, toasts…). Shared components in `components/ui` and `components/question` do this automatically for every string prop through `txt()` (`components/ui/Rich.tsx`). In your own JSX, never print a user-facing string raw: use `<Rich text={…} />` (or `<Rich block …/>` for multi-paragraph text) or `txt(…)`. Syntax: `lib/markdown.ts`. Plain text skips parsing and results are cached, so it is cheap.
 7. **Dates are plain `YYYY-MM-DD` strings in IST.** Do not use `new Date()` for day logic.
-8. **Styling is one file, `app/site.css`, with unique class prefixes and theme variables** (`--sheet --ink --accent …`). Support light and dark.
+8. **Styling is Tailwind CSS v4 utility classes**, written in the components. Colours come ONLY from Orbit's theme tokens (`bg-sheet text-ink border-line bg-accent text-gray …`); Tailwind's own palette (`gray-500`, `blue-600`…) is switched off because it doesn't follow light / dark. `app/site.css` holds the theme (`@theme`), custom utilities (`special-fill`, `special-text`, `special-border`, `warm`, `dot-grid`, `frosted`…) and only what utilities can't express (code-editor overlay, theme ripple). Don't add new component CSS there; use utilities, or add an `@utility` if a pattern repeats. Support light and dark. See `docs/COMPONENTS.md` §3.
    **Build screens only from the shared components** in `components/ui` (index: `components/ui/index.ts`, all shown at `/dev/components`). No raw `<button>`, `<input>`, `<select>`, `<a>`, `<h1>`–`<h3>`, `<p>`, `<details>`, `<table>` or `<hr>` in pages: use `Button`/`IconButton`, `TextField`/`Dropdown`/`DatePicker`/`FileInput`, `Link`, `Heading`, `Text`, `Disclosure`, `Table`, `Divider`. There is deliberately no native `<select>`: its list can't be styled or show maths. If something is missing, add it to `components/ui` with a demo first.
 9. **Prompts the app hands to AI chats are product features.** If you change a data format, update every prompt that describes it and its test.
 10. Do not delete, rename or reformat code you were not asked to touch.

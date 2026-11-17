@@ -5,6 +5,6 @@
 import type { QuestionId } from "./common";
 
 export interface QuestionCodeRow {
-  question_id: QuestionId;          // PRIMARY KEY → questions.id
-  starter: string | null;           // code the editor opens with; null = empty editor
+  question_id: QuestionId; // PRIMARY KEY → questions.id
+  starter: string | null; // code the editor opens with; null = empty editor
 }

@@ -7,19 +7,38 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState, type Keyboard
 import { useDismiss } from "./useDismiss";
 import { IconCheck, IconChevronDown, IconSearch } from "./icons";
 import { cx } from "./cx";
-import { FieldLabel } from "./Field";
+import { FieldLabel, FieldMessage } from "./Field";
+import { POPUP, triggerClass, triggerIconClass } from "./styles";
 import { txt } from "./txt";
 
-export type DropdownOption<V extends string> = { value: V; label: string; description?: string; icon?: ReactNode; disabled?: boolean };
+export type DropdownOption<V extends string> = {
+  value: V;
+  label: string;
+  description?: string;
+  icon?: ReactNode;
+  disabled?: boolean;
+};
 
-export function Dropdown<V extends string>({ label, help, options, value, onChange, placeholder = "Choose…", searchable = false, hint, error }: {
+export function Dropdown<V extends string>({
+  label,
+  help,
+  options,
+  value,
+  onChange,
+  placeholder = "Choose…",
+  searchable = false,
+  hint,
+  error,
+  size = "md",
+}: {
   label?: ReactNode;
-  help?: ReactNode;      // shows a "?" tip beside the label
+  help?: ReactNode; // shows a "?" tip beside the label
   options: DropdownOption<V>[];
   value: V | null;
   onChange: (v: V) => void;
   placeholder?: string;
   searchable?: boolean;
+  size?: "sm" | "md"; // sm = compact, for toolbars (e.g. the code editor's language picker)
   hint?: ReactNode;
   error?: ReactNode;
 }) {
@@ -39,7 +58,11 @@ export function Dropdown<V extends string>({ label, help, options, value, onChan
   }, [options, query]);
   const selected = options.find((o) => o.value === value) ?? null;
 
-  const close = useCallback(() => { setOpen(false); setQuery(""); trigger.current?.focus(); }, []);
+  const close = useCallback(() => {
+    setOpen(false);
+    setQuery("");
+    trigger.current?.focus();
+  }, []);
   const refs = useMemo(() => [wrap], []);
   useDismiss(open, close, refs);
 
@@ -55,78 +78,144 @@ export function Dropdown<V extends string>({ label, help, options, value, onChan
   useEffect(() => {
     list.current?.querySelector(`[data-i="${active}"]`)?.scrollIntoView({ block: "nearest" });
   }, [active]);
-  useEffect(() => { setActive(shown.findIndex((o) => !o.disabled)); }, [query]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    setActive(shown.findIndex((o) => !o.disabled));
+  }, [query]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const choose = (o: DropdownOption<V> | undefined) => { if (!o || o.disabled) return; onChange(o.value); close(); };
+  const choose = (o: DropdownOption<V> | undefined) => {
+    if (!o || o.disabled) return;
+    onChange(o.value);
+    close();
+  };
   const step = (from: number, dir: 1 | -1) => {
     for (let i = from + dir; i >= 0 && i < shown.length; i += dir) if (!shown[i].disabled) return i;
     return from;
   };
 
   const onKey = (e: KeyboardEvent) => {
-    if (e.key === "ArrowDown") { e.preventDefault(); setActive((a) => step(a, 1)); }
-    else if (e.key === "ArrowUp") { e.preventDefault(); setActive((a) => step(a, -1)); }
-    else if (e.key === "Home") { e.preventDefault(); setActive(step(-1, 1)); }
-    else if (e.key === "End") { e.preventDefault(); setActive(step(shown.length, -1)); }
-    else if (e.key === "Enter" || (e.key === " " && !searchable)) { e.preventDefault(); choose(shown[active]); }
-    else if (e.key === "Tab") close();
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActive((a) => step(a, 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActive((a) => step(a, -1));
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      setActive(step(-1, 1));
+    } else if (e.key === "End") {
+      e.preventDefault();
+      setActive(step(shown.length, -1));
+    } else if (e.key === "Enter" || (e.key === " " && !searchable)) {
+      e.preventDefault();
+      choose(shown[active]);
+    } else if (e.key === "Tab") close();
     else if (!searchable && e.key.length === 1 && /\S/.test(e.key)) {
       const k = e.key.toLowerCase();
       const n = shown.length;
       for (let j = 1; j <= n; j++) {
         const i = (active + j) % n;
-        if (!shown[i].disabled && shown[i].label.toLowerCase().startsWith(k)) { setActive(i); break; }
+        if (!shown[i].disabled && shown[i].label.toLowerCase().startsWith(k)) {
+          setActive(i);
+          break;
+        }
       }
     }
   };
   const onTriggerKey = (e: KeyboardEvent) => {
-    if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); openList(); }
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      openList();
+    }
   };
 
   return (
-    <div className={cx("ui-field", error ? "has-error" : null)}>
+    <div className="grid gap-1.5">
       <FieldLabel htmlFor={id} label={label} help={help} />
-      <div className="ui-pop-wrap" ref={wrap}>
-        <button ref={trigger} id={id} type="button" className={cx("ui-trigger", !selected && "is-empty")}
-          aria-haspopup="listbox" aria-expanded={open} aria-controls={open ? listId : undefined}
+      <div className="relative" ref={wrap}>
+        <button
+          ref={trigger}
+          id={id}
+          type="button"
+          className={triggerClass({ open, empty: !selected, size })}
+          aria-invalid={error ? true : undefined}
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          aria-controls={open ? listId : undefined}
           aria-describedby={hint || error ? `${id}-msg` : undefined}
-          onClick={() => (open ? close() : openList())} onKeyDown={onTriggerKey}>
-          <span className="ui-trigger-value">{selected ? <>{selected.icon}{txt(selected.label)}</> : txt(placeholder)}</span>
-          <IconChevronDown className={cx("ui-trigger-icon", open && "is-flipped")} />
+          onClick={() => (open ? close() : openList())}
+          onKeyDown={onTriggerKey}
+        >
+          <span className="inline-flex min-w-0 items-center gap-2 truncate [&_svg]:size-4 [&_svg]:shrink-0">
+            {selected ? (
+              <>
+                {selected.icon}
+                {txt(selected.label)}
+              </>
+            ) : (
+              txt(placeholder)
+            )}
+          </span>
+          <IconChevronDown className={triggerIconClass(open)} />
         </button>
 
         {open && (
-          <div className="ui-pop ui-dd">
+          <div className={cx(POPUP, "w-full min-w-[220px] overflow-hidden")}>
             {searchable && (
-              <div className="ui-dd-search">
+              <div className="flex items-center gap-2 border-b border-line-2 px-3 py-2.5 text-gray [&>svg]:size-4 [&>svg]:shrink-0">
                 <IconSearch />
-                <input ref={search} type="text" value={query} placeholder="Type to filter…" aria-label="Filter options"
-                  aria-controls={listId} aria-activedescendant={shown[active] ? `${id}-o${active}` : undefined}
-                  onChange={(e) => setQuery(e.target.value)} onKeyDown={onKey} />
+                <input
+                  ref={search}
+                  type="text"
+                  className="min-w-0 flex-1 bg-transparent font-body text-[0.95rem] text-ink outline-none"
+                  value={query}
+                  placeholder="Type to filter…"
+                  aria-label="Filter options"
+                  aria-controls={listId}
+                  aria-activedescendant={shown[active] ? `${id}-o${active}` : undefined}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={onKey}
+                />
               </div>
             )}
-            <ul ref={list} id={listId} role="listbox" tabIndex={searchable ? -1 : 0} className="ui-dd-list"
+            <ul
+              ref={list}
+              id={listId}
+              role="listbox"
+              tabIndex={searchable ? -1 : 0}
+              className="m-0 max-h-[264px] list-none overflow-y-auto p-1.5 focus:outline-none"
               aria-activedescendant={!searchable && shown[active] ? `${id}-o${active}` : undefined}
-              onKeyDown={searchable ? undefined : onKey}>
-              {shown.length === 0 && <li className="ui-dd-empty">Nothing matches “{query}”.</li>}
+              onKeyDown={searchable ? undefined : onKey}
+            >
+              {shown.length === 0 && <li className="p-2.5 text-[0.9rem] text-gray">Nothing matches “{query}”.</li>}
               {shown.map((o, i) => (
-                <li key={o.value} id={`${id}-o${i}`} data-i={i} role="option" aria-selected={o.value === value} aria-disabled={o.disabled || undefined}
-                  className={cx("ui-dd-opt", i === active && "is-active", o.disabled && "is-disabled")}
-                  onPointerMove={() => !o.disabled && setActive(i)} onClick={() => choose(o)}>
-                  {o.icon && <span className="ui-dd-icon">{o.icon}</span>}
-                  <span className="ui-dd-text">
+                <li
+                  key={o.value}
+                  id={`${id}-o${i}`}
+                  data-i={i}
+                  role="option"
+                  aria-selected={o.value === value}
+                  aria-disabled={o.disabled || undefined}
+                  className={cx(
+                    "flex items-center gap-2.5 rounded-sm px-2.5 py-2 aria-selected:font-bold aria-selected:text-accent",
+                    i === active && "bg-sheet-2",
+                    o.disabled ? "cursor-not-allowed opacity-45" : "cursor-pointer",
+                  )}
+                  onPointerMove={() => !o.disabled && setActive(i)}
+                  onClick={() => choose(o)}
+                >
+                  {o.icon && <span className="inline-grid shrink-0 place-items-center [&_svg]:size-4">{o.icon}</span>}
+                  <span className="grid min-w-0 flex-1">
                     <span>{txt(o.label)}</span>
-                    {o.description && <span className="ui-dd-desc">{txt(o.description)}</span>}
+                    {o.description && <span className="text-[0.8rem] font-normal text-gray">{txt(o.description)}</span>}
                   </span>
-                  {o.value === value && <IconCheck className="ui-dd-check" />}
+                  {o.value === value && <IconCheck className="size-4 shrink-0" />}
                 </li>
               ))}
             </ul>
           </div>
         )}
       </div>
-      {error ? <span className="ui-error" id={`${id}-msg`}>{txt(error)}</span>
-        : hint ? <span className="ui-hint" id={`${id}-msg`}>{txt(hint)}</span> : null}
+      <FieldMessage id={id} hint={hint} error={error} />
     </div>
   );
 }

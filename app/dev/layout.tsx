@@ -10,17 +10,23 @@ export default function DevLayout({ children }: { children: React.ReactNode }) {
   if (process.env.NODE_ENV !== "development") notFound();
   return (
     <ToastProvider>
-      <div className="dv-shell">
-        <header className="dv-top">
-          <Link href="/dev" variant="subtle" className="dv-brand">Orbit</Link>
+      <div className="min-h-screen">
+        <header className="sticky top-0 z-20 flex flex-wrap items-center gap-4 border-b border-line bg-pad/88 px-[clamp(16px,3vw,32px)] py-3 backdrop-blur-sm">
+          <Link href="/dev" variant="subtle" className="font-display text-[1.15rem] font-extrabold text-ink!">
+            Orbit
+          </Link>
           <Pill tone="amber">DEV ONLY</Pill>
-          <nav aria-label="Dev pages" className="dv-nav">
-            <Link href="/dev/components" variant="nav">Components</Link>
-            <Link href="/" variant="nav">App</Link>
+          <nav aria-label="Dev pages" className="mr-auto flex flex-wrap gap-1">
+            <Link href="/dev/components" variant="nav">
+              Components
+            </Link>
+            <Link href="/" variant="nav">
+              App
+            </Link>
           </nav>
           <ThemeToggle />
         </header>
-        <main className="dv-main">{children}</main>
+        <main className="mx-auto grid max-w-[1200px] gap-[22px] px-[clamp(16px,3vw,32px)] pt-7 pb-20">{children}</main>
       </div>
     </ToastProvider>
   );

@@ -5,8 +5,18 @@ import { gradeMsq, type Verdict } from "@/lib/grade";
 import { QuestionFrame, type FrameResult } from "./QuestionFrame";
 import { OptionList } from "./OptionList";
 
-export function MsqQuestion({ question, detail, number, onAnswer, special }: {
-  question: QuestionRow; detail: QuestionMsqRow; number?: number; onAnswer?: (v: Verdict) => void; special?: boolean;
+export function MsqQuestion({
+  question,
+  detail,
+  number,
+  onAnswer,
+  special,
+}: {
+  question: QuestionRow;
+  detail: QuestionMsqRow;
+  number?: number;
+  onAnswer?: (v: Verdict) => void;
+  special?: boolean;
 }) {
   const [picks, setPicks] = useState<number[]>([]);
   const [result, setResult] = useState<FrameResult | null>(null);
@@ -17,11 +27,26 @@ export function MsqQuestion({ question, detail, number, onAnswer, special }: {
     onAnswer?.(verdict);
   };
   return (
-    <QuestionFrame question={question} number={number} special={special}
-      instruction="Pick every correct option. All of them must be right to score." result={result}
-      canCheck={picks.length > 0} onCheck={check} onReset={() => { setPicks([]); setResult(null); }}>
-      <OptionList mode="multi" options={detail.options} picked={picks}
-        correct={result ? detail.correct : null} onToggle={toggle} />
+    <QuestionFrame
+      question={question}
+      number={number}
+      special={special}
+      instruction="Pick every correct option. All of them must be right to score."
+      result={result}
+      canCheck={picks.length > 0}
+      onCheck={check}
+      onReset={() => {
+        setPicks([]);
+        setResult(null);
+      }}
+    >
+      <OptionList
+        mode="multi"
+        options={detail.options}
+        picked={picks}
+        correct={result ? detail.correct : null}
+        onToggle={toggle}
+      />
     </QuestionFrame>
   );
 }

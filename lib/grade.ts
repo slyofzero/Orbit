@@ -44,7 +44,10 @@ function norm(s: string, caseSensitive: boolean): string {
 
 /** "a, b ,c" → ["a", "b", "c"] (empty items dropped). */
 function items(s: string, caseSensitive: boolean): string[] {
-  return s.split(",").map((x) => norm(x, caseSensitive)).filter(Boolean);
+  return s
+    .split(",")
+    .map((x) => norm(x, caseSensitive))
+    .filter(Boolean);
 }
 
 /** str: right when the typed answer matches ANY accepted answer.

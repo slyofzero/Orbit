@@ -4,7 +4,7 @@
 import type { QuestionId } from "./common";
 
 export interface QuestionMsqRow {
-  question_id: QuestionId;          // PRIMARY KEY → questions.id
-  options: string[];                // the choices; array index = position (0 = A)
-  correct: number[];                // indexes into options, at least one, no repeats
+  question_id: QuestionId; // PRIMARY KEY → questions.id
+  options: string[]; // the choices; array index = position (0 = A)
+  correct: number[]; // indexes into options, at least one, no repeats
 }

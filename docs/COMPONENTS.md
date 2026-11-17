@@ -4,7 +4,7 @@ Every screen in Orbit is built from a small set of shared components. This file 
 
 - Shared components: `components/ui/` (one file each; everything is exported from `components/ui/index.ts`)
 - Question components: `components/question/`
-- All styles: `app/site.css` (class prefixes: `ui-` shared, `qz-` questions, `dv-` the `/dev` pages)
+- Styling: **Tailwind CSS v4 utility classes**, written in the components. `app/site.css` holds the theme, custom utilities and the few things utilities can't express (see §3).
 
 ---
 
@@ -43,13 +43,23 @@ open http://localhost:3000/dev/components
 1. **Only shared components.** No raw `<button>`, `<input>`, `<select>`, `<a>`, `<h1>`–`<h3>`, `<p>`, `<details>`, `<table>` or `<hr>` in pages. If something is missing, add it to `components/ui` (with a demo) first.
 2. **No native `<select>`.** Its pop-up list is drawn by the browser: it can't be themed and can't show maths. Use `Dropdown`.
 3. **All text is markdown + LaTeX.** Every component renders its text props through `txt()` automatically. In your own JSX, wrap text in `<Text>`, `<Rich>` or `txt()`. See §4.
-4. **Colours only through theme variables** (`--sheet --ink --accent --line …`); light and dark are both required.
+4. **Colours only through theme tokens** (`bg-sheet text-ink border-line bg-accent text-gray …`). Tailwind's own palette (`gray-500`, `blue-600`…) is switched off: it doesn't follow light / dark. Both themes are required.
 5. **Special sparingly.** The animated gradient ("special") is for moments worth celebrating: one or two per screen.
 6. **Never start a class with `ad-`, `ads-`, `banner` or `sponsor`:** ad blockers hide those on the deployed site.
 
 ---
 
-## 3. Theme, "special" and "warm"
+## 3. Styling, theme, "special" and "warm"
+
+- **Tailwind CSS v4.** Components carry utility classes; there is no per-component CSS. `app/site.css` contains only:
+  - the **theme tokens** (`--pad --sheet --ink --accent …`, light and dark) and the `@theme` mapping that makes them Tailwind's only colours (`bg-sheet`, `text-ink`, `border-line`, `bg-accent-soft`, `text-on-hero/70`…), fonts (`font-display`, `font-body`, `font-mono`), radii (`rounded-sm/md/lg`) and shadows (`shadow-card`, `shadow-lg`);
+  - **custom utilities**: `special-fill`, `special-text`, `special-border` (inner colour via `--sp-inner`), `special-tint`, `special-ring`, `warm`, `dot-grid`, `frosted`;
+  - **animations** as `animate-*` (`animate-flow`, `animate-flow-border`, `animate-pop-in`, `animate-dialog-in`, `animate-toast-in-flow`…);
+  - base element rules (body, headings, code, selection, scrollbars, reduced motion), and plain CSS for the **code-editor overlay** (`ui-ce-*`) and the **theme ripple**.
+- **`dark:`** follows Orbit's theme (system setting, overridden by the user's choice), not just the system. It is rarely needed: the tokens switch by themselves.
+- **Shared looks** used by several components (field box, pop-up panel, trigger, label / hint / error) are class strings in `components/ui/styles.ts`; button looks are exported from `Button.tsx`.
+- Don't add new component CSS to `site.css`. Use utilities; if a pattern repeats, add an `@utility`.
+- **Formatting:** `bun run format` runs Prettier on every `.tsx` file (`.prettierrc.json`); `bun run format:check` must pass.
 
 - **Theme:** light by default, dark when the system says so, unless the user picks one with `ThemeToggle` (Light / System / Dark). The choice is saved as `localStorage["orbit.theme"]` and applied before the first paint (`lib/theme.ts`), so there is no flash. Switching reveals the new theme as a circle growing from where you clicked.
 - **Special:** many components take `special` (or `variant`/`tone="special"`). Filled parts get a slowly flowing gradient; bordered parts a flowing gradient border; headings gradient text. Larger components also show a sparkle badge. Motion stops for users with "reduce motion" on.
@@ -161,6 +171,6 @@ They all share **`QuestionFrame`**: type, difficulty and marks (+marks, −negat
 1. Make sure no existing component already does the job (see §5).
 2. Add `components/ui/<Name>.tsx`; export it from `components/ui/index.ts`.
 3. Render every piece of text through `txt()` (or `Text` / `Heading`); support `special` if it is a component people would celebrate with.
-4. Style it in `app/site.css` with a `ui-` class and theme variables only; check light and dark.
+4. Style it with Tailwind utilities and theme tokens only (shared looks: `components/ui/styles.ts`); check light and dark.
 5. Pure logic (parsing, maths, rules) goes in `lib/` with a test in `scripts/check.ts`.
 6. Add a demo to `/dev/components` that includes some LaTeX, and a row to this file.
