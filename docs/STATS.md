@@ -17,7 +17,7 @@ One row per question **per sitting**. A sitting is one practice session or one m
 | `recorded_at` | when it was answered, or when the sitting ended if it was left unanswered |
 | `outcome` | `correct`, `incorrect` or `skipped` (shown but never answered) |
 | `time_ms` | active time spent on the question in that sitting (see §2) |
-| `source` | `practice` or `mock` |
+| `attempt_id` | the mock attempt it came from; empty for practice |
 
 - A question answered in one sitting and again a week later has **two rows**.
 - A question shown and left unanswered still gets a row (`skipped`), so its time is not lost.
@@ -128,10 +128,10 @@ All from `question_answers` (+ `questions` for topic and difficulty) unless note
 | Average time per question | mean `time_ms` of counted answers |
 | Time sinks | questions or topics with the highest total `time_ms`, skips included |
 | Daily activity, "this week", trends | group rows by the IST calendar day of `recorded_at` |
-| Practice vs mock | filter on `source` |
+| Practice vs mock | `attempt_id` empty = practice, set = mock |
 
 ---
 
 ## 5. Open points
-- Mock answers only count once a mock is **submitted**; attempts that are abandoned or failed are not recorded. The mock tables that make this exact are not designed yet.
-- The user's own self-rating of a topic (know / shaky / no idea) could be shown next to the computed strength to spot over- or under-confidence. Not modelled yet.
+- Mock answers only count once a mock is **submitted**: submitting writes one row per visited question, with `attempt_id` set. Abandoned or failed attempts write nothing. Unvisited questions write nothing either; visited but unanswered ones are `skipped`. During the test, responses and clocks live in `mock_attempt_items` (`types/tables/mocks/`).
+- The user's own rating of a topic (know / shaky / no idea, `topic_ratings`) can be shown next to the computed strength to spot over- or under-confidence.

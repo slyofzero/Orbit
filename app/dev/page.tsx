@@ -17,6 +17,15 @@ export default function DevIndex() {
             </Link>
           }
         />
+        <Card
+          title="Database"
+          subtitle="The SQLite worker, live: connection, tables and sample writes. Open it in two tabs."
+          actions={
+            <Link href="/dev/db" variant="nav">
+              Open
+            </Link>
+          }
+        />
       </div>
     </>
   );

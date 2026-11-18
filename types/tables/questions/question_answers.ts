@@ -3,9 +3,10 @@
 // question is answered, or when the sitting ends with the question left unanswered.
 // Coming back to the same question in a later sitting makes a new row.
 // How these rows become stats: docs/STATS.md.
-// PRIMARY KEY (id)
+// Mock answers are written only when the attempt is submitted.
+// PRIMARY KEY (id). Indexed by (question_id, recorded_at) and (attempt_id).
 
-import type { AnswerOutcome, AnswerSource, QuestionId } from "@/types/tables/common";
+import type { AnswerOutcome, AttemptId, QuestionId } from "@/types/tables/common";
 
 export interface QuestionAnswerRow {
   id: number; // PRIMARY KEY
@@ -14,5 +15,5 @@ export interface QuestionAnswerRow {
   outcome: AnswerOutcome; // correct | incorrect | skipped
   time_ms: number; // ACTIVE time on this question, summed over all visits in the
   // sitting; paused when the tab is hidden or the user is idle
-  source: AnswerSource; // practice | mock
+  attempt_id: AttemptId | null; // → mock_attempts.id for a mock answer; null = practice
 }

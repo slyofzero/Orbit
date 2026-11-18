@@ -20,6 +20,9 @@ export default function DevLayout({ children }: { children: React.ReactNode }) {
             <Link href="/dev/components" variant="nav">
               Components
             </Link>
+            <Link href="/dev/db" variant="nav">
+              Database
+            </Link>
             <Link href="/" variant="nav">
               App
             </Link>

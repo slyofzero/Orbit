@@ -1,6 +1,6 @@
 # Orbit: instructions for AI agents
 
-Read this first. Then read `docs/HANDOFF.md` (what is done and what is next) and `docs/STORAGE.md` (the storage design and its rules). Read `docs/STATS.md` before touching anything that records answers or shows statistics. Read `docs/PLANS.md` before touching plans, day progress or streaks. Read `docs/COMPONENTS.md` before building or changing any screen (every shared component, the UI rules, and what the dev-only `/dev` route is for). Table shapes are in `types/tables/` (one file per table; question tables in `types/tables/questions/`, the per-type ones in `questions/question_types/`, plan tables in `types/tables/plans/`). Import them from `@/types/tables`.
+Read this first. Then read `docs/HANDOFF.md` (what is done and what is next) and `docs/STORAGE.md` (the storage design and its rules). Read `docs/STATS.md` before touching anything that records answers or shows statistics. Read `docs/PLANS.md` before touching plans, day progress or streaks. Read `docs/COMPONENTS.md` before building or changing any screen (every shared component, the UI rules, and what the dev-only `/dev` route is for). Table shapes are in `types/tables/` (one file per table; subjects, topics, tags and packs in `catalog/`, question tables in `questions/` (per-type ones in `questions/question_types/`), mock tests in `mocks/`, plan tables in `plans/`). Import them from `@/types/tables`.
 
 ## What Orbit is
 Orbit is a personal, **exam-agnostic study hub**: a day-by-day planner, topic-wise practice, mock tests that copy a real exam screen, a mistake log, rich statistics and an admin area. It is a Next.js 15 / React 19 / TypeScript app. There is no server database and no login: everything the user owns lives in the **browser**.
@@ -15,6 +15,7 @@ The `rehaul` branch is a rebuild. The old localStorage app is on `main` and in g
 - `bun run check`: `scripts/check.ts`, the logic test suite. It must print `ALL OK`.
 - `bun run format`: Prettier on every `.tsx` file (`.prettierrc.json`: 120 columns, double quotes, semicolons, trailing commas). `bun run format:check` must pass.
 - `bun run build` / `bun run start`: production build
+- http://localhost:3000/dev/db: the database worker live (connection, table counts, sample writes). Open it in two tabs to see them share one database.
 - http://localhost:3000/dev/components: every shared UI component (`components/ui`) and question component (`components/question`), live, in both themes. **Dev mode only**: `app/dev/layout.tsx` returns 404 in production. When you add or change a shared component, add or update its demo there.
 
 ## Hosting: zero budget, Vercel free tier only
@@ -26,7 +27,7 @@ The owner has **no hosting budget**. Orbit is deployed on **Vercel's free (Hobby
 - Before adding a dependency or feature, check it works on Vercel's free plan. If it would need a paid plan, stop and ask the owner.
 
 ## Rules that always apply
-1. **Storage follows `docs/STORAGE.md`.** SQLite WASM in one Web Worker, OPFS `opfs-sahpool`, one file per profile. The UI thread never touches the database; it uses named queries through `lib/db/client.ts`. Every list has a `LIMIT`; every write is one transaction.
+1. **Storage follows `docs/STORAGE.md`.** SQLite WASM in one Web Worker, OPFS `opfs-sahpool`, one file per profile. The UI thread never touches the database: screens call `useQuery` / `useMutation` (`lib/db/client.ts`) with a query NAME from `lib/db/queries.ts`, the only place SQL lives. Any number of tabs work (one leads, the rest go through it). Every list has a `LIMIT`; every write is one transaction.
 2. **The schema is `db/schema.sql`; changes are migrations.** Never edit a shipped migration; add `db/migrations/NNN-*.sql` and bump `PRAGMA user_version`.
 3. **Never break saved data.** Old v2 exports and localStorage data must still import (through `legacy_id`).
 4. **Pure logic goes in `lib/` and gets a test in `scripts/check.ts`.** UI components stay thin. Run `bunx tsc --noEmit` and `bun run check` before you say you are done.

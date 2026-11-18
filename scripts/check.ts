@@ -9,6 +9,11 @@ import { hashImage, imageProblem, imageRef, refToHash } from "@/lib/images";
 import * as cIndent from "@/lib/codeIndent";
 import { addDays, addMonths, daysInMonth, formatDate, isIsoDate, monthGrid, todayIST, weekday } from "@/lib/dates";
 import { gradeMcq, gradeMsq, gradeNat, gradeStr, marksFor, parseNumber } from "@/lib/grade";
+import { BOOL_COLUMNS, JSON_COLUMNS, decode, encode } from "@/lib/db/codec";
+import { affectedTables, readEffects } from "@/lib/db/effects";
+import { latestVersion, migrate } from "@/lib/db/migrate";
+import { QUERIES, type QueryDef } from "@/lib/db/queries";
+import { TABLES, transaction, type Bind, type Sql, type TableName } from "@/lib/db/sql";
 
 let failed = 0;
 function ok(cond: unknown, label: string) {
@@ -39,141 +44,465 @@ try {
 }
 ok((db.query("PRAGMA user_version").get() as { user_version: number }).user_version === 1, "user_version = 1");
 ok(db.query("PRAGMA foreign_key_check").all().length === 0, "no foreign key violations");
-const tables = db.query("SELECT count(*) AS n FROM sqlite_master WHERE type = 'table'").get() as { n: number };
-ok(tables.n > 10, `tables created (${tables.n})`);
-
-// ---------------------------------------------------------------------------
-// Fixtures
-function seed(db: Database, nQuestions: number) {
-  db.exec("INSERT INTO subjects(id, name) VALUES ('s', 'Subject')");
-  db.exec("INSERT INTO topics(id, subject_id, name) VALUES ('tp_1', 's', 'Topic')");
-  const ins =
-    db.prepare(`INSERT INTO questions(id, topic_id, type, marks, difficulty, stem, content_hash, created_at, updated_at)
-                          VALUES (?, 'tp_1', 'mcq', 1, 'easy', ?, ?, 0, 0)`);
-  for (let i = 0; i < nQuestions; i++) ins.run(`q_${i}`, `word${i} common stem`, `h${i}`);
+{
+  // Every table in types/tables/ exists in the SQL with exactly the same columns.
+  const typesDir = join(import.meta.dir, "..", "types", "tables");
+  const files = new Bun.Glob("**/*.ts").scanSync(typesDir);
+  let checked = 0;
+  for (const rel of files) {
+    const src = readFileSync(join(typesDir, rel), "utf8");
+    const table = src.match(/^\/\/ Table `(\w+)`/m)?.[1];
+    if (!table) continue;
+    const body = src.match(/export interface \w+ \{([\s\S]*?)\n\}/)?.[1] ?? "";
+    const tsCols = [...body.matchAll(/^ {2}(\w+):/gm)].map((m) => m[1]).sort();
+    const sqlCols = (db.query(`SELECT name FROM pragma_table_xinfo('${table}')`).all() as { name: string }[])
+      .map((r) => r.name)
+      .sort();
+    ok(JSON.stringify(tsCols) === JSON.stringify(sqlCols), `${table}: SQL columns = TS type`);
+    checked++;
+  }
+  ok(checked >= 28, `every table type checked against the SQL (${checked})`);
 }
 
 // ---------------------------------------------------------------------------
-console.log("search index survives VACUUM");
+// Fixtures
+const run = (d: Database, sql: string) => d.exec(sql);
+const count = (d: Database, sql: string) => (d.query(sql).get() as { n: number }).n;
+const throwsMsg = (fn: () => unknown, part: string) => {
+  try {
+    fn();
+    return false;
+  } catch (e) {
+    return String(e).toLowerCase().includes(part.toLowerCase());
+  }
+};
+const refuses = (d: Database, sql: string) => {
+  try {
+    d.exec(sql);
+    return false;
+  } catch {
+    return true;
+  }
+};
+function seed(d: Database, nQuestions: number) {
+  run(d, "INSERT INTO subjects(id, name) VALUES ('sb_1', 'Subject')");
+  run(d, "INSERT INTO topics(id, subject_id, name) VALUES ('tp_1', 'sb_1', 'Topic')");
+  const q =
+    d.prepare(`INSERT INTO questions(id, type, topic_id, marks, difficulty, stem, content_hash, created_at, updated_at)
+                       VALUES (?, 'mcq', 'tp_1', 1, 'easy', ?, ?, 0, 0)`);
+  const mcq = d.prepare(`INSERT INTO question_mcq(question_id, options, correct) VALUES (?, '["a","b","c","d"]', 0)`);
+  for (let i = 0; i < nQuestions; i++) {
+    q.run(`q_${i}`, `word${i} common stem`, `h${i}`);
+    mcq.run(`q_${i}`);
+  }
+}
+// IST midnight of a date, in Unix ms (+ an offset in hours).
+const at = (date: string, hours = 12) => Date.parse(`${date}T00:00:00+05:30`) + hours * 3_600_000;
+
+// ---------------------------------------------------------------------------
+console.log("schema: question rules");
 {
-  const f = new Database(join(process.env.TEMP ?? "/tmp", `orbit-check-${process.pid}.sqlite3`));
+  db = freshDb();
+  seed(db, 2);
+  run(
+    db,
+    "INSERT INTO questions(id, type, topic_id, marks, difficulty, stem, content_hash, created_at, updated_at) VALUES ('q_n', 'nat', 'tp_1', 2, 'hard', 'n', 'hn', 0, 0)",
+  );
+  ok(refuses(db, `INSERT INTO question_mcq VALUES ('q_n', '["a","b"]', 0)`), "an mcq row on a nat question is refused");
+  ok(refuses(db, `INSERT INTO question_nat VALUES ('q_0', 1, 0)`), "a nat row on an mcq question is refused");
+  ok(!refuses(db, `INSERT INTO question_nat VALUES ('q_n', 2.5, 0.01)`), "a nat row on a nat question is saved");
+  ok(refuses(db, "UPDATE questions SET type = 'msq' WHERE id = 'q_0'"), "a question's type can't change");
+  ok(
+    refuses(db, `UPDATE question_mcq SET correct = 4 WHERE question_id = 'q_0'`),
+    "mcq correct out of range is refused",
+  );
+  ok(
+    refuses(db, `UPDATE question_mcq SET options = '["only"]' WHERE question_id = 'q_0'`),
+    "mcq with 1 option is refused",
+  );
+  ok(
+    refuses(db, `UPDATE question_mcq SET options = 'a,b' WHERE question_id = 'q_0'`),
+    "options that aren't JSON are refused",
+  );
+  ok(refuses(db, "UPDATE questions SET marks = 0 WHERE id = 'q_0'"), "marks must be > 0");
+  run(db, "INSERT INTO question_answers(question_id, recorded_at, outcome) VALUES ('q_1', 1, 'correct')");
+  ok(refuses(db, "DELETE FROM questions WHERE id = 'q_1'"), "an answered question can't be deleted (retire it)");
+}
+
+// ---------------------------------------------------------------------------
+console.log("schema: search index");
+{
+  const path = join(process.env.TEMP ?? "/tmp", `orbit-check-${process.pid}.sqlite3`);
+  const f = new Database(path);
   try {
     f.exec("PRAGMA foreign_keys = ON;");
     f.exec(schema);
     seed(f, 6);
+    const find = (word: string) =>
+      (
+        f
+          .query(`SELECT question_id FROM questions_fts WHERE questions_fts MATCH '{stem explanation} : ${word}'`)
+          .all() as { question_id: string }[]
+      ).map((r) => r.question_id);
     f.exec("DELETE FROM questions WHERE id IN ('q_0', 'q_2')"); // leave gaps that VACUUM could close
     f.exec("VACUUM");
-    const hit = f
-      .query(
-        `SELECT q.id FROM questions_fts JOIN questions q ON q.n = questions_fts.rowid
-                         WHERE questions_fts MATCH 'word4'`,
-      )
-      .all() as { id: string }[];
-    ok(hit.length === 1 && hit[0].id === "q_4", "search finds the right question after VACUUM");
+    ok(JSON.stringify(find("word4")) === '["q_4"]', "search finds the right question after VACUUM");
+    ok(find("word0").length === 0, "a deleted question leaves the index");
+    f.exec("UPDATE questions SET stem = 'renamed eigen' WHERE id = 'q_3'");
+    ok(find("word3").length === 0 && JSON.stringify(find("eigen")) === '["q_3"]', "an edited stem is re-indexed");
+    ok(find("common").length === 3, "the other questions are untouched");
     f.exec("INSERT INTO questions_fts(questions_fts) VALUES ('integrity-check')");
     ok(true, "FTS integrity-check passes");
   } catch (e) {
     ok(false, "search index: " + String(e));
   } finally {
     f.close();
+    try {
+      require("node:fs").unlinkSync(path);
+    } catch {}
   }
 }
 
 // ---------------------------------------------------------------------------
-console.log("question_stats triggers = full rebuild");
+console.log("schema: question_stats triggers = full rebuild");
 {
-  const REBUILD = `
-    SELECT question_id, COUNT(*) AS answers, SUM(outcome = 'right') AS rights,
-           coalesce(MIN(CASE WHEN outcome = 'wrong' THEN rn END) - 1, COUNT(*)) AS streak,
-           MAX(CASE WHEN rn = 1 THEN outcome END) AS last_outcome, MAX(at) AS last_at, SUM(ms) AS total_ms
-    FROM (SELECT question_id, outcome, at, coalesce(ms, 0) AS ms,
-                 ROW_NUMBER() OVER (PARTITION BY question_id ORDER BY at DESC) AS rn
-          FROM v_answers WHERE outcome IN ('right', 'wrong'))
-    GROUP BY question_id ORDER BY question_id`;
-  const CACHED = `SELECT question_id, answers, rights, streak, last_outcome, last_at, total_ms
-                  FROM question_stats ORDER BY question_id`;
+  const REBUILD = `SELECT question_id, COUNT(*) AS visited, SUM(outcome = 'correct') AS correct,
+                          SUM(outcome = 'incorrect') AS incorrect
+                   FROM question_answers GROUP BY question_id ORDER BY question_id`;
+  const CACHED = "SELECT question_id, visited, correct, incorrect FROM question_stats ORDER BY question_id";
   const same = (label: string) =>
     ok(JSON.stringify(db.query(CACHED).all()) === JSON.stringify(db.query(REBUILD).all()), label);
 
   db = freshDb();
   seed(db, 20);
-  // Deterministic pseudo-random answers with distinct times, inserted OUT of time order.
+  run(db, "INSERT INTO mocks(id, name, minutes, created_at, updated_at) VALUES ('mk_1', 'Mock', 180, 0, 0)");
   let s = 7;
   const rnd = () => (s = (s * 48271) % 2147483647) / 2147483647;
-  const ev = db.prepare(`INSERT INTO practice_events(question_id, question_rev, shown_at, answered_at, outcome, ms)
-                         VALUES (?, 1, ?, ?, ?, ?)`);
-  const times = Array.from({ length: 400 }, (_, i) => 1_000_000 + i * 1000).sort(() => rnd() - 0.5);
-  for (const t of times) {
-    const q = `q_${Math.floor(rnd() * 20)}`;
-    if (rnd() < 0.15)
-      ev.run(q, t, null, null, null); // skip
-    else ev.run(q, t, t + 500, rnd() < 0.6 ? "right" : "wrong", 500);
-  }
-  same("after 400 practice answers inserted out of order");
-
-  db.exec(
-    "UPDATE practice_events SET answered_at = shown_at + 10, outcome = 'right', ms = 10 WHERE outcome IS NULL AND id % 2 = 0",
+  const ans = db.prepare(
+    "INSERT INTO question_answers(question_id, recorded_at, outcome, time_ms) VALUES (?, ?, ?, ?)",
   );
-  same("after answering shown (skipped) rows");
+  const outcomes = ["correct", "incorrect", "skipped"];
+  for (let i = 0; i < 400; i++)
+    ans.run(`q_${Math.floor(rnd() * 20)}`, Math.floor(rnd() * 1e6), outcomes[Math.floor(rnd() * 3)], 500);
+  same("after 400 practice answers");
 
-  db.exec(
-    "UPDATE practice_events SET outcome = CASE outcome WHEN 'right' THEN 'wrong' ELSE 'right' END WHERE id % 7 = 0 AND outcome IS NOT NULL",
+  // A mock: answers are refused until it is submitted.
+  run(
+    db,
+    `INSERT INTO mock_attempts(id, mock_id, sections, minutes, started_at) VALUES ('at_1', 'mk_1', '[{"name":"S","minutes":null}]', 180, 0)`,
   );
-  same("after correcting some outcomes");
-
-  db.exec("DELETE FROM practice_events WHERE id % 5 = 0");
-  same("after deleting some practice answers");
-
-  // Two mocks: one scored, one later marked failed, then the scored one deleted.
-  for (const [aid, at] of [
-    ["at_1", 1_200_500],
-    ["at_2", 1_300_500],
-  ] as const) {
-    db.exec(
-      `INSERT INTO attempts(id, title, created_at, started_at, duration_sec) VALUES ('${aid}', 'Mock', 0, 0, 3600)`,
-    );
-    db.exec(`INSERT INTO attempt_sections(attempt_id, position, name) VALUES ('${aid}', 0, 'S')`);
-    for (let i = 0; i < 10; i++)
-      db.exec(`INSERT INTO attempt_items(attempt_id, question_id, position, section_pos, question_rev, ms)
-               VALUES ('${aid}', 'q_${i}', ${i}, 0, 1, 1000)`);
-    db.exec(`UPDATE attempts SET submitted_at = ${at} WHERE id = '${aid}'`);
-    db.exec(`UPDATE attempt_items SET outcome = CASE WHEN position % 3 = 0 THEN 'wrong' WHEN position % 3 = 1 THEN 'right' ELSE 'skip' END
-             WHERE attempt_id = '${aid}'`);
-  }
-  same("after scoring two mocks");
-
-  db.exec("UPDATE attempts SET failed_reason = 'left full screen' WHERE id = 'at_2'");
-  same("after marking a mock failed");
-
-  db.exec("DELETE FROM attempts WHERE id = 'at_1'");
   ok(
-    (db.query("SELECT count(*) AS n FROM attempt_items WHERE attempt_id = 'at_1'").get() as { n: number }).n === 0,
-    "deleting an attempt cascades to its items",
+    refuses(
+      db,
+      "INSERT INTO question_answers(question_id, recorded_at, outcome, attempt_id) VALUES ('q_0', 1, 'correct', 'at_1')",
+    ),
+    "mock answers are refused before submit",
+  );
+  ok(
+    refuses(
+      db,
+      `INSERT INTO mock_attempts(id, mock_id, sections, minutes, started_at) VALUES ('at_x', 'mk_1', '[{"name":"S"}]', 180, 0)`,
+    ),
+    "only one attempt can be in progress",
+  );
+  ok(
+    refuses(db, "UPDATE mock_attempts SET status = 'submitted', ended_at = 5 WHERE id = 'at_1'"),
+    "submitted needs a score",
+  );
+  run(db, "UPDATE mock_attempts SET status = 'submitted', ended_at = 5, score = 3, max_score = 10 WHERE id = 'at_1'");
+  for (let i = 0; i < 10; i++)
+    run(
+      db,
+      `INSERT INTO question_answers(question_id, recorded_at, outcome, time_ms, attempt_id)
+             VALUES ('q_${i}', 5, '${outcomes[i % 3]}', 1000, 'at_1')`,
+    );
+  same("after a submitted mock");
+  ok(
+    refuses(
+      db,
+      "INSERT INTO question_answers(question_id, recorded_at, outcome, attempt_id) VALUES ('q_0', 6, 'correct', 'at_1')",
+    ),
+    "one answer per question per attempt",
+  );
+  ok(
+    refuses(db, "UPDATE mock_attempts SET status = 'abandoned' WHERE id = 'at_1'"),
+    "a finished attempt stays finished",
+  );
+
+  run(db, "DELETE FROM question_answers WHERE id % 5 = 0 AND attempt_id IS NULL");
+  same("after deleting some practice answers");
+  run(db, "UPDATE question_answers SET outcome = 'correct' WHERE id % 7 = 0");
+  same("after changing some outcomes");
+  run(db, "DELETE FROM mock_attempts WHERE id = 'at_1'");
+  ok(
+    count(db, "SELECT count(*) AS n FROM question_answers WHERE attempt_id = 'at_1'") === 0,
+    "deleting an attempt deletes its answers",
   );
   same("after deleting a whole attempt");
+  run(db, "DELETE FROM question_answers");
+  ok(count(db, "SELECT count(*) AS n FROM question_stats") === 0, "deleting every answer empties question_stats");
 
-  let blocked = false;
-  db.exec(`INSERT INTO attempts(id, title, created_at, duration_sec) VALUES ('at_3', 'Open', 0, 3600)`);
-  db.exec(`INSERT INTO attempt_sections(attempt_id, position, name) VALUES ('at_3', 0, 'S')`);
-  db.exec(
-    `INSERT INTO attempt_items(attempt_id, question_id, position, section_pos, question_rev) VALUES ('at_3', 'q_1', 0, 0, 1)`,
-  );
-  try {
-    db.exec("UPDATE attempt_items SET outcome = 'right' WHERE attempt_id = 'at_3'");
-  } catch {
-    blocked = true;
-  }
-  ok(blocked, "outcome on an unsubmitted attempt is refused");
-
-  db.exec("DELETE FROM practice_events");
-  db.exec("DELETE FROM attempts");
-  ok(
-    (db.query("SELECT count(*) AS n FROM question_stats").get() as { n: number }).n === 0,
-    "deleting every answer empties question_stats",
-  );
+  run(db, "INSERT INTO mock_sections(id, mock_id, name, position) VALUES (1, 'mk_1', 'A', 1), (2, 'mk_1', 'B', 2)");
+  run(db, "INSERT INTO mock_items VALUES (1, 'q_0', 1)");
+  ok(refuses(db, "INSERT INTO mock_items VALUES (2, 'q_0', 1)"), "a question can't be in two sections of one mock");
 }
 
 // ---------------------------------------------------------------------------
+console.log("schema: plan progress");
+{
+  const REBUILD = `SELECT day_id, tasks_total, tasks_done, questions_total, questions_done, done_at
+                   FROM v_plan_day_progress ORDER BY day_id`;
+  const CACHED = `SELECT day_id, tasks_total, tasks_done, questions_total, questions_done, done_at
+                  FROM plan_day_progress ORDER BY day_id`;
+  const same = (label: string) =>
+    ok(JSON.stringify(db.query(CACHED).all()) === JSON.stringify(db.query(REBUILD).all()), label);
+  const status = (day: number) =>
+    (db.query(`SELECT status FROM plan_day_progress WHERE day_id = ${day}`).get() as { status: string | null }).status;
+
+  db = freshDb();
+  seed(db, 10);
+  run(
+    db,
+    `INSERT INTO plans(id, name, starts_on, ends_on, is_active, created_at, updated_at)
+           VALUES ('pl_1', 'Plan', '2026-01-01', '2026-01-31', 1, 0, 0)`,
+  );
+  ok(
+    refuses(
+      db,
+      `INSERT INTO plans(id, name, starts_on, ends_on, is_active, created_at, updated_at) VALUES ('pl_2', 'P', '2026-01-01', '2026-01-02', 1, 0, 0)`,
+    ),
+    "only one plan can be active",
+  );
+  ok(
+    refuses(db, "INSERT INTO plan_days(plan_id, on_date) VALUES ('pl_1', '2026-02-01')"),
+    "a day outside the plan is refused",
+  );
+  for (let d = 1; d <= 5; d++)
+    run(db, `INSERT INTO plan_days(id, plan_id, on_date) VALUES (${d}, 'pl_1', '2026-01-0${d}')`);
+  ok(refuses(db, "UPDATE plans SET ends_on = '2026-01-03' WHERE id = 'pl_1'"), "a plan can't shrink past its days");
+  ok(status(1) === null, "a day with nothing planned has no status (rest day)");
+
+  // Day 1: 2 tasks + 2 questions. Day 2: 1 task. Day 3: q_0 again. Day 5 (future): q_0.
+  run(
+    db,
+    "INSERT INTO plan_tasks(id, day_id, position, body) VALUES (1, 1, 1, 'Read'), (2, 1, 2, 'Notes'), (3, 2, 1, 'Revise')",
+  );
+  run(db, "INSERT INTO plan_day_questions VALUES (1, 'q_0', 1), (1, 'q_1', 2), (3, 'q_0', 1), (5, 'q_0', 1)");
+  ok(status(1) === "incomplete", "nothing done = incomplete");
+  run(db, `INSERT INTO plan_task_ticks VALUES (1, ${at("2026-01-01")})`);
+  ok(status(1) === "partial", "some done = partial");
+
+  // Answering on Jan 3 ticks q_0 on days 1 and 3, not on day 5 (future). Skips tick nothing.
+  run(
+    db,
+    `INSERT INTO question_answers(question_id, recorded_at, outcome) VALUES ('q_1', ${at("2026-01-03")}, 'skipped')`,
+  );
+  ok(
+    count(db, "SELECT count(*) AS n FROM plan_question_ticks WHERE question_id = 'q_1'") === 0,
+    "a skipped answer ticks nothing",
+  );
+  run(
+    db,
+    `INSERT INTO question_answers(question_id, recorded_at, outcome) VALUES ('q_0', ${at("2026-01-03", 23.9)}, 'incorrect')`,
+  );
+  ok(
+    JSON.stringify(
+      db.query("SELECT day_id FROM plan_question_ticks WHERE question_id = 'q_0' ORDER BY day_id").all(),
+    ) === '[{"day_id":1},{"day_id":3}]',
+    "an answer ticks past and today's links (IST), not future ones",
+  );
+  ok(status(3) === "done", "a wrong answer still counts as done");
+  run(
+    db,
+    `INSERT INTO question_answers(question_id, recorded_at, outcome) VALUES ('q_1', ${at("2026-01-03")}, 'correct')`,
+  );
+  run(db, `INSERT INTO plan_task_ticks VALUES (2, ${at("2026-01-04")})`);
+  ok(status(1) === "done", "everything done = done (late work counts)");
+  ok(
+    (db.query("SELECT done_at FROM plan_day_progress WHERE day_id = 1").get() as { done_at: number }).done_at ===
+      at("2026-01-04"),
+    "done_at = when the last item was done",
+  );
+  same("after ticks and answers");
+
+  run(db, "INSERT INTO plan_tasks(id, day_id, position, body) VALUES (4, 1, 1.5, 'Extra')");
+  ok(status(1) === "partial", "adding a task to a done day makes it partial");
+  run(db, "DELETE FROM plan_task_ticks WHERE task_id = 1");
+  run(db, "UPDATE plan_tasks SET day_id = 2 WHERE id = 4");
+  run(db, "DELETE FROM plan_tasks WHERE id = 2");
+  run(db, "DELETE FROM plan_day_questions WHERE day_id = 3");
+  same("after unticking, moving and deleting items");
+  run(db, "DELETE FROM question_answers WHERE question_id = 'q_0'");
+  ok(
+    count(db, "SELECT count(*) AS n FROM plan_question_ticks WHERE question_id = 'q_0'") === 0,
+    "deleting the answer removes its ticks",
+  );
+  same("after deleting answers");
+  run(db, "DELETE FROM plan_days WHERE id = 1");
+  ok(
+    count(db, "SELECT count(*) AS n FROM plan_day_progress WHERE day_id = 1") === 0,
+    "deleting a day deletes its progress",
+  );
+  same("after deleting a day");
+  run(db, "DELETE FROM plans");
+  ok(count(db, "SELECT count(*) AS n FROM plan_day_progress") === 0, "deleting the plan deletes everything under it");
+  ok(db.query("PRAGMA foreign_key_check").all().length === 0, "no foreign key violations at the end");
+}
+
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// lib/db: the same code the worker runs, over bun:sqlite instead of SQLite WASM.
+function bunSql(d: Database): Sql {
+  return {
+    all: <T>(q: string, p: Bind = []) => d.query(q).all(...(p as never[])) as T[],
+    get: <T>(q: string, p: Bind = []) => (d.query(q).get(...(p as never[])) ?? undefined) as T | undefined,
+    run: (q: string, p: Bind = []) => d.query(q).run(...(p as never[])).changes,
+    exec: (s: string) => void d.exec(s),
+  };
+}
+
+console.log("db: migrations");
+{
+  const fresh = () => {
+    const d = new Database(":memory:");
+    d.exec("PRAGMA foreign_keys = ON;");
+    return d;
+  };
+  let d = fresh();
+  let r = migrate(bunSql(d), schema, []);
+  ok(r.from === 0 && r.to === 1, "a new file gets the schema (0 → 1)");
+  ok(JSON.stringify(migrate(bunSql(d), schema, [])) === '{"from":1,"to":1}', "opening again changes nothing");
+  const m2 = { version: 2, sql: "ALTER TABLE tags ADD COLUMN colour TEXT;" };
+  const m3 = { version: 3, sql: "CREATE TABLE dev_extra (id INTEGER PRIMARY KEY) STRICT;" };
+  r = migrate(bunSql(d), schema, [m3, m2]);
+  ok(r.from === 1 && r.to === 3, "migrations run in order, whatever order they're listed (1 → 3)");
+  ok(
+    (d.query("SELECT count(*) AS n FROM pragma_table_info('tags') WHERE name = 'colour'").get() as { n: number }).n ===
+      1,
+    "migration 2 ran",
+  );
+  ok(
+    refuses(d, "SELECT 1") === false && throwsMsg(() => migrate(bunSql(d), schema, [m2]), "newer version"),
+    "a file from a newer Orbit is refused",
+  );
+  ok(
+    throwsMsg(() => latestVersion([m3]), "without gaps"),
+    "a gap in migration numbers is refused",
+  );
+  d = fresh();
+  const bad = { version: 2, sql: "CREATE TABLE half (id INTEGER); THIS IS NOT SQL;" };
+  ok(
+    throwsMsg(() => migrate(bunSql(d), schema, [bad]), "syntax"),
+    "a broken migration fails",
+  );
+  ok(
+    (d.query("PRAGMA user_version").get() as { user_version: number }).user_version === 1 &&
+      (d.query("SELECT count(*) AS n FROM sqlite_master WHERE name = 'half'").get() as { n: number }).n === 0,
+    "…and is rolled back completely (still version 1, nothing half-made)",
+  );
+}
+
+console.log("db: tables, codec and change tracking");
+{
+  const d = freshDb();
+  const s = bunSql(d);
+  const real = (
+    d
+      .query(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'questions_fts%' AND name NOT LIKE 'sqlite_%' ORDER BY name",
+      )
+      .all() as { name: string }[]
+  ).map((r) => r.name);
+  ok(JSON.stringify(real) === JSON.stringify([...TABLES].sort()), "TABLES lists exactly the schema's tables");
+
+  // Every array / boolean field in types/tables/ is converted by the codec.
+  const typesDir = join(import.meta.dir, "..", "types", "tables");
+  const missing: string[] = [];
+  for (const rel of new Bun.Glob("**/*.ts").scanSync(typesDir)) {
+    const src = readFileSync(join(typesDir, rel), "utf8");
+    const table = src.match(/^\/\/ Table `(\w+)`/m)?.[1] as TableName | undefined;
+    if (!table) continue;
+    for (const [, field, type] of src.matchAll(/^ {2}(\w+): ([^;]+);/gm)) {
+      if (type.includes("[]") && !JSON_COLUMNS[table]?.includes(field)) missing.push(`${table}.${field} (array)`);
+      if (/\bboolean\b/.test(type) && !BOOL_COLUMNS[table]?.includes(field))
+        missing.push(`${table}.${field} (boolean)`);
+    }
+  }
+  ok(
+    missing.length === 0,
+    "codec covers every array and boolean column" + (missing.length ? `: missing ${missing.join(", ")}` : ""),
+  );
+  const enc = encode("mock_attempt_items", { choice: [0, 2], visited: true, marked: false, typed: null });
+  ok(
+    enc.choice === "[0,2]" && enc.visited === 1 && enc.marked === 0 && enc.typed === null,
+    "encode: arrays → JSON, booleans → 0/1",
+  );
+  const dec = decode<{ choice: number[] | null; visited: boolean }>("mock_attempt_items", { choice: null, visited: 1 });
+  ok(dec.choice === null && dec.visited === true, "decode: JSON null stays null, 1 → true");
+
+  const fx = readEffects(s);
+  const hit = (w: string[], t: string) => affectedTables(w, fx).includes(t);
+  ok(hit(["question_answers"], "question_stats"), "writing answers changes question_stats (trigger)");
+  ok(hit(["question_answers"], "plan_day_progress"), "…and plan_day_progress (trigger → trigger)");
+  ok(
+    hit(["plans"], "plan_tasks") && hit(["plans"], "plan_day_progress"),
+    "deleting plans reaches their tasks and progress (cascade)",
+  );
+  ok(hit(["mock_attempts"], "question_stats"), "deleting an attempt reaches question_stats (cascade → trigger)");
+  ok(!hit(["tags"], "questions"), "unrelated tables are not marked changed");
+}
+
+console.log("db: named queries");
+{
+  const d = freshDb();
+  const s = bunSql(d);
+  const fx = readEffects(s);
+  const runQ = <N extends keyof typeof QUERIES>(name: N, params?: unknown) => {
+    const def = QUERIES[name] as unknown as QueryDef<unknown, unknown>;
+    if (def.kind === "read") return { data: def.run(s, params), changed: [] as string[] };
+    return { data: transaction(s, () => def.run(s, params)), changed: affectedTables(def.tables, fx) };
+  };
+  for (const [name, def] of Object.entries(QUERIES)) {
+    const unknownTable = def.tables.find((t) => !(TABLES as readonly string[]).includes(t));
+    ok(!unknownTable, `${name}: lists only real tables`);
+  }
+  const first = runQ("dev.addSampleQuestion").data as string;
+  const second = runQ("dev.addSampleQuestion").data as string;
+  ok(first !== second, "two sample questions added in the same millisecond get different IDs");
+  const latest = runQ("dev.latestQuestion").data as { question: { id: string }; mcq: { options: string[] } };
+  ok(
+    Array.isArray(latest.mcq.options) && latest.mcq.options.length === 4,
+    "a read returns decoded rows (options is an array)",
+  );
+  const ans = runQ("dev.answerRandom");
+  ok(
+    ans.changed.includes("question_stats") && ans.changed.includes("question_answers"),
+    "a write reports the tables its triggers changed",
+  );
+  const counts = runQ("db.counts").data as { table: string; rows: number }[];
+  ok(
+    counts.find((c) => c.table === "questions")?.rows === 2 &&
+      counts.find((c) => c.table === "question_stats")?.rows === 1,
+    "db.counts sees the writes",
+  );
+  let rolledBack = false;
+  try {
+    transaction(s, () => {
+      s.run("INSERT INTO tags (name) VALUES ('kept?')");
+      throw new Error("boom");
+    });
+  } catch {
+    rolledBack = s.get<{ n: number }>("SELECT count(*) AS n FROM tags")!.n === 0;
+  }
+  ok(rolledBack, "a write that throws is rolled back completely");
+  runQ("dev.clearAll");
+  ok(
+    (runQ("db.counts").data as { rows: number }[]).every((c) => c.rows === 0),
+    "dev.clearAll empties every table",
+  );
+  ok(d.query("PRAGMA foreign_key_check").all().length === 0, "no foreign key violations after clearing");
+}
+
 console.log("markdown: inline");
 {
   const j = (s: string) => JSON.stringify(parseInline(s));

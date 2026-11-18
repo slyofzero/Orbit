@@ -11,7 +11,7 @@ export interface PlanRow {
   description: string | null; // what the plan is for, in the owner's words; sent with AI prompts
   starts_on: IsoDate; // first day of the plan
   ends_on: IsoDate; // last day; >= starts_on
-  is_active: 0 | 1; // the plan the planner shows; only one at a time
+  is_active: boolean; // the plan the planner shows; only one at a time
   created_at: number;
   updated_at: number;
 }
