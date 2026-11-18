@@ -15,11 +15,11 @@ import {
   type ReactElement,
   type ReactNode,
 } from "react";
-import { txt } from "./txt";
-import { Dialog } from "./Dialog";
-import { useDismiss } from "./useDismiss";
-import { IconHelp } from "./icons";
-import { cx } from "./cx";
+import { txt } from "@/components/ui/txt";
+import { Dialog } from "@/components/ui/Dialog";
+import { useDismiss } from "@/components/ui/useDismiss";
+import { IconHelp } from "@/components/ui/icons";
+import { cx } from "@/components/ui/cx";
 
 export type TipPlacement = "top" | "bottom" | "left" | "right";
 

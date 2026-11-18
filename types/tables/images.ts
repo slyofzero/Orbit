@@ -3,7 +3,7 @@
 // question_images maps questions to the pictures they use.
 // PRIMARY KEY (hash)
 
-import type { ImageHash } from "./common";
+import type { ImageHash } from "@/types/tables/common";
 
 export interface ImageRow {
   hash: ImageHash; // PRIMARY KEY: content hash; the name used in img:<hash>

@@ -1,8 +1,8 @@
 "use client";
 import { useId, type ReactNode } from "react";
-import { cx } from "./cx";
-import { LABEL } from "./styles";
-import { txt } from "./txt";
+import { cx } from "@/components/ui/cx";
+import { LABEL } from "@/components/ui/styles";
+import { txt } from "@/components/ui/txt";
 
 type CheckboxProps = {
   checked: boolean;

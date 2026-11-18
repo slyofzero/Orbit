@@ -1,7 +1,7 @@
 "use client";
 import { useMemo, useState, type ReactNode } from "react";
-import { cx } from "./cx";
-import { txt } from "./txt";
+import { cx } from "@/components/ui/cx";
+import { txt } from "@/components/ui/txt";
 
 export type Column<T> = {
   key: string;

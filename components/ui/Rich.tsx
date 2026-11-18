@@ -14,10 +14,10 @@ import { Fragment, type ReactNode } from "react";
 import katex from "katex";
 import { parseInline, parseMarkdown, type Block, type Inline } from "@/lib/markdown";
 import { refToHash } from "@/lib/images";
-import { useImageResolver, type ImageResolver } from "./images";
-import { cx } from "./cx";
-import { Divider } from "./Divider";
-import { Link } from "./Link";
+import { useImageResolver, type ImageResolver } from "@/components/ui/images";
+import { cx } from "@/components/ui/cx";
+import { Divider } from "@/components/ui/Divider";
+import { Link } from "@/components/ui/Link";
 
 // Small caches. Cleared wholesale when full: cheap, and the hot entries come straight back.
 const CAP = 3000;

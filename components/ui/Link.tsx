@@ -1,7 +1,7 @@
 import NextLink from "next/link";
 import type { ReactNode } from "react";
-import { txt } from "./txt";
-import { cx } from "./cx";
+import { txt } from "@/components/ui/txt";
+import { cx } from "@/components/ui/cx";
 
 export type LinkVariant = "inline" | "nav" | "subtle";
 

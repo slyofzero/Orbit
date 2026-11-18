@@ -11,7 +11,7 @@
 //   - anything else (an element, a number) → unchanged
 
 import { Fragment, type ReactNode } from "react";
-import { Rich } from "./Rich";
+import { Rich } from "@/components/ui/Rich";
 
 export function txt(node: ReactNode): ReactNode {
   if (typeof node === "string") return <Rich text={node} />;

@@ -1,7 +1,7 @@
 "use client";
 import { useId } from "react";
 import { Rich, cx } from "@/components/ui";
-import { letter } from "./format";
+import { letter } from "@/components/question/format";
 
 type Tone = "picked" | "right" | "wrong";
 const BOX: Record<Tone, string> = {

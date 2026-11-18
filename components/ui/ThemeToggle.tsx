@@ -4,8 +4,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { applyThemeWithRipple, readTheme, type ThemeChoice } from "@/lib/theme";
-import { Segmented } from "./Segmented";
-import { IconMonitor, IconMoon, IconSun } from "./icons";
+import { Segmented } from "@/components/ui/Segmented";
+import { IconMonitor, IconMoon, IconSun } from "@/components/ui/icons";
 
 export function ThemeToggle() {
   const [choice, setChoice] = useState<ThemeChoice>("system");

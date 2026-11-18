@@ -3,10 +3,10 @@
 // for a moment; if the browser refuses, it shows ✗ and "Couldn't copy" instead.
 
 import { useEffect, useRef, useState } from "react";
-import { IconCheck, IconCopy, IconX } from "./icons";
-import { cx } from "./cx";
-import { BUTTON_BASE, BUTTON_SIZE, BUTTON_VARIANT, iconButtonClass } from "./Button";
-import { txt } from "./txt";
+import { IconCheck, IconCopy, IconX } from "@/components/ui/icons";
+import { cx } from "@/components/ui/cx";
+import { BUTTON_BASE, BUTTON_SIZE, BUTTON_VARIANT, iconButtonClass } from "@/components/ui/Button";
+import { txt } from "@/components/ui/txt";
 
 type State = "idle" | "copied" | "failed";
 const SHOW_MS = 1600;

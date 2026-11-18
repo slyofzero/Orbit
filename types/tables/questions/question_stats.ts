@@ -4,7 +4,7 @@
 // Skipped = visited − correct − incorrect.
 // PRIMARY KEY (question_id): one row per question.
 
-import type { QuestionId } from "./common";
+import type { QuestionId } from "@/types/tables/common";
 
 export interface QuestionStatRow {
   question_id: QuestionId; // PRIMARY KEY → questions.id

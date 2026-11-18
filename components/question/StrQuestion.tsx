@@ -3,7 +3,7 @@ import { useState } from "react";
 import type { QuestionRow, QuestionStrRow } from "@/types/tables";
 import { gradeStr, type Verdict } from "@/lib/grade";
 import { Rich, TextField } from "@/components/ui";
-import { QuestionFrame, typedClass, type FrameResult } from "./QuestionFrame";
+import { QuestionFrame, typedClass, type FrameResult } from "@/components/question/QuestionFrame";
 
 const HOW = {
   exact: "Type your answer.",

@@ -3,7 +3,7 @@ import { useState } from "react";
 import type { QuestionCodeRow, QuestionRow } from "@/types/tables";
 import type { Verdict } from "@/lib/grade";
 import { Button, CodeEditor, IconCheck, IconX } from "@/components/ui";
-import { QuestionFrame, type FrameResult } from "./QuestionFrame";
+import { QuestionFrame, type FrameResult } from "@/components/question/QuestionFrame";
 
 /** Code questions have no automatic checking: the learner writes code, then marks it right or wrong. */
 export function CodeQuestion({

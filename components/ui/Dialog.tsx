@@ -1,11 +1,11 @@
 "use client";
 import { useEffect, useId, useRef, type ReactNode } from "react";
-import { IconButton } from "./Button";
-import { Heading } from "./Heading";
-import { IconX } from "./icons";
-import { SparkleBadge } from "./Special";
-import { txt } from "./txt";
-import { cx } from "./cx";
+import { IconButton } from "@/components/ui/Button";
+import { Heading } from "@/components/ui/Heading";
+import { IconX } from "@/components/ui/icons";
+import { SparkleBadge } from "@/components/ui/Special";
+import { txt } from "@/components/ui/txt";
+import { cx } from "@/components/ui/cx";
 
 const CLOSE_MS = 200; // must match --animate-dialog-out in app/site.css
 const reducedMotion = () => typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches;

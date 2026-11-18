@@ -3,7 +3,7 @@
 // question_str / question_code. Everything else in the app refers to questions.id.
 // PRIMARY KEY (id)
 
-import type { Difficulty, PackId, QuestionId, QuestionPool, QuestionType, TopicId } from "./common";
+import type { Difficulty, PackId, QuestionId, QuestionPool, QuestionType, TopicId } from "@/types/tables/common";
 
 export interface QuestionRow {
   id: QuestionId; // PRIMARY KEY: what every other table refers to

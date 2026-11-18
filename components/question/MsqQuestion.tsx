@@ -2,8 +2,8 @@
 import { useState } from "react";
 import type { QuestionMsqRow, QuestionRow } from "@/types/tables";
 import { gradeMsq, type Verdict } from "@/lib/grade";
-import { QuestionFrame, type FrameResult } from "./QuestionFrame";
-import { OptionList } from "./OptionList";
+import { QuestionFrame, type FrameResult } from "@/components/question/QuestionFrame";
+import { OptionList } from "@/components/question/OptionList";
 
 export function MsqQuestion({
   question,

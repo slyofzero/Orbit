@@ -2,7 +2,7 @@
 // Filled on save by scanning the stem, options and explanation.
 // PRIMARY KEY (question_id, hash): a question lists each picture once.
 
-import type { ImageHash, QuestionId } from "./common";
+import type { ImageHash, QuestionId } from "@/types/tables/common";
 
 export interface QuestionImageRow {
   question_id: QuestionId; // → questions.id

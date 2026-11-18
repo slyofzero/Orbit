@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import { txt } from "./txt";
-import { Heading } from "./Heading";
+import { txt } from "@/components/ui/txt";
+import { Heading } from "@/components/ui/Heading";
 
 /** What a list or page shows when it has nothing yet: say why, and offer the next step. */
 export function EmptyState({

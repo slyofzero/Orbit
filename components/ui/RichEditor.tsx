@@ -17,17 +17,17 @@ import {
 } from "@/lib/editing";
 import { safeHref, safeImageSrc } from "@/lib/markdown";
 import { imageProblem } from "@/lib/images";
-import { Button, IconButton } from "./Button";
-import { Dialog } from "./Dialog";
-import { FieldLabel, TextArea, TextField } from "./Field";
-import { FileInput } from "./FileInput";
-import { Rich } from "./Rich";
-import { Segmented } from "./Segmented";
-import { applyToTextarea } from "./textareaEdit";
-import { Table } from "./Table";
-import { Code, Text } from "./Text";
-import { HelpDialog } from "./Tooltip";
-import { cx } from "./cx";
+import { Button, IconButton } from "@/components/ui/Button";
+import { Dialog } from "@/components/ui/Dialog";
+import { FieldLabel, TextArea, TextField } from "@/components/ui/Field";
+import { FileInput } from "@/components/ui/FileInput";
+import { Rich } from "@/components/ui/Rich";
+import { Segmented } from "@/components/ui/Segmented";
+import { applyToTextarea } from "@/components/ui/textareaEdit";
+import { Table } from "@/components/ui/Table";
+import { Code, Text } from "@/components/ui/Text";
+import { HelpDialog } from "@/components/ui/Tooltip";
+import { cx } from "@/components/ui/cx";
 import {
   IconBold,
   IconCode,
@@ -43,7 +43,7 @@ import {
   IconSigma,
   IconStrike,
   IconUnderline,
-} from "./icons";
+} from "@/components/ui/icons";
 
 /** Rows of the "Formatting help" dialog: what to type, and what it renders as (itself markdown). */
 const FORMATTING: { code: string; result: string }[] = [

@@ -3,7 +3,7 @@ import { useState } from "react";
 import type { QuestionNatRow, QuestionRow } from "@/types/tables";
 import { gradeNat, parseNumber, type Verdict } from "@/lib/grade";
 import { TextField } from "@/components/ui";
-import { QuestionFrame, typedClass, type FrameResult } from "./QuestionFrame";
+import { QuestionFrame, typedClass, type FrameResult } from "@/components/question/QuestionFrame";
 
 export function NatQuestion({
   question,

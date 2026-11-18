@@ -1,7 +1,7 @@
 // Indentation rules for the code editor. Each function returns ONE Edit (see lib/editing.ts) that the
 // editor applies as a single undoable change, or null when it should not act.
 
-import type { Edit } from "./editing";
+import type { Edit } from "@/lib/editing";
 
 export type CodeLang = "python" | "c" | "cpp" | "java" | "javascript" | "sql" | "text";
 

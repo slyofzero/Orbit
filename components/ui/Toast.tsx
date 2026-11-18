@@ -1,9 +1,9 @@
 "use client";
 import { createContext, useCallback, useContext, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { IconSparkle, IconX } from "./icons";
-import { IconButton } from "./Button";
-import { txt } from "./txt";
-import { cx } from "./cx";
+import { IconSparkle, IconX } from "@/components/ui/icons";
+import { IconButton } from "@/components/ui/Button";
+import { txt } from "@/components/ui/txt";
+import { cx } from "@/components/ui/cx";
 
 export type ToastTone = "neutral" | "success" | "error" | "special" | "warm"; // warm = special with the warm gradient
 type Toast = { id: number; tone: ToastTone; text: ReactNode; leaving: boolean };

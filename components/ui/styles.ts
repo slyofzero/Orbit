@@ -1,6 +1,6 @@
 // Class lists shared by several components, so the same look is written once.
 // (Plain strings: Tailwind finds the class names here like anywhere else.)
-import { cx } from "./cx";
+import { cx } from "@/components/ui/cx";
 
 /** The frame of any field: border, background, hover, focus ring, disabled, and a red border when aria-invalid. */
 export const FIELD_FRAME =

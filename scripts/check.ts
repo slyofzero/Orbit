@@ -3,12 +3,12 @@
 import { Database } from "bun:sqlite";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { parseInline, parseMarkdown } from "../lib/markdown";
-import { applyEdit, insertBlock, replaceWithBlock, toggleLines, wrap, type Edit } from "../lib/editing";
-import { hashImage, imageProblem, imageRef, refToHash } from "../lib/images";
-import * as cIndent from "../lib/codeIndent";
-import { addDays, addMonths, daysInMonth, formatDate, isIsoDate, monthGrid, todayIST, weekday } from "../lib/dates";
-import { gradeMcq, gradeMsq, gradeNat, gradeStr, marksFor, parseNumber } from "../lib/grade";
+import { parseInline, parseMarkdown } from "@/lib/markdown";
+import { applyEdit, insertBlock, replaceWithBlock, toggleLines, wrap, type Edit } from "@/lib/editing";
+import { hashImage, imageProblem, imageRef, refToHash } from "@/lib/images";
+import * as cIndent from "@/lib/codeIndent";
+import { addDays, addMonths, daysInMonth, formatDate, isIsoDate, monthGrid, todayIST, weekday } from "@/lib/dates";
+import { gradeMcq, gradeMsq, gradeNat, gradeStr, marksFor, parseNumber } from "@/lib/grade";
 
 let failed = 0;
 function ok(cond: unknown, label: string) {

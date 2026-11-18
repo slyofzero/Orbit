@@ -1,8 +1,8 @@
 "use client";
 import type { KeyboardEvent, ReactNode } from "react";
-import { cx } from "./cx";
-import { isSpecial } from "./Special";
-import { txt } from "./txt";
+import { cx } from "@/components/ui/cx";
+import { isSpecial } from "@/components/ui/Special";
+import { txt } from "@/components/ui/txt";
 
 export type Segment<V extends string> = { value: V; label: ReactNode; icon?: ReactNode };
 

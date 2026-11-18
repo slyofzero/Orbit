@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import { cx } from "./cx";
-import { txt } from "./txt";
+import { cx } from "@/components/ui/cx";
+import { txt } from "@/components/ui/txt";
 
 export type PillTone = "neutral" | "accent" | "green" | "red" | "amber" | "blue" | "ink" | "special";
 

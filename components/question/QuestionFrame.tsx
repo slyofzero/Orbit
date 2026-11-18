@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import type { QuestionRow } from "@/types/tables";
 import type { Verdict } from "@/lib/grade";
 import { Button, Pill, Rich, SparkleBadge, IconCheck, IconRefresh, cx, txt } from "@/components/ui";
-import { DIFFICULTY_LABEL, DIFFICULTY_TONE, TYPE_LABEL, fmtMarks } from "./format";
+import { DIFFICULTY_LABEL, DIFFICULTY_TONE, TYPE_LABEL, fmtMarks } from "@/components/question/format";
 
 export type FrameResult = {
   verdict: Verdict; // null = checked with nothing answered

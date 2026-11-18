@@ -13,11 +13,11 @@
 
 import { useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { INDENT, backspace, indent, indentLevels, newline, typeCloser, type CodeLang } from "@/lib/codeIndent";
-import { Dropdown } from "./Dropdown";
-import { FieldLabel, FieldMessage } from "./Field";
-import { highlight } from "./highlight";
-import { applyToTextarea } from "./textareaEdit";
-import { cx } from "./cx";
+import { Dropdown } from "@/components/ui/Dropdown";
+import { FieldLabel, FieldMessage } from "@/components/ui/Field";
+import { highlight } from "@/components/ui/highlight";
+import { applyToTextarea } from "@/components/ui/textareaEdit";
+import { cx } from "@/components/ui/cx";
 
 export const CODE_LANGS: { value: CodeLang; label: string }[] = [
   { value: "python", label: "Python" },

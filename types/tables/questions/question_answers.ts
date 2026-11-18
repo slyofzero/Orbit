@@ -5,7 +5,7 @@
 // How these rows become stats: docs/STATS.md.
 // PRIMARY KEY (id)
 
-import type { AnswerOutcome, AnswerSource, QuestionId } from "./common";
+import type { AnswerOutcome, AnswerSource, QuestionId } from "@/types/tables/common";
 
 export interface QuestionAnswerRow {
   id: number; // PRIMARY KEY
