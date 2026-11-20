@@ -3,8 +3,8 @@
 // Larger components (card, callout, dialog, question, toast) also show this sparkle badge.
 // The gradient itself is the `special-*` utilities in app/site.css.
 
-import { IconSparkle } from "@/components/ui/icons";
-import { cx } from "@/components/ui/cx";
+import { IconSparkle } from "@/components/icons";
+import { cx } from "@/components/utils/cx";
 
 /** The gradient square with a twinkling star. `small` = the size used inside callouts. */
 export function SparkleBadge({ small = false, className }: { small?: boolean; className?: string }) {

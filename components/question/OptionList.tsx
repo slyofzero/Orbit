@@ -1,6 +1,7 @@
 "use client";
 import { useId } from "react";
-import { Rich, cx } from "@/components/ui";
+import { Rich } from "@/components/ui";
+import { cx } from "@/components/utils";
 import { letter } from "@/components/question/format";
 
 type Tone = "picked" | "right" | "wrong";

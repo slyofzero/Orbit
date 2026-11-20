@@ -23,11 +23,11 @@ import { FieldLabel, TextArea, TextField } from "@/components/ui/Field";
 import { FileInput } from "@/components/ui/FileInput";
 import { Rich } from "@/components/ui/Rich";
 import { Segmented } from "@/components/ui/Segmented";
-import { applyToTextarea } from "@/components/ui/textareaEdit";
+import { applyToTextarea } from "@/components/utils/textareaEdit";
 import { Table } from "@/components/ui/Table";
 import { Code, Text } from "@/components/ui/Text";
 import { HelpDialog } from "@/components/ui/Tooltip";
-import { cx } from "@/components/ui/cx";
+import { cx } from "@/components/utils/cx";
 import {
   IconBold,
   IconCode,
@@ -43,7 +43,7 @@ import {
   IconSigma,
   IconStrike,
   IconUnderline,
-} from "@/components/ui/icons";
+} from "@/components/icons";
 
 /** Rows of the "Formatting help" dialog: what to type, and what it renders as (itself markdown). */
 const FORMATTING: { code: string; result: string }[] = [

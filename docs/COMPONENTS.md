@@ -57,7 +57,7 @@ open http://localhost:3000/dev/components
   - **animations** as `animate-*` (`animate-flow`, `animate-flow-border`, `animate-pop-in`, `animate-dialog-in`, `animate-toast-in-flow`…);
   - base element rules (body, headings, code, selection, scrollbars, reduced motion), and plain CSS for the **code-editor overlay** (`ui-ce-*`) and the **theme ripple**.
 - **`dark:`** follows Orbit's theme (system setting, overridden by the user's choice), not just the system. It is rarely needed: the tokens switch by themselves.
-- **Shared looks** used by several components (field box, pop-up panel, trigger, label / hint / error) are class strings in `components/ui/styles.ts`; button looks are exported from `Button.tsx`.
+- **Shared looks** used by several components (field box, pop-up panel, trigger, label / hint / error) are class strings in `components/utils/styles.ts`; button looks are exported from `Button.tsx`.
 - Don't add new component CSS to `site.css`. Use utilities; if a pattern repeats, add an `@utility`.
 - **Formatting:** `bun run format` runs Prettier on every `.tsx` file (`.prettierrc.json`); `bun run format:check` must pass.
 
@@ -146,7 +146,7 @@ All fields take `label`, `hint`, `error` and **`help`** (a "?" tip beside the la
 | `SparkleBadge`, `Warm` | `Special.tsx` | The special style's badge; switching special to warm | `Warm inline` for inline content |
 
 ### Helpers (not visual)
-`cx()` joins class names · `useDismiss()` closes a pop-up on Esc or an outside click · `FieldLabel` is the label + "?" row used by every field · `copyText()` · `CODE_LANGS` · icons in `icons.tsx` (24×24 line icons, always paired with a label).
+In `components/utils/` (import from `@/components/utils`): `cx()` joins class names · `txt()` renders text as markdown + LaTeX · `useDismiss()` closes a pop-up on Esc or an outside click · `ImageProvider` / `useImageResolver` look up pictures · `styles.ts` shared class strings · `highlight.ts`, `textareaEdit.ts` (code editor and text editor internals). Still in `components/ui/`: `FieldLabel` is the label + "?" row used by every field · `copyText()` · `CODE_LANGS`. Icons are in `components/icons.tsx` (import from `@/components/icons`; 24×24 line icons, always paired with a label).
 
 ---
 
@@ -171,6 +171,6 @@ They all share **`QuestionFrame`**: type, difficulty and marks (+marks, −negat
 1. Make sure no existing component already does the job (see §5).
 2. Add `components/ui/<Name>.tsx`; export it from `components/ui/index.ts`.
 3. Render every piece of text through `txt()` (or `Text` / `Heading`); support `special` if it is a component people would celebrate with.
-4. Style it with Tailwind utilities and theme tokens only (shared looks: `components/ui/styles.ts`); check light and dark.
+4. Style it with Tailwind utilities and theme tokens only (shared looks: `components/utils/styles.ts`); check light and dark.
 5. Pure logic (parsing, maths, rules) goes in `lib/` with a test in `scripts/check.ts`.
 6. Add a demo to `/dev/components` that includes some LaTeX, and a row to this file.

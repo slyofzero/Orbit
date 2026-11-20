@@ -4,12 +4,12 @@
 // `searchable` adds a filter box at the top (for long lists such as topics).
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
-import { useDismiss } from "@/components/ui/useDismiss";
-import { IconCheck, IconChevronDown, IconSearch } from "@/components/ui/icons";
-import { cx } from "@/components/ui/cx";
+import { useDismiss } from "@/components/utils/useDismiss";
+import { IconCheck, IconChevronDown, IconSearch } from "@/components/icons";
+import { cx } from "@/components/utils/cx";
 import { FieldLabel, FieldMessage } from "@/components/ui/Field";
-import { POPUP, triggerClass, triggerIconClass } from "@/components/ui/styles";
-import { txt } from "@/components/ui/txt";
+import { POPUP, triggerClass, triggerIconClass } from "@/components/utils/styles";
+import { txt } from "@/components/utils/txt";
 
 export type DropdownOption<V extends string> = {
   value: V;

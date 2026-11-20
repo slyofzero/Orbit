@@ -22,17 +22,6 @@ import {
   EmptyState,
   Heading,
   IconButton,
-  IconPlus,
-  IconSearch,
-  IconTrash,
-  IconUpload,
-  IconArrowRight,
-  IconSparkle,
-  IconCalendar,
-  IconCheck,
-  IconCode,
-  IconSigma,
-  ImageProvider,
   Kbd,
   Pill,
   ProgressBar,
@@ -61,7 +50,25 @@ import {
   Disclosure,
   FileInput,
   type Column,
+  NavRail,
 } from "@/components/ui";
+import {
+  IconPlus,
+  IconSearch,
+  IconTrash,
+  IconUpload,
+  IconArrowRight,
+  IconSparkle,
+  IconCalendar,
+  IconCheck,
+  IconCode,
+  IconSigma,
+  IconHome,
+  IconLines,
+  IconStar,
+  IconBars,
+} from "@/components/icons";
+import { ImageProvider } from "@/components/utils";
 import { addDays, todayIST } from "@/lib/dates";
 import type { CodeLang } from "@/lib/codeIndent";
 import { hashImage, imageRef } from "@/lib/images";
@@ -175,6 +182,7 @@ const SECTIONS: [string, string][] = [
   ["editor", "Text editor"],
   ["tips", "Tooltips"],
   ["choices", "Checkboxes & radios"],
+  ["nav", "Navigation rail"],
   ["switches", "Switch & segmented"],
   ["pills", "Pills"],
   ["tabs", "Tabs"],
@@ -238,6 +246,7 @@ export function Showcase() {
           <EditorDemo onAddImage={images.add} />
           <Tips />
           <Choices />
+          <NavDemo />
           <Switches />
           <Pills />
           <TabsDemo />
@@ -823,6 +832,31 @@ function Choices() {
   );
 }
 
+function NavDemo() {
+  return (
+    <Section
+      id="nav"
+      title="Navigation rail"
+      path="components/ui/NavRail.tsx"
+      note="v1's main menu: a narrow rail on desktop, a bottom bar on phones (the footer then floats top-right). Shown here at a fixed size."
+    >
+      <Demo>
+        <NavRail
+          className="static! h-[420px]! w-24! rounded-lg border"
+          brand={{ title: "Orbit", subtitle: "study hub $\\star$", href: "/dev/components" }}
+          items={[
+            { href: "/dev/components", label: "Today", icon: <IconHome /> },
+            { href: "/dev/planner", label: "Planner", icon: <IconLines /> },
+            { href: "/dev/practice", label: "Practice $\\pi$", icon: <IconStar /> },
+            { href: "/dev/stats", label: "Stats", icon: <IconBars /> },
+          ]}
+          footer={<ThemeToggle compact />}
+        />
+      </Demo>
+    </Section>
+  );
+}
+
 function Switches() {
   const [on, setOn] = useState(true);
   const [view, setView] = useState<"day" | "week" | "month">("week");
@@ -851,6 +885,7 @@ function Switches() {
             ]}
           />
           <ThemeToggle />
+          <ThemeToggle compact />
         </div>
       </Demo>
       <Demo caption="Special: one segment, or all of them">

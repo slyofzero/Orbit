@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Rich } from "@/components/ui/Rich";
-import { txt } from "@/components/ui/txt";
-import { cx } from "@/components/ui/cx";
+import { txt } from "@/components/utils/txt";
+import { cx } from "@/components/utils/cx";
 
 export type TextVariant = "body" | "muted" | "small" | "hint" | "caption" | "error";
 

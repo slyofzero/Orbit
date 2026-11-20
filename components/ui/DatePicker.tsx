@@ -16,13 +16,13 @@ import {
   WEEKDAYS_SHORT,
   type IsoDate,
 } from "@/lib/dates";
-import { useDismiss } from "@/components/ui/useDismiss";
-import { IconCalendar, IconChevronLeft, IconChevronRight } from "@/components/ui/icons";
-import { cx } from "@/components/ui/cx";
+import { useDismiss } from "@/components/utils/useDismiss";
+import { IconCalendar, IconChevronLeft, IconChevronRight } from "@/components/icons";
+import { cx } from "@/components/utils/cx";
 import { Button, IconButton } from "@/components/ui/Button";
 import { FieldLabel, FieldMessage } from "@/components/ui/Field";
-import { POPUP, triggerClass, triggerIconClass } from "@/components/ui/styles";
-import { txt } from "@/components/ui/txt";
+import { POPUP, triggerClass, triggerIconClass } from "@/components/utils/styles";
+import { txt } from "@/components/utils/txt";
 
 export function DatePicker({
   label,

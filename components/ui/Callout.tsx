@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
-import { cx } from "@/components/ui/cx";
+import { cx } from "@/components/utils/cx";
 import { SparkleBadge } from "@/components/ui/Special";
-import { txt } from "@/components/ui/txt";
+import { txt } from "@/components/utils/txt";
 
 export type CalloutTone = "info" | "success" | "warn" | "caution" | "special";
 

@@ -1,10 +1,6 @@
 // Shared UI components. Every one is shown at /dev/components (dev mode only).
-export { cx } from "@/components/ui/cx";
-export * from "@/components/ui/icons";
 export { Rich } from "@/components/ui/Rich";
-export { txt } from "@/components/ui/txt";
 export { RichEditor } from "@/components/ui/RichEditor";
-export { ImageProvider, useImageResolver, type ImageResolver } from "@/components/ui/images";
 export { SparkleBadge, isSpecial, Warm } from "@/components/ui/Special";
 export { Divider, type DividerVariant } from "@/components/ui/Divider";
 export { Heading } from "@/components/ui/Heading";
@@ -15,6 +11,7 @@ export { Checkbox, RadioGroup, type RadioOption } from "@/components/ui/Choice";
 export { Switch } from "@/components/ui/Switch";
 export { Segmented, type Segment } from "@/components/ui/Segmented";
 export { ThemeToggle } from "@/components/ui/ThemeToggle";
+export { NavRail, type NavItem } from "@/components/ui/NavRail";
 export { Card } from "@/components/ui/Card";
 export { Pill, Kbd, type PillTone } from "@/components/ui/Pill";
 export { Tabs, type Tab } from "@/components/ui/Tabs";
@@ -26,7 +23,6 @@ export { EmptyState } from "@/components/ui/EmptyState";
 export { ToastProvider, useToast, type ToastTone } from "@/components/ui/Toast";
 export { DatePicker } from "@/components/ui/DatePicker";
 export { Dropdown, type DropdownOption } from "@/components/ui/Dropdown";
-export { useDismiss } from "@/components/ui/useDismiss";
 export { Tooltip, HelpTip, type TipPlacement } from "@/components/ui/Tooltip";
 export { FieldLabel } from "@/components/ui/Field";
 export { CopyButton, copyText } from "@/components/ui/CopyButton";

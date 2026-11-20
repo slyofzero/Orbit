@@ -1,6 +1,6 @@
 "use client";
 import type { ReactNode } from "react";
-import { txt } from "@/components/ui/txt";
+import { txt } from "@/components/utils/txt";
 
 /** On/off setting that applies immediately (use Checkbox inside forms that are submitted). */
 export function Switch({

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { txt } from "@/components/ui/txt";
+import { txt } from "@/components/utils/txt";
 import { Heading } from "@/components/ui/Heading";
 
 /** What a list or page shows when it has nothing yet: say why, and offer the next step. */

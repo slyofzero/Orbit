@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
-import { cx } from "@/components/ui/cx";
+import { cx } from "@/components/utils/cx";
 import { SparkleBadge } from "@/components/ui/Special";
-import { txt } from "@/components/ui/txt";
+import { txt } from "@/components/utils/txt";
 import { Heading } from "@/components/ui/Heading";
 
 /** A white sheet. `hero` = the dark navy panel (at most one per screen).

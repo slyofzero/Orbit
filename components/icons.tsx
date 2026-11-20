@@ -187,3 +187,23 @@ export const IconCopy = (p: P) => (
     <path d="M5 15V6a2 2 0 012-2h9" />
   </Svg>
 );
+export const IconHome = (p: P) => (
+  <Svg {...p}>
+    <path d="M3 11l9-7 9 7M5 10v10h5v-6h4v6h5V10" />
+  </Svg>
+);
+export const IconLines = (p: P) => (
+  <Svg {...p}>
+    <path d="M4 6h16M4 12h16M4 18h10" />
+  </Svg>
+);
+export const IconStar = (p: P) => (
+  <Svg {...p}>
+    <path d="M12 3l2.5 5.5L20 9l-4 4 1 6-5-3-5 3 1-6-4-4 5.5-.5z" />
+  </Svg>
+);
+export const IconBars = (p: P) => (
+  <Svg {...p}>
+    <path d="M5 20V11M12 20V4M19 20v-6" />
+  </Svg>
+);

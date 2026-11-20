@@ -15,9 +15,9 @@ import { useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } 
 import { INDENT, backspace, indent, indentLevels, newline, typeCloser, type CodeLang } from "@/lib/codeIndent";
 import { Dropdown } from "@/components/ui/Dropdown";
 import { FieldLabel, FieldMessage } from "@/components/ui/Field";
-import { highlight } from "@/components/ui/highlight";
-import { applyToTextarea } from "@/components/ui/textareaEdit";
-import { cx } from "@/components/ui/cx";
+import { highlight } from "@/components/utils/highlight";
+import { applyToTextarea } from "@/components/utils/textareaEdit";
+import { cx } from "@/components/utils/cx";
 
 export const CODE_LANGS: { value: CodeLang; label: string }[] = [
   { value: "python", label: "Python" },

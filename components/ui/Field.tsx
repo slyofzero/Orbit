@@ -1,9 +1,9 @@
 "use client";
 import { useId, type InputHTMLAttributes, type ReactNode, type TextareaHTMLAttributes } from "react";
-import { cx } from "@/components/ui/cx";
-import { ERROR, FIELD_BOX, HINT, LABEL } from "@/components/ui/styles";
+import { cx } from "@/components/utils/cx";
+import { ERROR, FIELD_BOX, HINT, LABEL } from "@/components/utils/styles";
 import { HelpTip } from "@/components/ui/Tooltip";
-import { txt } from "@/components/ui/txt";
+import { txt } from "@/components/utils/txt";
 
 type Wrap = { label?: ReactNode; help?: ReactNode; hint?: ReactNode; error?: ReactNode; className?: string };
 

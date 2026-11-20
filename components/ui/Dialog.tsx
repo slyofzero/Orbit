@@ -2,10 +2,10 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
 import { IconButton } from "@/components/ui/Button";
 import { Heading } from "@/components/ui/Heading";
-import { IconX } from "@/components/ui/icons";
+import { IconX } from "@/components/icons";
 import { SparkleBadge } from "@/components/ui/Special";
-import { txt } from "@/components/ui/txt";
-import { cx } from "@/components/ui/cx";
+import { txt } from "@/components/utils/txt";
+import { cx } from "@/components/utils/cx";
 
 const CLOSE_MS = 200; // must match --animate-dialog-out in app/site.css
 const reducedMotion = () => typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches;

@@ -14,8 +14,8 @@ import { Fragment, type ReactNode } from "react";
 import katex from "katex";
 import { parseInline, parseMarkdown, type Block, type Inline } from "@/lib/markdown";
 import { refToHash } from "@/lib/images";
-import { useImageResolver, type ImageResolver } from "@/components/ui/images";
-import { cx } from "@/components/ui/cx";
+import { useImageResolver, type ImageResolver } from "@/components/utils/images";
+import { cx } from "@/components/utils/cx";
 import { Divider } from "@/components/ui/Divider";
 import { Link } from "@/components/ui/Link";
 

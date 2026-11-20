@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import { txt } from "@/components/ui/txt";
-import { cx } from "@/components/ui/cx";
+import { txt } from "@/components/utils/txt";
+import { cx } from "@/components/utils/cx";
 
 export type DividerVariant = "solid" | "dashed" | "dotted" | "double" | "thick" | "accent" | "fade" | "special";
 

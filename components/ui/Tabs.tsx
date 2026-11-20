@@ -1,8 +1,8 @@
 "use client";
 import type { KeyboardEvent, ReactNode } from "react";
-import { cx } from "@/components/ui/cx";
+import { cx } from "@/components/utils/cx";
 import { isSpecial } from "@/components/ui/Special";
-import { txt } from "@/components/ui/txt";
+import { txt } from "@/components/utils/txt";
 
 export type Tab<V extends string> = { value: V; label: ReactNode; count?: number };
 

@@ -8,9 +8,9 @@
 import { useEffect, useId, useMemo, useRef, useState, type DragEvent, type ReactNode } from "react";
 import { Button, IconButton } from "@/components/ui/Button";
 import { FieldLabel, FieldMessage } from "@/components/ui/Field";
-import { IconCheck, IconUpload, IconX } from "@/components/ui/icons";
-import { txt } from "@/components/ui/txt";
-import { cx } from "@/components/ui/cx";
+import { IconCheck, IconUpload, IconX } from "@/components/icons";
+import { txt } from "@/components/utils/txt";
+import { cx } from "@/components/utils/cx";
 
 const size = (n: number) =>
   n < 1024 * 1024 ? `${Math.max(1, Math.round(n / 1024))} KB` : `${(n / 1024 / 1024).toFixed(1)} MB`;

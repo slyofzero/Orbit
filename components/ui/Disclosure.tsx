@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
-import { IconChevronRight } from "@/components/ui/icons";
-import { txt } from "@/components/ui/txt";
-import { cx } from "@/components/ui/cx";
+import { IconChevronRight } from "@/components/icons";
+import { txt } from "@/components/utils/txt";
+import { cx } from "@/components/utils/cx";
 
 /** Show / hide extra content (help, advanced options). Built on <details>, so it works without JS. */
 export function Disclosure({

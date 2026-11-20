@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import { cx } from "@/components/ui/cx";
-import { txt } from "@/components/ui/txt";
+import { cx } from "@/components/utils/cx";
+import { txt } from "@/components/utils/txt";
 
 /** A heading. `special` paints it with the animated gradient. */
 export function Heading({
