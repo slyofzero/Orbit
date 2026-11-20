@@ -404,6 +404,9 @@ function Buttons() {
           <Button variant="primary">{"Primary $\\alpha$"}</Button>
           <Button variant="secondary">{"Secondary $\\beta$"}</Button>
           <Button variant="soft">{"Soft $\\gamma$"}</Button>
+          <Button variant="primary" href="/dev">
+            {"Link, button look $\\to$"}
+          </Button>
           <Button variant="ghost">{"Ghost $\\delta$"}</Button>
           <Button variant="danger" icon={<IconTrash />}>
             {"Delete $\\varnothing$"}

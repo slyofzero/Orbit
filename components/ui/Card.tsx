@@ -40,13 +40,11 @@ export function Card({
           {special && <SparkleBadge />}
           <div className="min-w-0 flex-1">
             {title && (
-              <Heading level={3} special={special}>
+              <Heading level={2} special={special}>
                 {title}
               </Heading>
             )}
-            {subtitle && (
-              <p className={cx("mt-0.5 text-[0.9rem]", hero ? "text-on-hero/70" : "text-gray")}>{txt(subtitle)}</p>
-            )}
+            {subtitle && <p className={cx("mt-1", hero ? "text-on-hero/70" : "text-gray")}>{txt(subtitle)}</p>}
           </div>
           {actions}
         </header>

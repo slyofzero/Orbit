@@ -478,6 +478,10 @@ console.log("db: named queries");
     const unknownTable = def.tables.find((t) => !(TABLES as readonly string[]).includes(t));
     ok(!unknownTable, `${name}: lists only real tables`);
   }
+  ok(
+    JSON.stringify(runQ("setup.status").data) === '{"hasPlan":false,"hasQuestions":false}',
+    "setup.status: nothing loaded",
+  );
   const first = runQ("dev.addSampleQuestion").data as string;
   const second = runQ("dev.addSampleQuestion").data as string;
   ok(first !== second, "two sample questions added in the same millisecond get different IDs");
@@ -507,6 +511,10 @@ console.log("db: named queries");
     rolledBack = s.get<{ n: number }>("SELECT count(*) AS n FROM tags")!.n === 0;
   }
   ok(rolledBack, "a write that throws is rolled back completely");
+  ok(
+    JSON.stringify(runQ("setup.status").data) === '{"hasPlan":false,"hasQuestions":true}',
+    "setup.status: questions, no plan",
+  );
   runQ("dev.clearAll");
   ok(
     (runQ("db.counts").data as { rows: number }[]).every((c) => c.rows === 0),

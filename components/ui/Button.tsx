@@ -1,3 +1,4 @@
+import NextLink from "next/link";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { cx } from "@/components/utils/cx";
 import { txt } from "@/components/utils/txt";
@@ -12,6 +13,7 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   iconAfter?: ReactNode; // shown after the label
   loading?: boolean; // shows a spinner and blocks clicks
   block?: boolean; // full width
+  href?: string; // makes it a link to another page that looks like this button
 };
 
 export const BUTTON_BASE =
@@ -22,13 +24,13 @@ export const BUTTON_SIZE: Record<ButtonSize, string> = {
   lg: "px-6 py-3 text-base",
 };
 export const BUTTON_VARIANT: Record<ButtonVariant, string> = {
-  primary: "bg-accent text-on-accent enabled:hover:-translate-y-px enabled:hover:brightness-108",
-  secondary: "border-ink bg-transparent text-ink enabled:hover:bg-ink enabled:hover:text-sheet",
-  soft: "border-line bg-sheet text-ink enabled:hover:bg-sheet-2",
-  ghost: "bg-transparent text-ink enabled:hover:bg-sheet-2",
-  danger: "border-red bg-transparent text-red enabled:hover:bg-red enabled:hover:text-white",
+  primary: "bg-accent text-on-accent not-disabled:hover:-translate-y-px not-disabled:hover:brightness-108",
+  secondary: "border-ink bg-transparent text-ink not-disabled:hover:bg-ink not-disabled:hover:text-sheet",
+  soft: "border-line bg-sheet text-ink not-disabled:hover:bg-sheet-2",
+  ghost: "bg-transparent text-ink not-disabled:hover:bg-sheet-2",
+  danger: "border-red bg-transparent text-red not-disabled:hover:bg-red not-disabled:hover:text-white",
   special:
-    "special-fill animate-flow enabled:hover:-translate-y-px enabled:hover:shadow-[0_8px_22px_-10px_var(--special-c)] enabled:hover:brightness-108 enabled:hover:saturate-110",
+    "special-fill animate-flow not-disabled:hover:-translate-y-px not-disabled:hover:shadow-[0_8px_22px_-10px_var(--special-c)] not-disabled:hover:brightness-108 not-disabled:hover:saturate-110",
 };
 
 export function Button({
@@ -42,8 +44,20 @@ export function Button({
   children,
   disabled,
   type = "button",
+  href,
   ...rest
 }: ButtonProps) {
+  if (href)
+    return (
+      <NextLink
+        href={href}
+        className={cx(BUTTON_BASE, BUTTON_SIZE[size], BUTTON_VARIANT[variant], block && "w-full", className)}
+      >
+        {icon}
+        {txt(children)}
+        {iconAfter}
+      </NextLink>
+    );
   return (
     <button
       {...rest}
