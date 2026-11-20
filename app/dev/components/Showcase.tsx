@@ -52,6 +52,12 @@ import {
   type Column,
   NavRail,
   QuoteBanner,
+  Runway,
+  RunwayStat,
+  ProgressRing,
+  Flame,
+  CountUp,
+  type RunwayTick,
 } from "@/components/ui";
 import {
   IconPlus,
@@ -185,6 +191,7 @@ const SECTIONS: [string, string][] = [
   ["choices", "Checkboxes & radios"],
   ["nav", "Navigation rail"],
   ["quote", "Quote banner"],
+  ["runway", "Runway & ring"],
   ["switches", "Switch & segmented"],
   ["pills", "Pills"],
   ["tabs", "Tabs"],
@@ -250,6 +257,7 @@ export function Showcase() {
           <Choices />
           <NavDemo />
           <QuoteDemo />
+          <RunwayDemo />
           <Switches />
           <Pills />
           <TabsDemo />
@@ -862,6 +870,89 @@ function QuoteDemo() {
       <Demo caption="size sm">
         <QuoteBanner size="sm" quote={DEMO_QUOTES[i]} onNext={next} />
       </Demo>
+    </Section>
+  );
+}
+
+const RUNWAY_TICKS: RunwayTick[] = Array.from({ length: 70 }, (_, i) =>
+  i === 3
+    ? "ms"
+    : i === 12
+      ? "today"
+      : i === 27 || i === 69
+        ? "ms"
+        : i > 12
+          ? "future"
+          : i % 5 === 2
+            ? "miss"
+            : i % 6 === 5
+              ? "past"
+              : "done",
+);
+
+function RunwayDemo() {
+  return (
+    <Section
+      id="runway"
+      title="Runway & progress ring"
+      path="components/ui/Runway.tsx · ProgressRing.tsx"
+      note="v1's dashboard hero: headline, a line under it, stat chips, one tick per day (done, missed, plain, today, milestone, future) and milestone flags. Phones get taller ticks and flags on two rows."
+    >
+      <Demo caption="ProgressRing: tones; the track takes the text colour">
+        <div className="flex flex-wrap items-center gap-5">
+          <ProgressRing value={1} max={4} label="One of four">
+            1/4
+          </ProgressRing>
+          <ProgressRing value={3} max={4} label="Three of four" tone="green">
+            {"$\\tfrac{3}{4}$"}
+          </ProgressRing>
+          <span className="rounded-md bg-hero p-2 text-on-hero">
+            <ProgressRing value={2} max={4} label="On the hero" tone="hi" className="size-[38px]" />
+          </span>
+        </div>
+      </Demo>
+      <Runway
+        label="Demo countdown"
+        title={
+          <>
+            <Rich text="Quiz $2$" /> is in <CountUp n={15} /> days
+          </>
+        }
+        sub="Day 13 of 92. 3 tasks left today. After that: End Term in 51 days, Final in 79 days."
+        stats={
+          <>
+            <RunwayStat
+              visual={<ProgressRing value={1} max={4} tone="hi" label="Tasks today" className="size-[38px]" />}
+              value="1/4"
+              label="tasks today"
+            />
+            <RunwayStat visual={<Flame on />} value={13} label="day streak" />
+            <RunwayStat visual={<Flame on={false} />} value={0} label="no streak" />
+          </>
+        }
+        ticks={RUNWAY_TICKS.map((state, i) => ({ key: String(i), state }))}
+        flags={[
+          { key: 1, name: "Quiz 1", pct: ((3 + 0.5) / 70) * 100, long: "passed", short: "passed", level: 0 },
+          {
+            key: 2,
+            name: "Quiz $2$",
+            pct: ((27 + 0.5) / 70) * 100,
+            long: "15 days to go",
+            short: "15d",
+            next: true,
+            level: 1,
+          },
+          {
+            key: 3,
+            name: "Final",
+            pct: ((69 + 0.5) / 70) * 100,
+            long: "57 days to go",
+            short: "57d",
+            flip: true,
+            level: 0,
+          },
+        ]}
+      />
     </Section>
   );
 }

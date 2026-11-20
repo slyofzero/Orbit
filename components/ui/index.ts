@@ -13,6 +13,8 @@ export { Segmented, type Segment } from "@/components/ui/Segmented";
 export { ThemeToggle } from "@/components/ui/ThemeToggle";
 export { NavRail, type NavItem } from "@/components/ui/NavRail";
 export { QuoteBanner } from "@/components/ui/QuoteBanner";
+export { ProgressRing, type RingTone } from "@/components/ui/ProgressRing";
+export { Runway, RunwayStat, Flame, CountUp, type RunwayTick, type RunwayFlag } from "@/components/ui/Runway";
 export { Card } from "@/components/ui/Card";
 export { Pill, Kbd, type PillTone } from "@/components/ui/Pill";
 export { Tabs, type Tab } from "@/components/ui/Tabs";

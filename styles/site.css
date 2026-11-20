@@ -21,6 +21,7 @@
 @import "./animations/toast.css";
 @import "./animations/file-input.css";
 @import "./animations/quote-banner.css";
+@import "./animations/runway.css";
 @import "./code-editor.css";
 @import "./theme-ripple.css";
 
@@ -199,6 +200,10 @@
   --color-special-a: var(--special-a);
   --color-special-b: var(--special-b);
   --color-special-c: var(--special-c);
+  --color-warm-a: var(--warm-a);
+  --color-warm-b: var(--warm-b);
+  --color-warm-c: var(--warm-c);
+  --color-warm-d: var(--warm-d);
 
   --font-*: initial;
   --font-sans: var(--ff-body);

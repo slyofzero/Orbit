@@ -19,6 +19,8 @@
 import { decode, insertSql } from "@/lib/db/codec";
 import { TABLES, type Sql, type TableName } from "@/lib/db/sql";
 import type { AnswerOutcome, QuestionMcqRow, QuestionRow } from "@/types/tables";
+import { addDays, weekday, type IsoDate } from "@/lib/dates";
+import { buildHero, type HeroDay, type HeroMilestone } from "@/lib/runway";
 
 export interface QueryDef<P, R> {
   kind: "read" | "write";
@@ -53,6 +55,27 @@ export const QUERIES = {
               EXISTS (SELECT 1 FROM questions WHERE retired_at IS NULL) AS questions`,
     )!;
     return { hasPlan: r.plan === 1, hasQuestions: r.questions === 1 };
+  }),
+
+  /** The hero (v1's runway): countdown, plan note, day track with milestone flags, today's tasks, streak. */
+  "dashboard.hero": read(["plans", "plan_days", "plan_day_progress", "milestones"], (sql, p: { today: IsoDate }) => {
+    const plan = sql.get<{ id: string; starts_on: IsoDate; ends_on: IsoDate }>(
+      "SELECT id, starts_on, ends_on FROM plans WHERE is_active = 1",
+    );
+    const days = plan
+      ? sql.all<HeroDay>(
+          `SELECT d.on_date, d.title, d.kind, p.status, p.tasks_total, p.tasks_done
+           FROM plan_days d JOIN plan_day_progress p ON p.day_id = d.id
+           WHERE d.plan_id = ? ORDER BY d.on_date LIMIT 2000`,
+          [plan.id],
+        )
+      : [];
+    const milestones = plan
+      ? sql.all<HeroMilestone>("SELECT id, name, on_date FROM milestones WHERE plan_id = ? ORDER BY on_date LIMIT 50", [
+          plan.id,
+        ])
+      : [];
+    return buildHero({ today: p.today, plan: plan ?? null, days, milestones });
   }),
 
   // ---------------------------------------------------------------- dev (/dev/db)
@@ -121,6 +144,52 @@ export const QUERIES = {
     );
     return { question, mcq: mcqRow ? decode<QuestionMcqRow>("question_mcq", mcqRow) : null, stats: stats ?? null };
   }),
+
+  /** Replaces the sample plan: 92 days around `today` (Sundays off), 4 milestones, some past days ticked. */
+  "dev.samplePlan": write(
+    ["plans", "plan_days", "plan_tasks", "plan_task_ticks", "milestones"],
+    (sql, p: { today: IsoDate }) => {
+      devOnly();
+      const now = Date.now();
+      const start = addDays(p.today, -12);
+      sql.run("DELETE FROM plans WHERE id = 'pl_sample'");
+      sql.run("UPDATE plans SET is_active = 0");
+      sql.run(
+        `INSERT INTO plans (id, name, starts_on, ends_on, is_active, created_at, updated_at)
+         VALUES ('pl_sample', 'Sample plan', ?, ?, 1, ?, ?)`,
+        [start, addDays(start, 91), now, now],
+      );
+      const kinds = ["study", "study", "light", "study", "crunch", "mock"] as const;
+      for (let i = 0; i < 92; i++) {
+        const date = addDays(start, i);
+        if (weekday(date) === 6) continue; // Sunday off
+        const id = sql.get<{ id: number }>(
+          "INSERT INTO plan_days (plan_id, on_date, title, kind, hours) VALUES ('pl_sample', ?, ?, ?, ?) RETURNING id",
+          [date, `Sample topic ${(i % 7) + 1}`, kinds[i % kinds.length], 3],
+        )!.id;
+        for (let k = 0; k < 4; k++) {
+          const task = sql.get<{ id: number }>(
+            "INSERT INTO plan_tasks (day_id, position, body) VALUES (?, ?, ?) RETURNING id",
+            [id, k + 1, `Task ${k + 1}`],
+          )!.id;
+          // past days: most finished, every 4th missed; today: the first task
+          const done = date < p.today ? i % 4 !== 1 || k === 0 : date === p.today && k === 0;
+          if (done) sql.run("INSERT INTO plan_task_ticks (task_id, done_at) VALUES (?, ?)", [task, now]);
+        }
+      }
+      for (const [name, offset] of [
+        ["Quiz 1", -5],
+        ["Quiz 2", 15],
+        ["End Term", 51],
+        ["Final", 79],
+      ] as const)
+        sql.run("INSERT INTO milestones (plan_id, name, on_date) VALUES ('pl_sample', ?, ?)", [
+          name,
+          addDays(p.today, offset),
+        ]);
+      return true;
+    },
+  ),
 
   /** Deletes ALL data in this profile. Dev only. */
   "dev.clearAll": write(TABLES, (sql) => {

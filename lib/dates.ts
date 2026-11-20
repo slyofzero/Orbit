@@ -110,3 +110,10 @@ export function formatLong(s: IsoDate): string {
 export function istHour(now: number = Date.now()): number {
   return new Date(now + 330 * 60_000).getUTCHours();
 }
+
+/** Whole days from `a` to `b` (negative if `b` is earlier). */
+export function daysBetween(a: IsoDate, b: IsoDate): number {
+  const pa = parseIso(a);
+  const pb = parseIso(b);
+  return dayNumber(pb.y, pb.m, pb.d) - dayNumber(pa.y, pa.m, pa.d);
+}

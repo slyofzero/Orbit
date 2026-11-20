@@ -4,3 +4,4 @@ next-env.d.ts
 exports
 tsconfig.tsbuildinfo
 .next-*
+temp

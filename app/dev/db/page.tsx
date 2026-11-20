@@ -19,6 +19,7 @@ import {
   type PillTone,
 } from "@/components/ui";
 import { useDbStatus, useMutation, useQuery, type DbRole } from "@/lib/db/client";
+import { todayIST } from "@/lib/dates";
 
 const ROLE: Record<DbRole, { tone: PillTone; label: string }> = {
   connecting: { tone: "amber", label: "Connecting…" },
@@ -40,6 +41,7 @@ export default function DevDb() {
   const add = useMutation("dev.addSampleQuestion");
   const answer = useMutation("dev.answerRandom");
   const clear = useMutation("dev.clearAll");
+  const samplePlan = useMutation("dev.samplePlan");
   const [confirmClear, setConfirmClear] = useState(false);
   const [lastAnswer, setLastAnswer] = useState<string | null>(null);
   const role = ROLE[status.role];
@@ -88,6 +90,9 @@ export default function DevDb() {
               }}
             >
               Answer a random question
+            </Button>
+            <Button loading={samplePlan.pending} onClick={() => samplePlan.run({ today: todayIST() })}>
+              Load a sample plan
             </Button>
             <Button variant="danger" onClick={() => setConfirmClear(true)}>
               Delete all data

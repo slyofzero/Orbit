@@ -99,7 +99,7 @@ open http://localhost:3000/dev/components
 ### Actions
 | Component | File | Use it for | Main options |
 |---|---|---|---|
-| `Button` | `Button.tsx` | Any action | `variant`: `primary` (one per screen) · `secondary` · `soft` · `ghost` · `danger` · `special`; `size` sm/md/lg; `icon`, `iconAfter`, `loading`, `block` |
+| `Button` | `Button.tsx` | Any action | `variant`: `primary` (one per screen) · `secondary` · `soft` · `ghost` · `danger` · `special`; `size` sm/md/lg; `icon`, `iconAfter`, `loading`, `block`; `href` makes it a link with the same look |
 | `IconButton` | `Button.tsx` | An action shown as an icon only | `label` (required: read aloud and shown on hover); `size` sm/md; `variant` `outline` / `ghost` (toolbars, inside other components) |
 | `Spinner` | `Button.tsx` | Something is loading | `label`, `special` (gradient ring) |
 | `CopyButton` | `CopyButton.tsx` | Copy text to the clipboard | `text` (string or a function, so long text is built only when clicked); `label` (omit for an icon button); icon turns into ✓ "Copied!" (✗ if the browser blocks it) |
@@ -121,12 +121,12 @@ All fields take `label`, `hint`, `error` and **`help`** (a "?" tip beside the la
 | `RadioGroup` | `Choice.tsx` | One of a few options, all visible | `legend`, `options` (`label`, `description`, `disabled`) |
 | `Switch` | `Switch.tsx` | A setting that applies at once | `label` |
 | `Segmented` | `Segmented.tsx` | 2–4 mutually exclusive options side by side | `segments` (`label`, `icon`); arrow keys; `special`: `true` (all) or a list of values (just those) |
-| `ThemeToggle` | `ThemeToggle.tsx` | Light / System / Dark | none; switching plays v1's ripple (the new theme spreads in a circle from the click; `applyThemeWithRipple` in `lib/theme.ts`, skipped with reduce motion or without View Transitions) |
+| `ThemeToggle` | `ThemeToggle.tsx` | Light / System / Dark | `compact` = v1's rail pill (cosmic-event button via `onCosmic`, then one theme button showing the current choice; System → Light → Dark); switching plays v1's ripple (the new theme spreads in a circle from the click; `applyThemeWithRipple` in `lib/theme.ts`, skipped with reduce motion or without View Transitions) |
 
 ### Showing information
 | Component | File | Use it for | Main options |
 |---|---|---|---|
-| `Card` | `Card.tsx` | A sheet holding one idea | `title`, `subtitle`, `actions`; `hero` (the one dark panel per screen); `special` |
+| `Card` | `Card.tsx` | A sheet holding one idea | `title` (h2, v1's card-title size), `subtitle`, `actions` (wrap under the title on narrow screens); `hero` (the one dark panel per screen); `special` |
 | `Pill` | `Pill.tsx` | Status, difficulty, counts, tags | `tone`: neutral · accent · green · red · amber · blue · ink · special |
 | `Kbd` | `Pill.tsx` | A keyboard key | text shown literally |
 | `Tabs` | `Tabs.tsx` | Switching between views | `tabs` (`label`, `count`); arrow keys; `special`: `true` or a list of values |
@@ -137,6 +137,14 @@ All fields take `label`, `hint`, `error` and **`help`** (a "?" tip beside the la
 | `Divider` | `Divider.tsx` | A line between sections | `variant`: solid · dashed · dotted · double · thick · accent · fade · special; `label` (and `align="start"`) |
 | `EmptyState` | `EmptyState.tsx` | A list or page with nothing yet | `title`, text, `action`; say why it is empty and offer the next step |
 | `Disclosure` | `Disclosure.tsx` | Show / hide extra content in place | `title`, `defaultOpen` |
+| `ProgressRing` | `ProgressRing.tsx` | A round meter (tasks done today) | `value`, `max`, `label`; `tone` hi · accent · green; size via `className` (default 52px); track takes the text colour, so it works on the hero |
+
+### App frame and dashboard pieces (from v1)
+| Component | File | Use it for | Main options |
+|---|---|---|---|
+| `NavRail` | `NavRail.tsx` | The main menu | `items` (`href`, `label`, `icon`), `brand`, `footer`; narrow rail on desktop, bottom bar on phones (footer floats top-right) |
+| `QuoteBanner` | `QuoteBanner.tsx` | The warm quote bar | `quote`, `onNext`; `size="sm"` beside the dashboard greeting; quotes and their order: `lib/quotes.ts` |
+| `Runway` | `Runway.tsx` | The dashboard hero | `title`, `sub`, `stats`, `ticks` (done · miss · past · today · ms · future), `flags` (`pct`, `long`/`short`, `next`, `flip`, `level`); also `RunwayStat` (a chip), `Flame` (streak), `CountUp`; what goes in it: `lib/runway.ts` |
 
 ### Overlays and feedback
 | Component | File | Use it for | Main options |

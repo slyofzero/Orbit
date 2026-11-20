@@ -1,0 +1,39 @@
+/* The dashboard hero (components/ui/Runway.tsx), from v1: day ticks growing in one after another,
+   today's tick breathing, a red ping beside the next milestone, the streak flame flickering.
+   Imported by styles/site.css. Reduced motion switches all of them off (styles/site.css). */
+@theme inline {
+  --animate-tick-grow: tick-grow 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-breathe: breathe 2.4s ease-in-out infinite;
+  --animate-flag-ping: flag-ping 1.8s ease-out infinite;
+  --animate-flicker: flicker 1.6s ease-in-out infinite;
+
+  @keyframes tick-grow {
+    from {
+      transform: scaleY(0.05);
+      opacity: 0;
+    }
+    to {
+      transform: scaleY(1);
+      opacity: 1;
+    }
+  }
+  @keyframes breathe {
+    50% {
+      transform: scaleY(0.78);
+    }
+  }
+  @keyframes flag-ping {
+    0% {
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--red) 70%, transparent);
+    }
+    70%,
+    100% {
+      box-shadow: 0 0 0 9px color-mix(in srgb, var(--red) 0%, transparent);
+    }
+  }
+  @keyframes flicker {
+    50% {
+      transform: scale(1.1) rotate(-3deg);
+    }
+  }
+}

@@ -38,7 +38,7 @@ export function Card({
       {(title || actions || special) && (
         <header className="mb-3.5 flex flex-wrap items-center gap-3">
           {special && <SparkleBadge />}
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-[1_1_260px]">
             {title && (
               <Heading level={2} special={special}>
                 {title}
