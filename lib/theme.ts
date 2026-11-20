@@ -1,7 +1,7 @@
 // Theme choice: "light", "dark", or "system" (follow the operating system).
 // Saved in localStorage as "orbit.theme" (one of the few things kept outside the database,
 // because it is needed before anything else loads). "system" = key absent.
-// Applied as <html data-theme="light|dark">; no attribute = follow the system (see app/site.css).
+// Applied as <html data-theme="light|dark">; no attribute = follow the system (see styles/site.css).
 
 export type ThemeChoice = "light" | "dark" | "system";
 
@@ -29,7 +29,7 @@ export function applyThemeWithRipple(choice: ThemeChoice, x: number, y: number):
     return;
   }
   const r = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y)); // reach the farthest corner
-  // The new-theme layer exists one frame before `ready` fires. app/site.css clips it to a zero-size
+  // The new-theme layer exists one frame before `ready` fires. styles/theme-ripple.css clips it to a zero-size
   // circle at this point from the very first frame; without that it flashes full-screen and then
   // snaps to nothing, which looks like a jitter.
   const root = document.documentElement;

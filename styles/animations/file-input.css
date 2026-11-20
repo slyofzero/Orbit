@@ -1,0 +1,15 @@
+/* The drop zone's bobbing icon (components/ui/FileInput.tsx).
+   Imported by styles/site.css. `inline` so var(--special-speed) etc. resolve where the animation runs. */
+@theme inline {
+  --animate-bob: bob 2.4s ease-in-out infinite;
+
+  @keyframes bob {
+    0%,
+    100% {
+      transform: translateY(1px);
+    }
+    50% {
+      transform: translateY(-3px);
+    }
+  }
+}

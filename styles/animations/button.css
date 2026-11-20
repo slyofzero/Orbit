@@ -1,0 +1,12 @@
+/* Button spinner (components/ui/Button.tsx).
+   Imported by styles/site.css. `inline` so var(--special-speed) etc. resolve where the animation runs. */
+@theme inline {
+  --animate-spin: spin 0.7s linear infinite;
+  --animate-spin-slow: spin 0.8s linear infinite;
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+}

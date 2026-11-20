@@ -7,7 +7,7 @@ import { SparkleBadge } from "@/components/ui/Special";
 import { txt } from "@/components/utils/txt";
 import { cx } from "@/components/utils/cx";
 
-const CLOSE_MS = 200; // must match --animate-dialog-out in app/site.css
+const CLOSE_MS = 200; // must match --animate-dialog-out in styles/animations/dialog.css
 const reducedMotion = () => typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 // open: fade + rise in over a frosted backdrop; data-closing (set below while it fades out): the reverse

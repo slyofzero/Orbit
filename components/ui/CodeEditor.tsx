@@ -9,7 +9,7 @@
 // Every one of these is a single native change, so Ctrl+Z undoes it.
 // How it works: a transparent <textarea> (caret, selection, typing) sits exactly on top of a
 // highlighted <pre> and an indent-guide layer that scroll with it. That overlay must line up to the pixel,
-// so it is plain CSS (the ui-ce-* rules in app/site.css); the toolbar and frame are utilities.
+// so it is plain CSS (the ui-ce-* rules in styles/code-editor.css); the toolbar and frame are utilities.
 
 import { useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { INDENT, backspace, indent, indentLevels, newline, typeCloser, type CodeLang } from "@/lib/codeIndent";

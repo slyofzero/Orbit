@@ -1,0 +1,52 @@
+/* Animations used by several components: the special gradient drift (flow, flow-border), the sparkle badge's twinkle, cards fading in, and the copy / file ✓ pop.
+   Imported by styles/site.css. `inline` so var(--special-speed) etc. resolve where the animation runs. */
+@theme inline {
+  --animate-flow: flow var(--special-speed) ease-in-out infinite alternate;
+  --animate-flow-border: flow-border var(--special-speed) ease-in-out infinite alternate;
+  --animate-twinkle: twinkle 2.6s ease-in-out infinite;
+  --animate-card-in: card-in 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+  --animate-copy-pop: copy-pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+  --animate-tick-pop: copy-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) 0.15s both;
+
+  @keyframes flow {
+    from {
+      background-position: 0% 50%;
+    }
+    to {
+      background-position: 100% 50%;
+    }
+  }
+  @keyframes flow-border {
+    from {
+      background-position:
+        0 0,
+        0% 50%;
+    }
+    to {
+      background-position:
+        0 0,
+        100% 50%;
+    }
+  }
+  @keyframes twinkle {
+    0%,
+    100% {
+      transform: scale(1) rotate(0deg);
+    }
+    50% {
+      transform: scale(1.18) rotate(14deg);
+    }
+  }
+  @keyframes card-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px) scale(0.98);
+    }
+  }
+  @keyframes copy-pop {
+    from {
+      transform: scale(0.4) rotate(-20deg);
+      opacity: 0;
+    }
+  }
+}

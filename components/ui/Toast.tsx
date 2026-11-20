@@ -11,7 +11,7 @@ type Toast = { id: number; tone: ToastTone; text: ReactNode; leaving: boolean };
 const Ctx = createContext<(text: ReactNode, tone?: ToastTone) => void>(() => {});
 
 const MAX_ON_SCREEN = 3;
-const LEAVE_MS = 240; // must match --animate-toast-out in app/site.css
+const LEAVE_MS = 240; // must match --animate-toast-out in styles/animations/toast.css
 const MOVE_MS = 260; // how long the others take to slide into the gap
 const reducedMotion = () => typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches;
 

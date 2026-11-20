@@ -1,0 +1,12 @@
+/* The quote banner's drifting light (components/ui/QuoteBanner.tsx).
+   Imported by styles/site.css. `inline` so var(--special-speed) etc. resolve where the animation runs. */
+@theme inline {
+  --animate-glow: glow 6s ease-in-out infinite alternate; /* the quote banner's drifting light (v1) */
+
+  @keyframes glow {
+    to {
+      transform: translate(-40px, 24px) scale(1.2);
+      opacity: 0.7;
+    }
+  }
+}

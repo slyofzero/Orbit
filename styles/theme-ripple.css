@@ -1,0 +1,16 @@
+/* Theme ripple (lib/theme.ts applyThemeWithRipple). Imported by styles/site.css. */
+@layer components {
+  /* ---------- theme ripple (lib/theme.ts applyThemeWithRipple) ----------
+     The browser's default cross-fade is switched off; the new theme is revealed by a growing circle instead. */
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+    mix-blend-mode: normal;
+  }
+  ::view-transition-new(root) {
+    z-index: 9998;
+    clip-path: circle(
+      0px at var(--ripple-x, 50%) var(--ripple-y, 0px)
+    ); /* hidden from the first frame; the script grows it */
+  }
+}

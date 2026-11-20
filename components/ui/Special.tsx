@@ -1,7 +1,7 @@
 // "Special" = the animated gradient treatment for things that deserve attention
 // (a milestone, a perfect score, a new feature). Use sparingly: one or two per screen.
 // Larger components (card, callout, dialog, question, toast) also show this sparkle badge.
-// The gradient itself is the `special-*` utilities in app/site.css.
+// The gradient itself is the `special-*` utilities in styles/site.css.
 
 import { IconSparkle } from "@/components/icons";
 import { cx } from "@/components/utils/cx";

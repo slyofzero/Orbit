@@ -1,0 +1,35 @@
+/* Dialog open / close and its backdrop (components/ui/Dialog.tsx). -flow = the special version (entrance + gradient drift).
+   Imported by styles/site.css. `inline` so var(--special-speed) etc. resolve where the animation runs. */
+@theme inline {
+  --animate-dialog-in: dialog-in 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-dialog-out: dialog-out 0.2s ease-in forwards;
+  --animate-fade-in: fade-in 0.25s ease-out;
+  --animate-fade-out: fade-out 0.2s ease-in forwards;
+  --animate-dialog-in-flow:
+    dialog-in 0.24s cubic-bezier(0.16, 1, 0.3, 1), flow-border var(--special-speed) ease-in-out infinite alternate;
+  --animate-dialog-out-flow:
+    dialog-out 0.2s ease-in forwards, flow-border var(--special-speed) ease-in-out infinite alternate;
+
+  @keyframes dialog-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px) scale(0.97);
+    }
+  }
+  @keyframes dialog-out {
+    to {
+      opacity: 0;
+      transform: translateY(10px) scale(0.97);
+    }
+  }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes fade-out {
+    to {
+      opacity: 0;
+    }
+  }
+}

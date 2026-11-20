@@ -1,0 +1,178 @@
+/* Code editor overlay (components/ui/CodeEditor.tsx). Plain CSS: utilities can't express it. Imported by styles/site.css. */
+@layer components {
+  /* =============================================================================
+     Code editor (components/ui/CodeEditor.tsx)
+     A transparent textarea sits exactly on top of the highlighted <pre> and the indent guides,
+     so both MUST share font, size, line height, padding and tab size (the --ce-* variables).
+     The code area is always dark (--code-bg) in both themes, so the token colours are fixed.
+     ============================================================================= */
+  .ui-ce {
+    --ce-font: 0.92rem;
+    --ce-lh: 1.5rem;
+    --ce-pad: 12px;
+    --syn-keyword: #c792ea;
+    --syn-string: #c3e88d;
+    --syn-number: #f78c6c;
+    --syn-comment: #7d8ba3;
+    --syn-title: #82aaff;
+    --syn-builtin: #ffcb6b;
+    --syn-literal: #ff9cac;
+    --syn-meta: #89ddff;
+    --syn-attr: #ffcb6b;
+    border: 1.5px solid var(--code-bg);
+    border-radius: var(--r-md);
+    background: var(--code-bg);
+    transition: box-shadow 0.15s; /* no overflow: hidden here, or the language list would be cut off */
+  }
+  .ui-ce:focus-within {
+    box-shadow: 0 0 0 3px var(--accent-soft);
+    border-color: var(--accent);
+  }
+  .ui-ce.is-error {
+    border-color: var(--red);
+  }
+  .ui-ce-body {
+    border-radius: 0 0 calc(var(--r-md) - 2px) calc(var(--r-md) - 2px);
+    position: relative;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    min-height: calc(4 * var(--ce-lh) + 2 * var(--ce-pad));
+    resize: vertical;
+    overflow: hidden;
+  }
+  .ui-ce-gutter {
+    position: relative;
+    overflow: hidden;
+    padding: var(--ce-pad) 10px var(--ce-pad) 12px;
+    min-width: 3.2em;
+    font: var(--ce-font) / var(--ce-lh) var(--ff-mono);
+    color: color-mix(in srgb, var(--code-fg) 35%, transparent);
+    text-align: right;
+    user-select: none;
+    border-right: 1px solid color-mix(in srgb, var(--code-fg) 10%, transparent);
+  }
+  .ui-ce-code {
+    position: relative;
+    overflow: hidden;
+  }
+  .ui-ce-move {
+    position: relative;
+    will-change: transform;
+  }
+  .ui-ce-layer {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .ui-ce-pre,
+  .ui-ce-input {
+    margin: 0;
+    padding: var(--ce-pad);
+    border: 0;
+    font: var(--ce-font) / var(--ce-lh) var(--ff-mono);
+    font-variant-ligatures: none;
+    letter-spacing: 0;
+    tab-size: 4;
+    white-space: pre;
+    word-wrap: normal;
+  }
+  .ui-ce-pre {
+    position: relative;
+    color: var(--code-fg);
+    background: transparent;
+    min-width: max-content;
+  }
+  .ui-ce-pre code {
+    font: inherit;
+    background: none;
+    padding: 0;
+    color: inherit;
+  }
+  .ui-ce-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    resize: none;
+    overflow: auto;
+    background: transparent;
+    color: transparent;
+    caret-color: var(--code-fg);
+    outline: none;
+  }
+  .ui-ce-input::selection {
+    background: rgba(130, 170, 255, 0.32);
+    color: transparent;
+  }
+  .ui-ce-input::placeholder {
+    color: color-mix(in srgb, var(--code-fg) 40%, transparent);
+  }
+  /* indent guides: one row per line; one thin line per indent level */
+  .ui-ce-guides {
+    position: absolute;
+    top: var(--ce-pad);
+    left: var(--ce-pad);
+    font: var(--ce-font) / var(--ce-lh) var(--ff-mono);
+  }
+  .ui-ce-gline {
+    position: relative;
+    height: var(--ce-lh);
+  }
+  .ui-ce-gline span {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: color-mix(in srgb, var(--code-fg) 14%, transparent);
+  }
+  /* tokens */
+  .ui-ce .hljs-keyword,
+  .ui-ce .hljs-selector-tag,
+  .ui-ce .hljs-built_in.hljs-keyword {
+    color: var(--syn-keyword);
+  }
+  .ui-ce .hljs-string,
+  .ui-ce .hljs-regexp,
+  .ui-ce .hljs-char {
+    color: var(--syn-string);
+  }
+  .ui-ce .hljs-number {
+    color: var(--syn-number);
+  }
+  .ui-ce .hljs-comment,
+  .ui-ce .hljs-quote {
+    color: var(--syn-comment);
+    font-style: italic;
+  }
+  .ui-ce .hljs-title,
+  .ui-ce .hljs-title.function_,
+  .ui-ce .hljs-section {
+    color: var(--syn-title);
+  }
+  .ui-ce .hljs-built_in,
+  .ui-ce .hljs-type,
+  .ui-ce .hljs-title.class_ {
+    color: var(--syn-builtin);
+  }
+  .ui-ce .hljs-literal,
+  .ui-ce .hljs-symbol {
+    color: var(--syn-literal);
+  }
+  .ui-ce .hljs-meta,
+  .ui-ce .hljs-meta .hljs-keyword,
+  .ui-ce .hljs-operator,
+  .ui-ce .hljs-punctuation {
+    color: var(--syn-meta);
+  }
+  .ui-ce .hljs-attr,
+  .ui-ce .hljs-attribute,
+  .ui-ce .hljs-variable,
+  .ui-ce .hljs-params {
+    color: var(--syn-attr);
+  }
+  .ui-ce .hljs-subst,
+  .ui-ce .hljs-property {
+    color: var(--code-fg);
+  }
+}

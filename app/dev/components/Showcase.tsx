@@ -51,6 +51,7 @@ import {
   FileInput,
   type Column,
   NavRail,
+  QuoteBanner,
 } from "@/components/ui";
 import {
   IconPlus,
@@ -183,6 +184,7 @@ const SECTIONS: [string, string][] = [
   ["tips", "Tooltips"],
   ["choices", "Checkboxes & radios"],
   ["nav", "Navigation rail"],
+  ["quote", "Quote banner"],
   ["switches", "Switch & segmented"],
   ["pills", "Pills"],
   ["tabs", "Tabs"],
@@ -247,6 +249,7 @@ export function Showcase() {
           <Tips />
           <Choices />
           <NavDemo />
+          <QuoteDemo />
           <Switches />
           <Pills />
           <TabsDemo />
@@ -314,7 +317,7 @@ function Colours() {
     <Section
       id="colours"
       title="Colours"
-      path="app/site.css"
+      path="styles/site.css"
       note="Theme variables. Always use these; never hard-code a colour. Count: $19$ swatches."
     >
       <div className="grid grid-cols-[repeat(auto-fill,minmax(130px,1fr))] gap-2.5">
@@ -334,7 +337,7 @@ function Typography() {
     <Section
       id="type"
       title="Typography"
-      path="app/site.css · components/ui/Heading.tsx"
+      path="styles/site.css · components/ui/Heading.tsx"
       note="Bricolage Grotesque for headings and numbers, Atkinson Hyperlegible Next for reading."
     >
       <Demo caption="Heading component, levels $1$–$3$">
@@ -827,6 +830,34 @@ function Choices() {
             ]}
           />
         </div>
+      </Demo>
+    </Section>
+  );
+}
+
+const DEMO_QUOTES = [
+  "How you do small things is how you do everything.",
+  "Small steps add up: $\\sum_{d=1}^{n} \\text{effort}_d$.",
+  "Effort you can't see yet is still effort that's **adding up**.",
+];
+
+function QuoteDemo() {
+  const [i, setI] = useState(0);
+  const next = () => setI((n) => (n + 1) % DEMO_QUOTES.length);
+  return (
+    <Section
+      id="quote"
+      title="Quote banner"
+      path="components/ui/QuoteBanner.tsx"
+      note={
+        'v1\'s warm quote bar. The button shows the next quote; `size="sm"` is the slim one next to the dashboard greeting.'
+      }
+    >
+      <Demo caption="size md (default)">
+        <QuoteBanner quote={DEMO_QUOTES[i]} onNext={next} />
+      </Demo>
+      <Demo caption="size sm">
+        <QuoteBanner size="sm" quote={DEMO_QUOTES[i]} onNext={next} />
       </Demo>
     </Section>
   );

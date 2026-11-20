@@ -4,7 +4,7 @@ Every screen in Orbit is built from a small set of shared components. This file 
 
 - Shared components: `components/ui/` (one file each; everything is exported from `components/ui/index.ts`)
 - Question components: `components/question/`
-- Styling: **Tailwind CSS v4 utility classes**, written in the components. `app/site.css` holds the theme, custom utilities and the few things utilities can't express (see §3).
+- Styling: **Tailwind CSS v4 utility classes**, written in the components. All CSS lives in `styles/`: `styles/site.css` holds the theme, custom utilities and base rules, and imports the rest (see §3).
 
 ---
 
@@ -51,14 +51,17 @@ open http://localhost:3000/dev/components
 
 ## 3. Styling, theme, "special" and "warm"
 
-- **Tailwind CSS v4.** Components carry utility classes; there is no per-component CSS. `app/site.css` contains only:
+- **Tailwind CSS v4.** Components carry utility classes; CSS lives in the root `styles/` folder. `styles/site.css` contains only:
   - the **theme tokens** (`--pad --sheet --ink --accent …`, light and dark) and the `@theme` mapping that makes them Tailwind's only colours (`bg-sheet`, `text-ink`, `border-line`, `bg-accent-soft`, `text-on-hero/70`…), fonts (`font-display`, `font-body`, `font-mono`), radii (`rounded-sm/md/lg`) and shadows (`shadow-card`, `shadow-lg`);
   - **custom utilities**: `special-fill`, `special-text`, `special-border` (inner colour via `--sp-inner`), `special-tint`, `special-ring`, `warm`, `dot-grid`, `frosted`;
-  - **animations** as `animate-*` (`animate-flow`, `animate-flow-border`, `animate-pop-in`, `animate-dialog-in`, `animate-toast-in-flow`…);
-  - base element rules (body, headings, code, selection, scrollbars, reduced motion), and plain CSS for the **code-editor overlay** (`ui-ce-*`) and the **theme ripple**.
+  - base element rules (body, headings, code, selection, scrollbars, reduced motion);
+  - `@import`s of everything else, each file saying what uses it:
+    - `styles/animations/*.css`: the `animate-*` tokens and their keyframes, one file per component (`toast.css`, `dialog.css`, `popover.css`, `button.css`, `file-input.css`, `quote-banner.css`) plus `shared.css` for those several components use (`flow`, `flow-border`, `twinkle`, `card-in`, `copy-pop`);
+    - `styles/code-editor.css`: the **code-editor overlay** (`ui-ce-*`), plain CSS utilities can't express;
+    - `styles/theme-ripple.css`: the **theme ripple**.
 - **`dark:`** follows Orbit's theme (system setting, overridden by the user's choice), not just the system. It is rarely needed: the tokens switch by themselves.
 - **Shared looks** used by several components (field box, pop-up panel, trigger, label / hint / error) are class strings in `components/utils/styles.ts`; button looks are exported from `Button.tsx`.
-- Don't add new component CSS to `site.css`. Use utilities; if a pattern repeats, add an `@utility`.
+- Don't add component CSS to `site.css`. Use utilities; if a pattern repeats, add an `@utility`. A new animation goes in `styles/animations/<component>.css` (inside `@theme inline`), imported from `site.css`.
 - **Formatting:** `bun run format` runs Prettier on every `.tsx` file (`.prettierrc.json`); `bun run format:check` must pass.
 
 - **Theme:** light by default, dark when the system says so, unless the user picks one with `ThemeToggle` (Light / System / Dark). The choice is saved as `localStorage["orbit.theme"]` and applied before the first paint (`lib/theme.ts`), so there is no flash. Switching reveals the new theme as a circle growing from where you clicked.
