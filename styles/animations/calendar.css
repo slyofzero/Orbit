@@ -1,0 +1,15 @@
+/* The month calendar (components/ui/Calendar.tsx), from v1: today's number pulses a highlighter ring.
+   Imported by styles/site.css. Reduced motion switches it off (styles/site.css). */
+@theme inline {
+  --animate-today-pulse: today-pulse 2.2s ease-out infinite;
+
+  @keyframes today-pulse {
+    0% {
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--hi) 70%, transparent);
+    }
+    70%,
+    100% {
+      box-shadow: 0 0 0 10px transparent;
+    }
+  }
+}

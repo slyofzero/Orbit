@@ -23,6 +23,9 @@
 @import "./animations/quote-banner.css";
 @import "./animations/runway.css";
 @import "./animations/launch.css";
+@import "./animations/calendar.css";
+@import "./animations/bar-chart.css";
+@import "./animations/disclosure.css";
 @import "./code-editor.css";
 @import "./theme-ripple.css";
 

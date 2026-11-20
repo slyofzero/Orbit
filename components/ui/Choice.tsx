@@ -1,5 +1,6 @@
 "use client";
 import { useId, type ReactNode } from "react";
+import { burstFrom } from "@/components/utils/burst";
 import { cx } from "@/components/utils/cx";
 import { LABEL } from "@/components/utils/styles";
 import { txt } from "@/components/utils/txt";
@@ -33,7 +34,46 @@ function ChoiceText({ label, description }: { label: ReactNode; description?: Re
   );
 }
 
-export function Checkbox({ checked, onChange, label, description, disabled }: CheckboxProps) {
+// v1's task tick: a round accent ring that pops into a green ✓; the text is struck through once done.
+const TASK_ROW =
+  "flex items-start gap-3 border-b border-dashed border-line py-2 transition-transform duration-200 hover:translate-x-[3px]";
+const TASK_BOX =
+  "peer mt-[3px] grid size-[22px] shrink-0 cursor-[inherit] appearance-none place-items-center rounded-full border-2 border-accent bg-sheet transition-[transform,background-color,border-color] duration-[250ms] ease-[cubic-bezier(0.3,1.8,0.5,1)] checked:scale-[1.12] checked:border-green checked:bg-green checked:after:text-[0.85rem] checked:after:leading-none checked:after:font-extrabold checked:after:text-white checked:after:content-['✓']";
+const TASK_TEXT = "transition-colors duration-200 peer-checked:text-gray/70 peer-checked:line-through";
+
+export function Checkbox({
+  checked,
+  onChange,
+  label,
+  description,
+  disabled,
+  variant = "default",
+  burst: pieces,
+}: CheckboxProps & {
+  /** task = v1's agenda row: round tick turning green, struck-through text, dashed line under it. */
+  variant?: "default" | "task";
+  /** task only: throw this many confetti pieces when it gets ticked (v1: 14, or 70 when it finishes the day). */
+  burst?: number;
+}) {
+  if (variant === "task")
+    return (
+      <label className={cx(TASK_ROW, disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer")}>
+        <input
+          type="checkbox"
+          className={TASK_BOX}
+          checked={checked}
+          disabled={disabled}
+          onChange={(e) => {
+            onChange(e.target.checked);
+            if (e.target.checked && pieces) burstFrom(e.currentTarget, pieces);
+          }}
+        />
+        <span className={cx("grid gap-0.5", TASK_TEXT)}>
+          <span>{txt(label)}</span>
+          {description && <span className="text-[0.85rem] text-gray">{txt(description)}</span>}
+        </span>
+      </label>
+    );
   return (
     <label className={cx(ROW, disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer")}>
       <input

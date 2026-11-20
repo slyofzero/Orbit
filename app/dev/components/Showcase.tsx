@@ -58,6 +58,11 @@ import {
   Flame,
   CountUp,
   type RunwayTick,
+  Calendar,
+  BarChart,
+  StatTile,
+  ActionRow,
+  type CalendarDay,
 } from "@/components/ui";
 import {
   IconPlus,
@@ -199,6 +204,7 @@ const SECTIONS: [string, string][] = [
   ["tabs", "Tabs"],
   ["cards", "Cards & stats"],
   ["progress", "Progress"],
+  ["calendar", "Calendar & charts"],
   ["callouts", "Callouts"],
   ["table", "Table"],
   ["dialog", "Dialog"],
@@ -265,6 +271,7 @@ export function Showcase() {
           <TabsDemo />
           <Cards />
           <ProgressDemo />
+          <CalendarDemo />
           <Callouts />
           <TableDemo />
           <DialogDemo />
@@ -485,13 +492,15 @@ function Buttons() {
           </Button>
         </div>
       </Demo>
-      <Demo caption="Copy buttons · components/ui/CopyButton.tsx: the icon turns into ✓ once copied">
+      <Demo caption="Copy buttons · components/ui/CopyButton.tsx: the icon turns into ✓ once copied; tone contrast inverts the colours">
         <div className="flex flex-wrap items-center gap-3">
           <Code>{"E = mc^2"}</Code>
           <CopyButton text="E = mc^2" />
           <CopyButton text="$\int_0^1 x\,dx = \tfrac{1}{2}$" label="Copy $\LaTeX$" copiedLabel="Copied $\checkmark$" />
           <CopyButton text={() => "A long AI prompt, built only when clicked."} label="Copy prompt" variant="primary" />
           <CopyButton text="small" label="Copy" size="sm" variant="ghost" />
+          <CopyButton text="icon, contrast" tone="contrast" hint="Copy (contrast)" />
+          <CopyButton text="Inverted for contrast" label="Copy · contrast" tone="contrast" />
         </div>
       </Demo>
     </Section>
@@ -810,6 +819,8 @@ function Tips() {
 function Choices() {
   const [a, setA] = useState(true);
   const [b, setB] = useState(false);
+  const [t1, setT1] = useState(true);
+  const [t2, setT2] = useState(false);
   const [r, setR] = useState<"all" | "wrong" | "new">("all");
   return (
     <Section id="choices" title="Checkboxes & radios" path="components/ui/Choice.tsx">
@@ -827,6 +838,19 @@ function Choices() {
             />
             <Checkbox checked={b} onChange={setB} label="Shuffle options $\sigma \in S_n$" />
             <Checkbox checked={false} onChange={() => {}} label="Disabled $\bot$" disabled />
+          </div>
+          <div className="grid content-start">
+            <Text variant="caption" as="span">
+              {"Task (agenda): ticking throws confetti $\\star$"}
+            </Text>
+            <Checkbox variant="task" checked={t1} onChange={setT1} burst={14} label="Revise eigenvalues $\lambda$" />
+            <Checkbox
+              variant="task"
+              checked={t2}
+              onChange={setT2}
+              burst={70}
+              label="Solve $5$ problems (finishes the day)"
+            />
           </div>
           <RadioGroup
             legend="Which questions? $Q \subseteq \mathcal{Q}$"
@@ -1100,6 +1124,18 @@ function Pills() {
           <Pill tone="ink">{"Q$_{12}$"}</Pill>
           <Pill tone="special">{"Personal best $\\star$"}</Pill>
         </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <Text variant="caption" as="span">
+            Day kinds
+          </Text>
+          <Pill tone="blue">study</Pill>
+          <Pill tone="green">light</Pill>
+          <Pill tone="amber">short day</Pill>
+          <Pill tone="accent-solid">{"mock $M_1$"}</Pill>
+          <Pill tone="red-solid">exam</Pill>
+          <Pill tone="hi">taper</Pill>
+          <Pill>buffer</Pill>
+        </div>
         <Text>
           Keys stay literal: press <Kbd>Esc</Kbd> to close a dialog, $\hookleftarrow$ <Kbd>Enter</Kbd> to check an
           answer.
@@ -1176,7 +1212,88 @@ function ProgressDemo() {
         <ProgressBar label="Linear algebra accuracy $\|A\|$" value={81} max={100} tone="green" />
         <ProgressBar label="Coverage $\frac{|T|}{|Q|}$" value={30} max={40} tone="amber" />
         <ProgressBar label="Plan complete (special) $\star$" value={88} max={91} tone="special" />
+        <ProgressBar
+          label="Segments: own questions (warm) + carried-over bonus (gold) $q + b$"
+          segments={[
+            { value: 6, max: 10, tone: "warm" },
+            { value: 1, max: 3, tone: "gold" },
+          ]}
+        />
       </Demo>
+    </Section>
+  );
+}
+
+function CalendarDemo() {
+  const today = todayIST();
+  const [sel, setSel] = useState(today);
+  const days: Record<string, CalendarDay> = {
+    [addDays(today, -3)]: { tone: "blue", done: true, label: "Matrices" },
+    [addDays(today, -2)]: { tone: "green", done: true },
+    [addDays(today, -1)]: { tone: "amber" },
+    [today]: { tone: "blue", label: "Eigenvalues" },
+    [addDays(today, 1)]: { tone: "accent", label: "Mock" },
+    [addDays(today, 2)]: { tone: "hi" },
+    [addDays(today, 4)]: { tone: "red", tag: "Quiz $2$" },
+  };
+  const bars = [2, 0, 5, 7, 6, 3, 1].map((v, i) => ({
+    key: String(i),
+    label: "SSMTWTF"[i],
+    value: v,
+    highlight: i === 6,
+    title: `${v} done`,
+    tip: `**Day ${i + 1}**\n${v} done${i === 2 ? ", $\\approx 2\\times$ the day before" : ""}`,
+  }));
+  return (
+    <Section
+      id="calendar"
+      title="Calendar, bar chart, stat tile, action row"
+      path="components/ui/Calendar.tsx · BarChart.tsx · StatTile.tsx · ActionRow.tsx"
+      note="From v1's dashboard. The calendar is display only: what a day holds comes in through `days`; its month follows the selected day."
+    >
+      <Demo caption="Calendar">
+        <Calendar
+          today={today}
+          selected={sel}
+          onSelect={setSel}
+          days={days}
+          legend={[
+            { tone: "blue", label: "study" },
+            { tone: "amber", label: "short day" },
+            { tone: "green", label: "light" },
+            { tone: "accent", label: "mock" },
+            { tone: "red", label: "exam $\\star$" },
+          ]}
+        />
+      </Demo>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3.5">
+        <Demo caption="Bar chart">
+          <BarChart label="Done per day" bars={bars} />
+        </Demo>
+        <Demo caption="Stat tiles">
+          <div className="grid grid-cols-3 gap-2.5">
+            <StatTile tone="accent" value="26" label="of $277$ plan tasks" />
+            <StatTile tone="green" value="140" label="questions, $72\%$ right" />
+            <StatTile tone="amber" value="2" label="mocks taken" />
+          </div>
+        </Demo>
+        <Demo caption="Action rows">
+          <div>
+            <ActionRow
+              lead={{ big: "21", small: "Sat" }}
+              title="SQL $\bowtie$ joins"
+              end={<Pill tone="blue">study</Pill>}
+              onClick={() => {}}
+            />
+            <ActionRow
+              lead={{ big: "23", small: "Mon" }}
+              title="Full mock $M_1$"
+              end={<Pill tone="accent-solid">mock</Pill>}
+              onClick={() => {}}
+            />
+          </div>
+        </Demo>
+      </div>
     </Section>
   );
 }
@@ -1362,6 +1479,17 @@ function ToastDemo() {
             onClick={() => toast("Could not save: storage is full ($100\\%$). Back up and free some space.", "error")}
           >
             {"Error $\\times$"}
+          </Button>
+          <Button
+            variant="soft"
+            onClick={() =>
+              toast("Removed Quiz $2$", "neutral", {
+                label: "Undo",
+                onClick: () => toast("Quiz $2$ is back", "success"),
+              })
+            }
+          >
+            {"With Undo $\\circlearrowleft$"}
           </Button>
           <Button variant="special" onClick={() => toast("New personal best: $\\frac{46}{50} = 92\\%$!", "special")}>
             {"Special $\\star$"}

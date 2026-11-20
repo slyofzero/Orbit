@@ -117,3 +117,9 @@ export function daysBetween(a: IsoDate, b: IsoDate): number {
   const pb = parseIso(b);
   return dayNumber(pb.y, pb.m, pb.d) - dayNumber(pa.y, pa.m, pa.d);
 }
+
+/** "18 Nov" (v1's short date). */
+export function formatShort(s: IsoDate): string {
+  const { m, d } = parseIso(s);
+  return `${d} ${MONTHS[m - 1].slice(0, 3)}`;
+}

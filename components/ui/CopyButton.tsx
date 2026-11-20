@@ -38,13 +38,17 @@ export async function copyText(text: string): Promise<boolean> {
 }
 
 /** `text` may be a function, so large text is only built when clicked.
- *  Without `label` it is a round icon button; with `label` it is a normal button with text. */
+ *  Without `label` it is a round icon button; with `label` it is a normal button with text.
+ *  tone: match = sits in the page's own colours (default) · contrast = inverted (dark on a light theme,
+ *  light on a dark one) so it stands out; `variant` then only matters for its size / shape. */
 export function CopyButton({
   text,
   label,
   copiedLabel = "Copied!",
   size = "md",
   variant = "soft",
+  tone = "match",
+  hint,
   onCopied,
 }: {
   text: string | (() => string);
@@ -52,6 +56,9 @@ export function CopyButton({
   copiedLabel?: string;
   size?: "sm" | "md";
   variant?: "soft" | "ghost" | "primary";
+  tone?: "match" | "contrast";
+  /** icon-only: what it copies, shown on hover and read out while idle (default "Copy") */
+  hint?: string;
   onCopied?: () => void;
 }) {
   const [state, setState] = useState<State>("idle");
@@ -73,21 +80,27 @@ export function CopyButton({
 
   const icon =
     state === "copied" ? <IconCheck key="ok" /> : state === "failed" ? <IconX key="no" /> : <IconCopy key="copy" />;
-  const said = state === "copied" ? copiedLabel : state === "failed" ? "Couldn't copy" : (label ?? "Copy");
+  const said = state === "copied" ? copiedLabel : state === "failed" ? "Couldn't copy" : (label ?? hint ?? "Copy");
 
-  // colours: the variant's while idle; green once copied, red if the browser refused
+  // colours: the variant's (or the inverted look) while idle; green once copied, red if the browser refused
   const colours =
-    state === "copied"
-      ? variant === "primary"
-        ? "bg-green text-white"
-        : "border-green bg-sheet text-green"
-      : state === "failed"
-        ? "border-red bg-sheet text-red"
-        : label
-          ? BUTTON_VARIANT[variant]
-          : variant === "ghost"
-            ? "border-transparent bg-transparent text-ink enabled:hover:bg-sheet-2"
-            : "border-line bg-sheet text-ink enabled:hover:border-ink";
+    tone === "contrast"
+      ? state === "copied"
+        ? "border-green bg-green text-sheet"
+        : state === "failed"
+          ? "border-red bg-red text-sheet"
+          : "border-ink bg-ink text-sheet enabled:hover:border-ink-2 enabled:hover:bg-ink-2"
+      : state === "copied"
+        ? variant === "primary"
+          ? "bg-green text-white"
+          : "border-green bg-sheet text-green"
+        : state === "failed"
+          ? "border-red bg-sheet text-red"
+          : label
+            ? BUTTON_VARIANT[variant]
+            : variant === "ghost"
+              ? "border-transparent bg-transparent text-ink enabled:hover:bg-sheet-2"
+              : "border-line bg-sheet text-ink enabled:hover:border-ink";
 
   return (
     <button
@@ -95,7 +108,7 @@ export function CopyButton({
       onClick={click}
       title={label ? undefined : said}
       aria-label={label ? undefined : said}
-      className={cx(label ? cx(BUTTON_BASE, BUTTON_SIZE[size]) : iconButtonClass("md", "outline", false), colours)}
+      className={cx(label ? cx(BUTTON_BASE, BUTTON_SIZE[size]) : iconButtonClass(size, "outline", false), colours)}
     >
       <span className="inline-grid place-items-center [&_svg]:animate-copy-pop" aria-hidden="true">
         {icon}

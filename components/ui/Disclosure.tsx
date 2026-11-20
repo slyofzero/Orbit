@@ -17,7 +17,10 @@ export function Disclosure({
 }) {
   // `[[open]>&]` / `[[open]>summary>&]`: only THIS disclosure's open state counts, not an outer one's
   return (
-    <details className={cx("rounded-md border border-line bg-sheet", className)} open={defaultOpen || undefined}>
+    <details
+      className={cx("disclosure-motion rounded-md border border-line bg-sheet", className)}
+      open={defaultOpen || undefined}
+    >
       <summary className="flex cursor-pointer list-none items-center gap-2 rounded-md px-3.5 py-2.5 font-bold select-none hover:bg-sheet-2 [&::-webkit-details-marker]:hidden [[open]>&]:rounded-b-none">
         <IconChevronRight className="size-4 shrink-0 text-gray transition-transform duration-200 [[open]>summary>&]:rotate-90" />
         {txt(title)}

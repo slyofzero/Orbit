@@ -6,9 +6,11 @@ import { txt } from "@/components/utils/txt";
 import { cx } from "@/components/utils/cx";
 
 export type ToastTone = "neutral" | "success" | "error" | "special" | "warm"; // warm = special with the warm gradient
-type Toast = { id: number; tone: ToastTone; text: ReactNode; leaving: boolean };
+/** An optional button on a toast, e.g. "Undo". Clicking it runs `onClick` and closes the toast. */
+export type ToastAction = { label: string; onClick: () => void };
+type Toast = { id: number; tone: ToastTone; text: ReactNode; action?: ToastAction; leaving: boolean };
 
-const Ctx = createContext<(text: ReactNode, tone?: ToastTone) => void>(() => {});
+const Ctx = createContext<(text: ReactNode, tone?: ToastTone, action?: ToastAction) => void>(() => {});
 
 const MAX_ON_SCREEN = 3;
 const LEAVE_MS = 240; // must match --animate-toast-out in styles/animations/toast.css
@@ -17,7 +19,8 @@ const reducedMotion = () => typeof matchMedia !== "undefined" && matchMedia("(pr
 
 /** Short feedback in the bottom-right corner that never moves the layout ("Copied", "Saved").
  *  Wrap the app once in <ToastProvider>, then call useToast()("Saved", "success").
- *  `special` = animated gradient with a sparkle, for celebrations.
+ *  `special` = animated gradient with a sparkle, for celebrations. A third argument adds a button
+ *  ({ label: "Undo", onClick }); such a toast stays a little longer (v1: 6.5 s).
  *  A toast slides in, and on leaving slides out to the right; the toasts above it then glide down. */
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -33,12 +36,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const show = useCallback(
-    (text: ReactNode, tone: ToastTone = "neutral") => {
+    (text: ReactNode, tone: ToastTone = "neutral", action?: ToastAction) => {
       const id = next.current++;
       const live = list.current.filter((x) => !x.leaving);
       live.slice(0, Math.max(0, live.length - (MAX_ON_SCREEN - 1))).forEach((x) => dismiss(x.id)); // oldest leave
-      setToasts((t) => [...t, { id, tone, text, leaving: false }]);
-      setTimeout(() => dismiss(id), tone === "error" ? 6000 : 3500);
+      setToasts((t) => [...t, { id, tone, text, action, leaving: false }]);
+      setTimeout(() => dismiss(id), action ? 6500 : tone === "error" ? 6000 : 3500);
     },
     [dismiss],
   );
@@ -83,6 +86,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               <IconSparkle className="size-[18px] shrink-0 animate-twinkle" />
             )}
             <span className="flex-1">{txt(t.text)}</span>
+            {t.action && (
+              <button
+                type="button"
+                className="-my-1 shrink-0 cursor-pointer rounded-full bg-hi px-3.5 py-[5px] text-[0.9rem] font-bold text-hero transition-[filter] duration-150 hover:brightness-110"
+                onClick={() => {
+                  t.action!.onClick();
+                  dismiss(t.id);
+                }}
+              >
+                {txt(t.action.label)}
+              </button>
+            )}
             <IconButton
               label="Dismiss"
               size="sm"

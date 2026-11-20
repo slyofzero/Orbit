@@ -207,3 +207,28 @@ export const IconBars = (p: P) => (
     <path d="M5 20V11M12 20V4M19 20v-6" />
   </Svg>
 );
+export const IconLock = (p: P) => (
+  <Svg {...p}>
+    <rect x="5" y="11" width="14" height="10" rx="2" />
+    <path d="M8 11V8a4 4 0 018 0v3" />
+  </Svg>
+);
+export const IconLockOpen = (p: P) => (
+  <Svg {...p}>
+    <rect x="5" y="11" width="14" height="10" rx="2" />
+    <path d="M8 11V8a4 4 0 017.7-1.5" />
+  </Svg>
+);
+export const IconPencil = (p: P) => (
+  <Svg {...p}>
+    <path d="M4 20h4L19 9a2.8 2.8 0 00-4-4L4 16z" />
+    <path d="M13.5 6.5l4 4" />
+  </Svg>
+);
+export const IconUnlink = (p: P) => (
+  <Svg {...p}>
+    <path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1" />
+    <path d="M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1" />
+    <path d="M3 3l18 18" />
+  </Svg>
+);

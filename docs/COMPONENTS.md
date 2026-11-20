@@ -102,7 +102,7 @@ open http://localhost:3000/dev/components
 | `Button` | `Button.tsx` | Any action | `variant`: `primary` (one per screen) · `secondary` · `soft` · `ghost` · `danger` · `special`; `size` sm/md/lg; `icon`, `iconAfter`, `loading`, `block`; `href` makes it a link with the same look |
 | `IconButton` | `Button.tsx` | An action shown as an icon only | `label` (required: read aloud and shown on hover); `size` sm/md; `variant` `outline` / `ghost` (toolbars, inside other components) |
 | `Spinner` | `Button.tsx` | Something is loading | `label`, `special` (gradient ring) |
-| `CopyButton` | `CopyButton.tsx` | Copy text to the clipboard | `text` (string or a function, so long text is built only when clicked); `label` (omit for an icon button); icon turns into ✓ "Copied!" (✗ if the browser blocks it) |
+| `CopyButton` | `CopyButton.tsx` | Copy text to the clipboard | `text` (string or a function, so long text is built only when clicked); `label` (omit for an icon button, then `hint` is its hover text); `tone` `match` (page colours, default) / `contrast` (inverted: dark on light, light on dark); icon turns into ✓ "Copied!" (✗ if the browser blocks it) |
 | `Link` | `Link.tsx` | Navigation | `variant`: `inline` (underlined, in text) · `nav` (menu item, `active`) · `subtle`; `http(s)`/`mailto` open in a new tab |
 
 ### Form fields
@@ -117,7 +117,7 @@ All fields take `label`, `hint`, `error` and **`help`** (a "?" tip beside the la
 | `Dropdown` | `Dropdown.tsx` | Choosing one item from a list | `options` (`label`, `description`, `icon`, `disabled`); `searchable` adds a filter box; keyboard ↑/↓, Home/End, type a letter to jump |
 | `DatePicker` | `DatePicker.tsx` | Choosing a day | values are `YYYY-MM-DD` (IST); `min`, `max`, `clearable`; keyboard arrows, PageUp/PageDown, Home/End |
 | `FileInput` | `FileInput.tsx` | Picking files | `files` / `onChange(files)`; `multiple`; `accept`; `title`, `description`, `buttonLabel`; drop zone lights up with the special gradient while dragging; chosen files become cards (type tile or picture thumbnail, size, ✓ Ready, remove) |
-| `Checkbox` | `Choice.tsx` | On/off inside a form | `label`, `description`, `disabled` |
+| `Checkbox` | `Choice.tsx` | On/off inside a form | `label`, `description`, `disabled`; `variant="task"` = v1's agenda task (round tick turning green, struck-through text, dashed line), `burst` = confetti pieces when ticked (`components/utils/burst.ts`) |
 | `RadioGroup` | `Choice.tsx` | One of a few options, all visible | `legend`, `options` (`label`, `description`, `disabled`) |
 | `Switch` | `Switch.tsx` | A setting that applies at once | `label` |
 | `Segmented` | `Segmented.tsx` | 2–4 mutually exclusive options side by side | `segments` (`label`, `icon`); arrow keys; `special`: `true` (all) or a list of values (just those) |
@@ -127,16 +127,16 @@ All fields take `label`, `hint`, `error` and **`help`** (a "?" tip beside the la
 | Component | File | Use it for | Main options |
 |---|---|---|---|
 | `Card` | `Card.tsx` | A sheet holding one idea | `title` (h2, v1's card-title size), `subtitle`, `actions` (wrap under the title on narrow screens); `hero` (the one dark panel per screen); `special` |
-| `Pill` | `Pill.tsx` | Status, difficulty, counts, tags | `tone`: neutral · accent · green · red · amber · blue · ink · special |
+| `Pill` | `Pill.tsx` | Status, difficulty, counts, tags | `tone`: neutral · accent · green · red · amber · blue · ink · hi · red-solid · accent-solid · special (day kinds: study blue, light green, short day amber, mock accent-solid, exam red-solid, taper hi, buffer neutral) |
 | `Kbd` | `Pill.tsx` | A keyboard key | text shown literally |
 | `Tabs` | `Tabs.tsx` | Switching between views | `tabs` (`label`, `count`); arrow keys; `special`: `true` or a list of values |
 | `Callout` | `Callout.tsx` | A highlighted message | `tone`: info · success · warn · **caution** (title always starts "CAUTION:", for anything destructive) · special |
-| `ProgressBar` | `Progress.tsx` | Progress towards a total | `value`, `max`, `label`; `tone`: accent · green · red · amber · special |
+| `ProgressBar` | `Progress.tsx` | Progress towards a total | `value`, `max`, `label`; `tone`: accent · green · red · amber · warm · gold · special; `segments` (stretches side by side, each as wide as its `max`, e.g. own questions warm + bonus gold); `showLabel={false}` |
 | `Stat` | `Progress.tsx` | One big number | `value`, `label`, `hint`, `trend` up/down |
 | `Table` | `Table.tsx` | Rows of data | `columns` (`header`, `cell`, `align`, `sortValue` makes it sortable, `special` highlights the column); `rowKey`; `empty`; `specialRow(row)`; scrolls sideways on phones; keep to one page of rows |
 | `Divider` | `Divider.tsx` | A line between sections | `variant`: solid · dashed · dotted · double · thick · accent · fade · special; `label` (and `align="start"`) |
 | `EmptyState` | `EmptyState.tsx` | A list or page with nothing yet | `title`, text, `action`; say why it is empty and offer the next step |
-| `Disclosure` | `Disclosure.tsx` | Show / hide extra content in place | `title`, `defaultOpen` |
+| `Disclosure` | `Disclosure.tsx` | Show / hide extra content in place; the body slides open and shut (`disclosure-motion`, styles/animations/disclosure.css) | `title`, `defaultOpen` |
 | `ProgressRing` | `ProgressRing.tsx` | A round meter (tasks done today) | `value`, `max`, `label`; `tone` hi · accent · green; size via `className` (default 52px); track takes the text colour, so it works on the hero |
 
 ### App frame and dashboard pieces (from v1)
@@ -145,6 +145,10 @@ All fields take `label`, `hint`, `error` and **`help`** (a "?" tip beside the la
 | `NavRail` | `NavRail.tsx` | The main menu | `items` (`href`, `label`, `icon`), `brand`, `footer`; narrow rail on desktop, bottom bar on phones (footer floats top-right) |
 | `QuoteBanner` | `QuoteBanner.tsx` | The warm quote bar | `quote`, `onNext`; `size="sm"` beside the dashboard greeting; quotes and their order: `lib/quotes.ts` |
 | `Runway` | `Runway.tsx` | The dashboard hero | `title`, `sub`, `stats`, `ticks` (done · miss · past · today · ms · future), `flags` (`pct`, `long`/`short`, `next`, `flip`, `level`); also `RunwayStat` (a chip), `Flame` (streak), `CountUp`; what goes in it: `lib/runway.ts` |
+| `Calendar` | `Calendar.tsx` | v1's month calendar | `today`, `selected`, `onSelect`, `days` (per date: `tone` blue · green · amber · accent · red · hi · neutral, `done` ✓, `tag` red label + ring, `label` for screen readers), `legend`, `actions`; 6×7 Monday first, month follows `selected`, today pulses (`styles/animations/calendar.css`) |
+| `BarChart` | `BarChart.tsx` | Small per-day bars ("Last 7 days") | `bars` (`key`, `label`, `value`, `title` (screen-reader text), `tip` (hover bubble via `Tooltip`, markdown + maths; none = no bubble), `highlight`), `label`, `height`, `max` (default the largest, at least 4); bars grow in (`styles/animations/bar-chart.css`) |
+| `StatTile` | `StatTile.tsx` | A big number on a tinted block ("Where you stand") | `value`, `label`, `tone`: accent · green · amber · neutral |
+| `ActionRow` | `ActionRow.tsx` | A list row ("Coming up") | `lead` (`big`, `small`), `title`, `sub`, `end`; `href` or `onClick` makes it clickable |
 | `OrbitScene` | `components/background/OrbitScene.tsx` (import it from there; not in the `components/ui` index) | An animated universe (the `welcome` scene of `Backdrop`; the `/dev` demo uses it directly) | canvas; `sunX`, `sunY` (0–1); theme colours, follows light / dark; one still frame with reduced motion; decorative (`aria-hidden`) |
 | `Backdrop` / `useScene` | `components/background/Backdrop.tsx` | The app's ever-present background layer, behind every app page | mounted once in `app/(app)/layout.tsx`, pinned to the viewport (doesn't scroll); a page calls `useScene("welcome")` to show a scene (default `"none"`, empty); scenes fade in, and fade out then unmount when the page leaves; scenes are the `SCENES` list in the file. Pages must not paint an opaque full-page background, or they hide it |
 | `LaunchWarp` | `components/background/LaunchWarp.tsx` | The launch sequence after a plan is imported | full-screen overlay: canvas hyperspace warp, rocket lift-off, `title` fading up, then dissolves and calls `onDone`; `duration` (ms, default `LAUNCH_MS` = 1500) scales every part, `Infinity` keeps it on screen (dev); skipped with reduced motion; animations in `styles/animations/launch.css` |
@@ -153,10 +157,10 @@ All fields take `label`, `hint`, `error` and **`help`** (a "?" tip beside the la
 | Component | File | Use it for | Main options |
 |---|---|---|---|
 | `Dialog` | `Dialog.tsx` | A focused task or confirmation | `open`, `onClose`, `title`, `footer`, `special`; closes on Esc, ×, or a click outside; fades in and out over a frosted backdrop |
-| `Tooltip` | `Tooltip.tsx` | A short label for a button or link | `content`, `placement` top/bottom/left/right |
+| `Tooltip` | `Tooltip.tsx` | A short label for a button or link | `content`, `placement` top/bottom/left/right, `className` (replaces the inline wrapper layout, e.g. a chart column) |
 | `HelpTip` | `Tooltip.tsx` | A "?" explaining the text beside it | hover, keyboard focus or tap; Esc or a tap elsewhere closes it |
 | `HelpDialog` | `Tooltip.tsx` | Help too long for a bubble (tables, examples) | same "?" (optionally with a `label`), opens a `Dialog`; e.g. the editor's Formatting help |
-| `ToastProvider` + `useToast()` | `Toast.tsx` | Short feedback ("Saved", "Copied") | `toast(text, tone)`; tones neutral · success · error · special · warm; bottom-right, slides in and out, others glide into the gap, at most 3 |
+| `ToastProvider` + `useToast()` | `Toast.tsx` | Short feedback ("Saved", "Copied") | `toast(text, tone, action?)` (`action` = `{ label, onClick }`, e.g. Undo; such toasts stay 6.5 s); tones neutral · success · error · special · warm; bottom-right, slides in and out, others glide into the gap, at most 3 |
 | `SparkleBadge`, `Warm` | `Special.tsx` | The special style's badge; switching special to warm | `Warm inline` for inline content |
 
 ### Helpers (not visual)

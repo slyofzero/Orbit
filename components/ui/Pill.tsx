@@ -2,7 +2,18 @@ import type { ReactNode } from "react";
 import { cx } from "@/components/utils/cx";
 import { txt } from "@/components/utils/txt";
 
-export type PillTone = "neutral" | "accent" | "green" | "red" | "amber" | "blue" | "ink" | "special";
+export type PillTone =
+  | "neutral"
+  | "accent"
+  | "green"
+  | "red"
+  | "amber"
+  | "blue"
+  | "ink"
+  | "hi" // highlighter yellow (v1's taper days)
+  | "red-solid" // filled red (v1's exam days)
+  | "accent-solid" // filled accent (v1's mock days)
+  | "special";
 
 const TONE: Record<PillTone, string> = {
   neutral: "bg-sheet-2 text-ink-2",
@@ -12,6 +23,9 @@ const TONE: Record<PillTone, string> = {
   amber: "bg-amber-soft text-amber",
   blue: "bg-blue-soft text-blue",
   ink: "bg-ink text-sheet",
+  hi: "bg-hi-soft text-amber",
+  "red-solid": "bg-red text-white",
+  "accent-solid": "bg-accent text-on-accent",
   special: "special-fill animate-flow",
 };
 

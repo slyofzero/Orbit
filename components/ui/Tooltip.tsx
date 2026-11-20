@@ -80,10 +80,13 @@ const tipBody = (content: ReactNode) => txt(content);
 export function Tooltip({
   content,
   placement = "top",
+  className,
   children,
 }: {
   content: ReactNode;
   placement?: TipPlacement;
+  /** replaces the wrapper's inline layout, e.g. to fill a chart column */
+  className?: string;
   children: ReactElement<{ "aria-describedby"?: string }>;
 }) {
   const id = useId();
@@ -102,7 +105,7 @@ export function Tooltip({
     : children;
   return (
     <span
-      className={WRAP}
+      className={className ? cx("relative", className) : WRAP}
       onPointerEnter={tip.show}
       onPointerLeave={tip.hide}
       onFocus={tip.showNow}
