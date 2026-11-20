@@ -97,3 +97,16 @@ export function formatDate(s: IsoDate): string {
 /** String comparison works for ISO dates; these read better. */
 export const isBefore = (a: IsoDate, b: IsoDate) => a < b;
 export const isAfter = (a: IsoDate, b: IsoDate) => a > b;
+
+const WEEKDAYS_LONG = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+/** "Friday 20 November" (v1's long date, no year). */
+export function formatLong(s: IsoDate): string {
+  const { m, d } = parseIso(s);
+  return `${WEEKDAYS_LONG[weekday(s)]} ${d} ${MONTHS[m - 1]}`;
+}
+
+/** The hour (0–23) in India at a moment, whatever timezone the device is in. */
+export function istHour(now: number = Date.now()): number {
+  return new Date(now + 330 * 60_000).getUTCHours();
+}

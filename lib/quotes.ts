@@ -1,0 +1,156 @@
+// A pool of short, original lines about effort, discipline and getting through life (from v1).
+// Shown by the dashboard's quote banner. Order: a fresh shuffle each visit, so none repeats until all
+// have been shown (nothing is saved between visits).
+export const QUOTES: string[] = [
+  // hard work
+  "Hard work is quiet. It doesn't announce itself; it just shows up in the results.",
+  "Nobody is watching the hours you put in. That's exactly why they count.",
+  "Talent opens the door. Effort is what keeps you in the room.",
+  "You don't rise to your goals. You rise to the effort you repeat every day.",
+  "The work you avoid today is the work that waits, with interest, tomorrow.",
+  "Sweat is a down payment. The rest arrives later.",
+  "Big results are small efforts that refused to quit.",
+  "Do the work as if it will matter. One day it will.",
+  "Effort you can't see yet is still effort that's adding up.",
+  "Nothing grows faster than a habit you keep feeding.",
+  "Hard work doesn't guarantee the win. It guarantees you were ready for it.",
+  "Be the person who is still working after the excitement has worn off.",
+  "The distance between a dream and a result is made of ordinary Tuesdays.",
+  "Work hardest on the days you least feel like it. Those hours are worth double.",
+  "A rough draft finished beats a perfect plan imagined.",
+  // discipline
+  "Discipline is choosing what you want most over what you want right now.",
+  "Discipline is just kindness to your future self, with a timetable.",
+  "Motivation gets you started. Habit is what finishes the job.",
+  "Decide once, then stop negotiating with yourself.",
+  "You are allowed to have a slow day. You are not allowed to have a zero day.",
+  "Do it tired. Do it bored. Do it anyway. That's the whole secret.",
+  "Make the right choice easy and the wrong one inconvenient.",
+  "The first five minutes are the hardest. After that, it's just work.",
+  "A rule you keep on bad days is worth ten you keep on good ones.",
+  "Freedom is what discipline buys you later.",
+  "Keep the promises you make to yourself. They are the ones that build trust.",
+  "Don't wait for the mood. Moods follow action, not the other way round.",
+  "Routine isn't boring. It's what makes room for the extraordinary.",
+  "Say no to the small thing today so you can say yes to the big thing later.",
+  "Consistency beats intensity, every single time.",
+  // perseverance
+  "Falling is part of walking. Get up and take the next step.",
+  "Every expert once failed more times than the beginner has even tried.",
+  "A setback is a plot twist, not the ending.",
+  "You are not behind. You are exactly where today's work puts you.",
+  "Quitting feels like relief for a day and regret for a year.",
+  "The hill looks steepest right before the view opens up.",
+  "It's fine to be slow. It's not fine to stop.",
+  "Strength is what's left when you're tired and keep going anyway.",
+  "Tough days build the muscles that easy days never will.",
+  "Doubt is loudest right before something clicks.",
+  "You've survived every bad day so far. That's a pretty good record.",
+  "Hard things become routine by being repeated, not by being avoided.",
+  "Try, fail, adjust, repeat. That's not a detour. That's the road.",
+  "Don't judge the journey by one bad step.",
+  "Patience is not waiting. It's working steadily while you wait.",
+  // growth and learning
+  "Be a little better than yesterday at one specific thing.",
+  "Confusion is what learning feels like just before it works.",
+  "You don't have to see the whole staircase. Just take the first step.",
+  "Compare yourself only with who you were last week.",
+  "Mistakes are tuition. Make sure you actually learn the lesson.",
+  "Curiosity does more than willpower ever will. Stay curious.",
+  "The best investment is in the skills nobody can take from you.",
+  "Small improvements, repeated for long enough, look like talent.",
+  "Learn something today that your tomorrow self will quietly use.",
+  "If it feels difficult, you're probably growing.",
+  "Read the question twice. Most of life's marks are in the second read.",
+  "Understanding is what remains after the details are forgotten.",
+  "When you can explain it simply, you truly own it.",
+  "Teach what you learn. It's the fastest way to find the gaps.",
+  "Today's hard thing is next month's easy one.",
+  // focus and time
+  "Where your attention goes, your life follows. Aim it carefully.",
+  "One thing at a time, done properly, beats five things done halfway.",
+  "Protect your focus like it's money. It's worth more.",
+  "Start with the smallest next step. Momentum does the rest.",
+  "Time doesn't need to be found. It needs to be chosen.",
+  "Busy is not the same as productive. Know the difference.",
+  "Plan tomorrow before you finish today. Mornings should start with a decision already made.",
+  "Do the hard thing first. The rest of the day gets lighter.",
+  "A distraction is just someone else's priority asking for your time.",
+  "Slow is smooth, and smooth becomes fast.",
+  "Ten focused minutes beat an hour of half-attention.",
+  "Done beats perfect, and finished beats both.",
+  "Make today's task so small that skipping it feels silly.",
+  "You get 24 hours, the same as everyone. What you do with them is the difference.",
+  "Say where today's effort goes before the day decides for you.",
+  // mindset, courage and calm
+  "Courage isn't feeling ready. It's starting while you're still unsure.",
+  "Be gentle with yourself and firm with your schedule.",
+  "Worry borrows from tomorrow and pays back nothing. Spend the time working instead.",
+  "You can be nervous and capable at the same time.",
+  "Calm is a skill. Breathe, then decide.",
+  "Panic is a poor adviser. Pause, then pick the next small step.",
+  "You don't need to be fearless. You just need to move anyway.",
+  "Self-doubt is normal. Letting it drive is optional.",
+  "Believe in the version of you that keeps showing up.",
+  "Be proud of effort, not just outcomes. Effort is the part you control.",
+  "Rest is part of the plan, not a break from it.",
+  "A tired mind needs sleep, not a lecture. Rest, then return.",
+  "Your pace is your own. Run it honestly.",
+  "Peace comes from doing your honest best, then letting go of the rest.",
+  "You are allowed to be a work in progress and a masterpiece at once.",
+  // habits and consistency
+  "Small hours, repeated, become big achievements.",
+  "Habits are votes for the person you're becoming. Vote often.",
+  "Make it easy to start. Make it satisfying to finish.",
+  "One good day is luck. One hundred is a habit.",
+  "Don't break the chain, and if you do, restart it before dinner.",
+  "What you do every day matters more than what you do once in a while.",
+  "A little every day beats a lot once in a while.",
+  "Build the routine, then let the routine build you.",
+  "You'll never regret the walk you took, the page you read or the task you finished.",
+  "Keep showing up. Even a bad day at the desk is a vote for who you want to be.",
+  // honesty, kindness and character
+  "Be honest about where you are. You can't plan a route from a place you pretend not to be.",
+  "Do the right thing when nobody's counting. That's character.",
+  "Kindness costs nothing and compounds quickly.",
+  "Give credit freely, take responsibility quickly.",
+  "How you do small things is how you do everything.",
+  "Your reputation is built in the moments you thought were too small to matter.",
+  "Humility keeps you learning. Pride keeps you guessing.",
+  "Help someone today. It makes your own hard work feel lighter.",
+  "Respect your own effort the way you'd respect a friend's.",
+  "Integrity is doing what you said, even after the mood has changed.",
+  // perspective
+  "A tough week is not a tough life. Finish the week.",
+  "Most worries never happen. Most work, once started, gets finished.",
+  "Look back today and see how far you've come. Then keep walking.",
+  "Progress feels invisible until you look back. So look back.",
+  "Good things take the time they take. Hurrying doesn't shorten them.",
+  "The goal isn't a perfect day. It's an honest one.",
+  "Success is mostly just refusing to leave the room when it gets uncomfortable.",
+  "Dreams are a direction. Work is how you travel.",
+  "Years pass anyway. Decide who you want to be when they do.",
+  "Today is a chance to do one thing you'll be glad you did.",
+  "Nobody gets there overnight. Everybody gets there one step at a time.",
+  "The only bad effort is the one you didn't make.",
+  "Your future self is rooting for you. Give them something to celebrate.",
+  "Keep going. Ordinary persistence looks a lot like greatness from far away.",
+  "You are closer than you were yesterday. That's enough reason to continue.",
+];
+
+/** The quote indexes 0…n−1 in a random order (Fisher–Yates). `rnd` is injectable for tests. */
+export function shuffledOrder(n: number, rnd: () => number = Math.random): number[] {
+  const order = Array.from({ length: n }, (_, i) => i);
+  for (let i = n - 1; i > 0; i--) {
+    const j = Math.floor(rnd() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  return order;
+}
+
+/** The next shuffle once every quote has been shown: a new order that doesn't start with `last`. */
+export function nextOrder(n: number, last: number, rnd: () => number = Math.random): number[] {
+  const order = shuffledOrder(n, rnd);
+  if (n > 1 && order[0] === last) [order[0], order[n - 1]] = [order[n - 1], order[0]];
+  return order;
+}
