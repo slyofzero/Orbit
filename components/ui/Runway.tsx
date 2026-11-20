@@ -105,10 +105,11 @@ export function Runway({
               >
                 {txt(f.name)}
                 {f.next && (
-                  <span
-                    aria-hidden="true"
-                    className="ml-[7px] inline-block size-[7px] animate-flag-ping rounded-full bg-red"
-                  />
+                  <span aria-hidden="true" className="relative ml-[7px] inline-grid size-[7px]">
+                    {/* the ring grows and fades behind the dot */}
+                    <span className="absolute inset-0 animate-flag-ping rounded-full bg-red" />
+                    <span className="relative rounded-full bg-red" />
+                  </span>
                 )}
               </b>
               <span className="text-[0.78rem] text-on-hero/70 max-[760px]:hidden">{txt(f.long)}</span>

@@ -1,11 +1,12 @@
 "use client";
-// What the dashboard shows until there is a plan: a small animated universe and three steps to launch
+// What the dashboard shows until there is a plan: the "welcome" backdrop scene and three steps to launch
 // one (ask an AI → save the file → drop it here). The file is checked as soon as it lands (lib/planFile.ts),
 // previewed, and imported in one go (plan.import). The AI prompt is lib/prompts/planPrompt.ts.
 
 import { useEffect, useState, type ReactNode } from "react";
 import { Button, Callout, CopyButton, Dialog, FileInput, Heading, Pill, Stat, Text, useToast } from "@/components/ui";
-import { OrbitScene } from "@/components/background/OrbitScene";
+import { LAUNCH_MS } from "@/components/background/LaunchWarp";
+import { useScene } from "@/components/background/Backdrop";
 import { cx } from "@/components/utils";
 import { useMutation } from "@/lib/db/client";
 import { formatLong, todayIST, type IsoDate } from "@/lib/dates";
@@ -33,7 +34,9 @@ const fixRequest = (errors: string[]) =>
   "Orbit couldn't import my plan file. Please fix these problems and send the whole corrected JSON again (only the JSON):\n" +
   errors.map((e) => `- ${e}`).join("\n");
 
-export function PlanOnboarding() {
+/** `onLaunched` runs once a plan is imported (the page plays the launch sequence). */
+export function PlanOnboarding({ onLaunched }: { onLaunched?: (name: string) => void }) {
+  useScene("welcome");
   const toast = useToast();
   const [today, setToday] = useState<IsoDate | null>(null);
   useEffect(() => setToday(todayIST()), []);
@@ -66,18 +69,17 @@ export function PlanOnboarding() {
     const r = await launch.run({ text });
     if (!r) return; // the hook already showed the error
     if (!r.ok) return setCheck({ plan: null, errors: r.errors, warnings: r.warnings });
-    toast(`**${r.name}** is launched: ${r.days} days, ${r.tasks} tasks. Have a good first day!`, "special");
+    onLaunched?.(r.name);
+    // after the launch sequence has landed (components/background/LaunchWarp.tsx)
+    setTimeout(
+      () => toast(`**${r.name}** is launched: ${r.days} days, ${r.tasks} tasks. Have a good first day!`, "special"),
+      LAUNCH_MS,
+    );
     // the dashboard switches to the plan view by itself (it re-reads the plans table)
   };
 
   return (
-    <section className="relative isolate min-h-screen overflow-hidden bg-pad max-[760px]:min-h-0 max-[760px]:pb-[100px]">
-      <OrbitScene className="absolute inset-0 -z-10 size-full" sunX={0.78} sunY={0.32} />
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 -z-10 bg-linear-to-r from-pad via-pad/85 to-pad/10 max-[900px]:bg-pad/80"
-      />
-
+    <section className="min-h-screen max-[760px]:min-h-0">
       <div className="grid max-w-[820px] gap-7 p-[clamp(22px,4vw,56px)]">
         <div className="grid animate-card-in justify-items-start gap-4">
           <Pill tone="accent">🪐 Welcome to Orbit</Pill>
@@ -227,7 +229,9 @@ export function PlanOnboarding() {
               size="sm"
               variant="ghost"
               loading={sample.pending}
-              onClick={() => sample.run({ today: today ?? todayIST() })}
+              onClick={async () => {
+                if (await sample.run({ today: today ?? todayIST() })) onLaunched?.("Sample plan"); // same launch sequence
+              }}
             >
               Skip all this: load the sample plan
             </Button>

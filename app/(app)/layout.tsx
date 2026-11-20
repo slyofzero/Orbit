@@ -1,25 +1,15 @@
-// The frame around every app page (v1's shell): the rail on the left (bottom bar on phones) and the page.
-import { NavRail, ThemeToggle, ToastProvider } from "@/components/ui";
-import { IconBars, IconHome, IconLines, IconStar } from "@/components/icons";
-
-const NAV = [
-  { href: "/dashboard", label: "Today", icon: <IconHome /> },
-  { href: "/planner", label: "Planner", icon: <IconLines /> },
-  { href: "/practice", label: "Practice", icon: <IconStar /> },
-  { href: "/stats", label: "Stats", icon: <IconBars /> },
-];
+// Every app page sits in AppFrame (the rail, or no rail before a plan is loaded) over the fixed Backdrop
+// canvas, and can show toasts.
+import { Backdrop } from "@/components/background/Backdrop";
+import { AppFrame } from "@/components/app/AppFrame";
+import { ToastProvider } from "@/components/ui";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ToastProvider>
-      <div className="grid min-h-screen grid-cols-[96px_minmax(0,1fr)] max-[760px]:grid-cols-1">
-        <NavRail
-          items={NAV}
-          brand={{ title: "Orbit", subtitle: "study hub", href: "/dashboard" }}
-          footer={<ThemeToggle compact />}
-        />
-        <main className="w-full max-w-[1760px]">{children}</main>
-      </div>
-    </ToastProvider>
+    <Backdrop>
+      <ToastProvider>
+        <AppFrame>{children}</AppFrame>
+      </ToastProvider>
+    </Backdrop>
   );
 }

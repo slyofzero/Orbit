@@ -8,7 +8,7 @@
 // are literal. As JSX children, put it in a JS string: {"$\\frac{1}{2}$"}. A bare {1} in JSX
 // text is a JavaScript expression and the braces disappear.
 
-import { useCallback, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import type { QuestionRow } from "@/types/tables";
 import {
   Button,
@@ -77,6 +77,7 @@ import {
 } from "@/components/icons";
 import { ImageProvider } from "@/components/utils";
 import { OrbitScene } from "@/components/background/OrbitScene";
+import { LaunchWarp } from "@/components/background/LaunchWarp";
 import { addDays, todayIST } from "@/lib/dates";
 import type { CodeLang } from "@/lib/codeIndent";
 import { hashImage, imageRef } from "@/lib/images";
@@ -891,14 +892,50 @@ const RUNWAY_TICKS: RunwayTick[] = Array.from({ length: 70 }, (_, i) =>
               : "done",
 );
 
+const LAUNCH_SPEEDS = [
+  { value: "800", label: "0.8 s" },
+  { value: "1500", label: "1.5 s (default)" },
+  { value: "4000", label: "4 s" },
+  { value: "forever", label: "Stays $\\infty$" },
+];
+
 function RunwayDemo() {
+  const [speed, setSpeed] = useState("1500");
+  const [launching, setLaunching] = useState(false);
+  const forever = speed === "forever";
+  useEffect(() => {
+    if (!launching || !forever) return;
+    const stop = () => setLaunching(false);
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && stop();
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("pointerdown", stop);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("pointerdown", stop);
+    };
+  }, [launching, forever]);
   return (
     <Section
       id="runway"
       title="Runway, progress ring & orbit scene"
-      path="components/ui/Runway.tsx · ProgressRing.tsx · components/background/OrbitScene.tsx"
-      note="v1's dashboard hero: headline, a line under it, stat chips, one tick per day (done, missed, plain, today, milestone, future) and milestone flags. Phones get taller ticks and flags on two rows. OrbitScene is the animated canvas behind the no-plan welcome."
+      path="components/ui/Runway.tsx · ProgressRing.tsx · components/background/OrbitScene.tsx · LaunchWarp.tsx"
+      note="v1's dashboard hero: headline, a line under it, stat chips, one tick per day (done, missed, plain, today, milestone, future) and milestone flags. Phones get taller ticks and flags on two rows. OrbitScene is the animated canvas behind the no-plan welcome; LaunchWarp plays after a plan is imported."
     >
+      <Demo caption="LaunchWarp: `duration` scales every part; Infinity keeps it on screen (Esc or a click closes it here)">
+        <div className="flex flex-wrap items-center gap-3">
+          <Segmented label="Launch duration" value={speed} onChange={setSpeed} segments={LAUNCH_SPEEDS} />
+          <Button variant="special" onClick={() => setLaunching(true)}>
+            {"Play the launch $\\to$"}
+          </Button>
+        </div>
+        {launching && (
+          <LaunchWarp
+            title="Demo plan $\\star$"
+            duration={forever ? Infinity : Number(speed)}
+            onDone={() => setLaunching(false)}
+          />
+        )}
+      </Demo>
       <Demo caption="OrbitScene: canvas, theme colours, still with reduced motion ($\odot$ at sunX, sunY)">
         <div className="relative h-56 overflow-hidden rounded-lg border border-line bg-pad">
           <OrbitScene className="absolute inset-0 size-full" sunX={0.5} sunY={0.5} />

@@ -1,0 +1,40 @@
+/* The launch sequence after a plan is imported (components/background/LaunchWarp.tsx):
+   the rocket lifts off, the title fades up, then the whole overlay dissolves into the dashboard.
+   Every timing is a share of --launch-ms (set by LaunchWarp's `duration`, default 1500ms).
+   Imported by styles/site.css. Reduced motion skips the sequence entirely (LaunchWarp). */
+@theme inline {
+  --animate-launch-rocket: launch-rocket calc(var(--launch-ms, 1500ms) * 0.73) cubic-bezier(0.55, 0, 0.75, 0.2) both;
+  --animate-launch-title: launch-title calc(var(--launch-ms, 1500ms) * 0.33) cubic-bezier(0.2, 0.8, 0.2, 1)
+    calc(var(--launch-ms, 1500ms) * 0.07) both;
+  --animate-launch-out: launch-out calc(var(--launch-ms, 1500ms) * 0.3) ease-in calc(var(--launch-ms, 1500ms) * 0.67)
+    forwards;
+
+  @keyframes launch-rocket {
+    0% {
+      transform: translateY(28vh) scale(0.8) rotate(-45deg);
+      opacity: 0;
+    }
+    15% {
+      opacity: 1;
+    }
+    40% {
+      transform: translateY(10vh) scale(1) rotate(-45deg);
+    }
+    100% {
+      transform: translateY(-75vh) scale(1.3) rotate(-45deg);
+    }
+  }
+  @keyframes launch-title {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+  }
+  @keyframes launch-out {
+    to {
+      opacity: 0;
+      transform: scale(1.04);
+      visibility: hidden;
+    }
+  }
+}
