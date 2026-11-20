@@ -83,6 +83,19 @@ When a day ends with work left, its unfinished tasks and questions are shared ou
 
 **Edge case:** editing a past day (adding a task to last Monday) changes Monday's carry-over. That's expected: the split always reflects the plan as it is now.
 
+
+## 5b. The plan file (import)
+
+Plans arrive as one JSON file, usually written by an AI chat from the prompt on the dashboard's welcome screen. The format is `"format": "orbit-plan"`, version 1, and it maps straight onto the plan tables:
+
+- **Rules and checks:** `lib/planFile.ts` (`parsePlanFile`). Every rule refuses with a plain-English message naming the field (AGENTS.md rule 5). The `plan.import` query checks the file again inside the worker and writes everything in one transaction, so nothing unchecked is ever saved.
+- **The AI prompt:** `lib/prompts/planPrompt.ts`. It asks the user about goal, dates, free time and topics first, then writes the file. Its example must pass the importer (`bun run check`), so **change both together** (rule 9).
+- **Shape:** `name`, optional `description`, `starts_on` / `ends_on` (default: first / last day), `milestones` (`name`, `short`, `date`, `note`), and `days`. A day is one `date` or a range `from` / `to` with optional `weekdays` (`"mon"`…`"sun"`), plus `title`, `kind`, `hours`, `tasks`, `note` and `questions` (question ids).
+- **Overlaps:** a single `date` beats any range; a later range beats an earlier one. Dates with no entry are rest days.
+- **Forgiving where it's safe:** a missing `format` is only a warning; ``` fences around the JSON are removed; LaTeX backslashes that JSON broke (`rac` read as a form feed) are put back, with a warning.
+- **Question links** whose ids aren't in the question bank yet are left out, with a warning (load the pack first to keep them).
+- **v1 files** use a different shape (numbered weekdays, `phases`, `links`, a `questions` target count). They need their own converter (rule 3); not built yet.
+
 ## 6. Not in this design yet (add with a migration when needed)
 
 - **Phases and milestones** (the v1 coloured stretches and exam dates).

@@ -76,6 +76,7 @@ import {
   IconBars,
 } from "@/components/icons";
 import { ImageProvider } from "@/components/utils";
+import { OrbitScene } from "@/components/background/OrbitScene";
 import { addDays, todayIST } from "@/lib/dates";
 import type { CodeLang } from "@/lib/codeIndent";
 import { hashImage, imageRef } from "@/lib/images";
@@ -191,7 +192,7 @@ const SECTIONS: [string, string][] = [
   ["choices", "Checkboxes & radios"],
   ["nav", "Navigation rail"],
   ["quote", "Quote banner"],
-  ["runway", "Runway & ring"],
+  ["runway", "Runway, ring & orbit"],
   ["switches", "Switch & segmented"],
   ["pills", "Pills"],
   ["tabs", "Tabs"],
@@ -894,10 +895,15 @@ function RunwayDemo() {
   return (
     <Section
       id="runway"
-      title="Runway & progress ring"
-      path="components/ui/Runway.tsx · ProgressRing.tsx"
-      note="v1's dashboard hero: headline, a line under it, stat chips, one tick per day (done, missed, plain, today, milestone, future) and milestone flags. Phones get taller ticks and flags on two rows."
+      title="Runway, progress ring & orbit scene"
+      path="components/ui/Runway.tsx · ProgressRing.tsx · components/background/OrbitScene.tsx"
+      note="v1's dashboard hero: headline, a line under it, stat chips, one tick per day (done, missed, plain, today, milestone, future) and milestone flags. Phones get taller ticks and flags on two rows. OrbitScene is the animated canvas behind the no-plan welcome."
     >
+      <Demo caption="OrbitScene: canvas, theme colours, still with reduced motion ($\odot$ at sunX, sunY)">
+        <div className="relative h-56 overflow-hidden rounded-lg border border-line bg-pad">
+          <OrbitScene className="absolute inset-0 size-full" sunX={0.5} sunY={0.5} />
+        </div>
+      </Demo>
       <Demo caption="ProgressRing: tones; the track takes the text colour">
         <div className="flex flex-wrap items-center gap-5">
           <ProgressRing value={1} max={4} label="One of four">

@@ -145,6 +145,7 @@ All fields take `label`, `hint`, `error` and **`help`** (a "?" tip beside the la
 | `NavRail` | `NavRail.tsx` | The main menu | `items` (`href`, `label`, `icon`), `brand`, `footer`; narrow rail on desktop, bottom bar on phones (footer floats top-right) |
 | `QuoteBanner` | `QuoteBanner.tsx` | The warm quote bar | `quote`, `onNext`; `size="sm"` beside the dashboard greeting; quotes and their order: `lib/quotes.ts` |
 | `Runway` | `Runway.tsx` | The dashboard hero | `title`, `sub`, `stats`, `ticks` (done · miss · past · today · ms · future), `flags` (`pct`, `long`/`short`, `next`, `flip`, `level`); also `RunwayStat` (a chip), `Flame` (streak), `CountUp`; what goes in it: `lib/runway.ts` |
+| `OrbitScene` | `components/background/OrbitScene.tsx` (import it from there; not in the `components/ui` index) | An animated universe behind a section (the no-plan welcome) | canvas; `sunX`, `sunY` (0–1); theme colours, follows light / dark; one still frame with reduced motion; decorative (`aria-hidden`) |
 
 ### Overlays and feedback
 | Component | File | Use it for | Main options |

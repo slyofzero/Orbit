@@ -21,6 +21,7 @@ import { TABLES, type Sql, type TableName } from "@/lib/db/sql";
 import type { AnswerOutcome, QuestionMcqRow, QuestionRow } from "@/types/tables";
 import { addDays, weekday, type IsoDate } from "@/lib/dates";
 import { buildHero, type HeroDay, type HeroMilestone } from "@/lib/runway";
+import { parsePlanFile } from "@/lib/planFile";
 
 export interface QueryDef<P, R> {
   kind: "read" | "write";
@@ -56,6 +57,75 @@ export const QUERIES = {
     )!;
     return { hasPlan: r.plan === 1, hasQuestions: r.questions === 1 };
   }),
+
+  /** Imports a plan file (lib/planFile.ts) and makes it the active plan. The file is checked again here,
+   *  so nothing unchecked is ever saved; on any error nothing is written. Question ids that aren't in the
+   *  bank yet are skipped (and counted). */
+  "plan.import": write(
+    ["plans", "plan_days", "plan_tasks", "plan_day_questions", "milestones"],
+    (sql, p: { text: string }) => {
+      const r = parsePlanFile(p.text);
+      if (!r.plan) return { ok: false as const, errors: r.errors, warnings: r.warnings };
+      const plan = r.plan;
+      const now = Date.now();
+      const id = `pl_${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}`;
+      sql.run("UPDATE plans SET is_active = 0 WHERE is_active = 1");
+      sql.run(
+        `INSERT INTO plans (id, name, description, starts_on, ends_on, is_active, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
+        [id, plan.name, plan.description, plan.starts_on, plan.ends_on, now, now],
+      );
+      let tasks = 0;
+      let links = 0;
+      let skipped = 0;
+      for (const d of plan.days) {
+        const dayId = sql.get<{ id: number }>(
+          "INSERT INTO plan_days (plan_id, on_date, title, note, kind, hours) VALUES (?, ?, ?, ?, ?, ?) RETURNING id",
+          [id, d.date, d.title, d.note, d.kind, d.hours],
+        )!.id;
+        d.tasks.forEach((body, k) => {
+          sql.run("INSERT INTO plan_tasks (day_id, position, body) VALUES (?, ?, ?)", [dayId, k + 1, body]);
+          tasks++;
+        });
+        d.questions.forEach((ref, k) => {
+          const q = sql.get<{ id: string }>("SELECT id FROM questions WHERE id = ? OR legacy_id = ? LIMIT 1", [
+            ref,
+            ref,
+          ]);
+          if (!q) return void skipped++;
+          sql.run("INSERT OR IGNORE INTO plan_day_questions (day_id, question_id, position) VALUES (?, ?, ?)", [
+            dayId,
+            q.id,
+            k + 1,
+          ]);
+          links++;
+        });
+      }
+      for (const m of plan.milestones)
+        sql.run("INSERT INTO milestones (plan_id, name, short, on_date, note) VALUES (?, ?, ?, ?, ?)", [
+          id,
+          m.name,
+          m.short,
+          m.date,
+          m.note,
+        ]);
+      const warnings = [...r.warnings];
+      if (skipped)
+        warnings.push(
+          `${skipped} linked question(s) aren't in your question bank yet, so they were left out. Load your question pack first to keep them.`,
+        );
+      return {
+        ok: true as const,
+        planId: id,
+        name: plan.name,
+        days: plan.days.length,
+        tasks,
+        links,
+        milestones: plan.milestones.length,
+        warnings,
+      };
+    },
+  ),
 
   /** The hero (v1's runway): countdown, plan note, day track with milestone flags, today's tasks, streak. */
   "dashboard.hero": read(["plans", "plan_days", "plan_day_progress", "milestones"], (sql, p: { today: IsoDate }) => {

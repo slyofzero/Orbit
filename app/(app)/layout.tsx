@@ -18,9 +18,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           brand={{ title: "Orbit", subtitle: "study hub", href: "/dashboard" }}
           footer={<ThemeToggle compact />}
         />
-        <main className="w-full max-w-[1760px] px-[clamp(18px,3.5vw,44px)] pt-[34px] pb-20 max-[760px]:pb-[100px]">
-          {children}
-        </main>
+        <main className="w-full max-w-[1760px]">{children}</main>
       </div>
     </ToastProvider>
   );
