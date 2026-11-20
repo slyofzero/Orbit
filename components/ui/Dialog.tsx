@@ -3,7 +3,7 @@ import { useEffect, useId, useRef, type ReactNode } from "react";
 import { IconButton } from "@/components/ui/Button";
 import { Heading } from "@/components/ui/Heading";
 import { IconX } from "@/components/icons";
-import { SparkleBadge } from "@/components/ui/Special";
+import { GLOW, SparkleBadge, type Glow } from "@/components/ui/Special";
 import { txt } from "@/components/utils/txt";
 import { cx } from "@/components/utils/cx";
 
@@ -16,7 +16,8 @@ const CLOSING = "[&[open][data-closing]]:backdrop:animate-fade-out";
 
 /** Modal dialog on the native <dialog>: traps focus, closes on Esc and on a click outside.
  *  Opens with a fade + rise over a frosted backdrop, and closes with the reverse.
- *  `special` = animated gradient border, gradient title and a sparkle badge (celebrations). */
+ *  `special` = animated gradient border, gradient title and a sparkle badge (celebrations);
+ *  `glow` = how strongly it glows (low · medium · high, default medium). */
 export function Dialog({
   open,
   onClose,
@@ -24,6 +25,7 @@ export function Dialog({
   children,
   footer,
   special = false,
+  glow = "medium",
 }: {
   open: boolean;
   onClose: () => void;
@@ -31,6 +33,7 @@ export function Dialog({
   children: ReactNode;
   footer?: ReactNode;
   special?: boolean;
+  glow?: Glow;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -63,7 +66,10 @@ export function Dialog({
         OPENING,
         CLOSING,
         special
-          ? "special-border border-2 shadow-[0_14px_34px_-22px_var(--special-c)] [&[open]:not([data-closing])]:animate-dialog-in-flow [&[open][data-closing]]:animate-dialog-out-flow"
+          ? cx(
+              "special-border border-2 [&[open]:not([data-closing])]:animate-dialog-in-flow [&[open][data-closing]]:animate-dialog-out-flow",
+              GLOW[glow],
+            )
           : "border border-line bg-sheet [&[open]:not([data-closing])]:animate-dialog-in [&[open][data-closing]]:animate-dialog-out",
       )}
       aria-labelledby={titleId}

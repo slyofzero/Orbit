@@ -22,6 +22,15 @@ export function SparkleBadge({ small = false, className }: { small?: boolean; cl
   );
 }
 
+/** How strongly a special panel glows (the coloured shadow under it). */
+export type Glow = "low" | "medium" | "high";
+/** The class for each glow strength (utilities in styles/site.css). */
+export const GLOW: Record<Glow, string> = {
+  low: "special-glow-low",
+  medium: "special-glow-medium",
+  high: "special-glow-high",
+};
+
 /** Is this item special? `special` may be true (all items), a list of item values, or nothing. */
 export function isSpecial<V>(special: boolean | readonly V[] | undefined, value: V): boolean {
   return special === true || (Array.isArray(special) && special.includes(value));

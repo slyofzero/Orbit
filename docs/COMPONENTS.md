@@ -65,7 +65,7 @@ open http://localhost:3000/dev/components
 - **Formatting:** `bun run format` runs Prettier on every `.tsx` file (`.prettierrc.json`); `bun run format:check` must pass.
 
 - **Theme:** light by default, dark when the system says so, unless the user picks one with `ThemeToggle` (Light / System / Dark). The choice is saved as `localStorage["orbit.theme"]` and applied before the first paint (`lib/theme.ts`), so there is no flash. Switching reveals the new theme as a circle growing from where you clicked.
-- **Special:** many components take `special` (or `variant`/`tone="special"`). Filled parts get a slowly flowing gradient; bordered parts a flowing gradient border; headings gradient text. Larger components also show a sparkle badge. Motion stops for users with "reduce motion" on.
+- **Special:** many components take `special` (or `variant`/`tone="special"`). Filled parts get a slowly flowing gradient; bordered parts a flowing gradient border; headings gradient text. Larger components also show a sparkle badge. Special panels (`Card`, `Dialog`) glow underneath; `glow` sets how much: `low` · `medium` (default) · `high` (utilities `special-glow-*`, classes in `GLOW`, `Special.tsx`; they follow warm). Motion stops for users with "reduce motion" on.
 - **Cool vs warm:** the default special gradient is **cool** (teal, blue, violet). Wrap anything in `<Warm>` and every special style inside it becomes **warm** (rose-red, red-orange, orange, a touch of amber, the v1 quote-banner colours). Toasts, which render outside your layout, use `toast("…", "warm")` instead.
 
 ```tsx
@@ -126,7 +126,7 @@ All fields take `label`, `hint`, `error` and **`help`** (a "?" tip beside the la
 ### Showing information
 | Component | File | Use it for | Main options |
 |---|---|---|---|
-| `Card` | `Card.tsx` | A sheet holding one idea | `title` (h2, v1's card-title size), `subtitle`, `actions` (wrap under the title on narrow screens); `hero` (the one dark panel per screen); `special` |
+| `Card` | `Card.tsx` | A sheet holding one idea | `title` (h2, v1's card-title size), `subtitle`, `actions` (wrap under the title on narrow screens); `hero` (the one dark panel per screen); `special`, with `glow` low · medium (default) · high |
 | `Pill` | `Pill.tsx` | Status, difficulty, counts, tags | `tone`: neutral · accent · green · red · amber · blue · ink · hi · red-solid · accent-solid · special (day kinds: study blue, light green, short day amber, mock accent-solid, exam red-solid, taper hi, buffer neutral) |
 | `Kbd` | `Pill.tsx` | A keyboard key | text shown literally |
 | `Tabs` | `Tabs.tsx` | Switching between views | `tabs` (`label`, `count`); arrow keys; `special`: `true` or a list of values |
@@ -149,6 +149,9 @@ All fields take `label`, `hint`, `error` and **`help`** (a "?" tip beside the la
 | `BarChart` | `BarChart.tsx` | Small per-day bars ("Last 7 days") | `bars` (`key`, `label`, `value`, `title` (screen-reader text), `tip` (hover bubble via `Tooltip`, markdown + maths; none = no bubble), `highlight`), `label`, `height`, `max` (default the largest, at least 4); bars grow in (`styles/animations/bar-chart.css`) |
 | `StatTile` | `StatTile.tsx` | A big number on a tinted block ("Where you stand") | `value`, `label`, `tone`: accent · green · amber · neutral |
 | `ActionRow` | `ActionRow.tsx` | A list row ("Coming up") | `lead` (`big`, `small`), `title`, `sub`, `end`; `href` or `onClick` makes it clickable |
+| `DateTile` | `DateTile.tsx` | v1's date block (planner cards and rows) | `big`, `small`; `size` sm/md; `highlight` (yellow, the focus day); `strike` (past) |
+| `DayRow` | `DayRow.tsx` | v1's collapsible planner row | `lead` (date tile), `title`, `end` (hidden on phones), `count`; `today` (accent border), `past` (faded and crossed out while shut), `tone` won / missed (green / red edge); the body (`children`) renders only while open |
+| `DayStrip` | `DayStrip.tsx` | v1's thin won / missed strip in a section header | `segments` (`key`, `weight` = width, `state` won · missed · partial · none, `part` 0–1), `label` (read aloud); rules for planner days: `lib/planner.ts` |
 | `OrbitScene` | `components/background/OrbitScene.tsx` (import it from there; not in the `components/ui` index) | An animated universe (the `welcome` scene of `Backdrop`; the `/dev` demo uses it directly) | canvas; `sunX`, `sunY` (0–1); theme colours, follows light / dark; one still frame with reduced motion; decorative (`aria-hidden`) |
 | `Backdrop` / `useScene` | `components/background/Backdrop.tsx` | The app's ever-present background layer, behind every app page | mounted once in `app/(app)/layout.tsx`, pinned to the viewport (doesn't scroll); a page calls `useScene("welcome")` to show a scene (default `"none"`, empty); scenes fade in, and fade out then unmount when the page leaves; scenes are the `SCENES` list in the file. Pages must not paint an opaque full-page background, or they hide it |
 | `LaunchWarp` | `components/background/LaunchWarp.tsx` | The launch sequence after a plan is imported | full-screen overlay: canvas hyperspace warp, rocket lift-off, `title` fading up, then dissolves and calls `onDone`; `duration` (ms, default `LAUNCH_MS` = 1500) scales every part, `Infinity` keeps it on screen (dev); skipped with reduced motion; animations in `styles/animations/launch.css` |
@@ -156,7 +159,7 @@ All fields take `label`, `hint`, `error` and **`help`** (a "?" tip beside the la
 ### Overlays and feedback
 | Component | File | Use it for | Main options |
 |---|---|---|---|
-| `Dialog` | `Dialog.tsx` | A focused task or confirmation | `open`, `onClose`, `title`, `footer`, `special`; closes on Esc, ×, or a click outside; fades in and out over a frosted backdrop |
+| `Dialog` | `Dialog.tsx` | A focused task or confirmation | `open`, `onClose`, `title`, `footer`, `special` (with `glow` low · medium · high); closes on Esc, ×, or a click outside; fades in and out over a frosted backdrop |
 | `Tooltip` | `Tooltip.tsx` | A short label for a button or link | `content`, `placement` top/bottom/left/right, `className` (replaces the inline wrapper layout, e.g. a chart column) |
 | `HelpTip` | `Tooltip.tsx` | A "?" explaining the text beside it | hover, keyboard focus or tap; Esc or a tap elsewhere closes it |
 | `HelpDialog` | `Tooltip.tsx` | Help too long for a bubble (tables, examples) | same "?" (optionally with a `label`), opens a `Dialog`; e.g. the editor's Formatting help |

@@ -63,6 +63,10 @@ import {
   StatTile,
   ActionRow,
   type CalendarDay,
+  DateTile,
+  DayRow,
+  DayStrip,
+  type DayStripSegment,
 } from "@/components/ui";
 import {
   IconPlus,
@@ -205,6 +209,7 @@ const SECTIONS: [string, string][] = [
   ["cards", "Cards & stats"],
   ["progress", "Progress"],
   ["calendar", "Calendar & charts"],
+  ["planner", "Planner rows"],
   ["callouts", "Callouts"],
   ["table", "Table"],
   ["dialog", "Dialog"],
@@ -272,6 +277,7 @@ export function Showcase() {
           <Cards />
           <ProgressDemo />
           <CalendarDemo />
+          <PlannerDemo />
           <Callouts />
           <TableDemo />
           <DialogDemo />
@@ -1199,6 +1205,17 @@ function Cards() {
           {"Special cards get a flowing gradient border and a sparkle. $\\infty$ effort."}
         </Card>
       </div>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-6 py-4">
+        <Card special glow="low" title="glow=low" subtitle="Today's card in the planner">
+          {"A faint halo: $\\epsilon$."}
+        </Card>
+        <Card special glow="medium" title="glow=medium" subtitle="The default">
+          {"The usual glow: $\\mu$."}
+        </Card>
+        <Card special glow="high" title="glow=high" subtitle="The big moments">
+          {"A strong halo: $\\Omega$."}
+        </Card>
+      </div>
     </Section>
   );
 }
@@ -1294,6 +1311,79 @@ function CalendarDemo() {
           </div>
         </Demo>
       </div>
+    </Section>
+  );
+}
+
+function PlannerDemo() {
+  const strip: DayStripSegment[] = [
+    { key: "1", weight: 4, state: "won" },
+    { key: "2", weight: 3, state: "won" },
+    { key: "3", weight: 4, state: "missed" },
+    { key: "4", weight: 5, state: "won" },
+    { key: "5", weight: 4, state: "partial", part: 0.5 },
+    { key: "6", weight: 4, state: "none" },
+    { key: "7", weight: 2, state: "none" },
+  ];
+  return (
+    <Section
+      id="planner"
+      title="Date tile, day row, day strip"
+      path="components/ui/DateTile.tsx · DayRow.tsx · DayStrip.tsx"
+      note="From v1's planner. A day row opens its body on click; the body only renders while open."
+    >
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-3.5">
+        <Demo caption="Date tiles">
+          <div className="flex flex-wrap items-center gap-3">
+            <DateTile big="21" small="Sat" />
+            <DateTile big="22" small="Sun" highlight />
+            <DateTile big="$\pi$" small="sm" size="sm" />
+            <DateTile big="19" small="Thu" size="sm" strike />
+          </div>
+        </Demo>
+        <Demo caption="Day strip">
+          <DayStrip segments={strip} label="3 of 7 days done, 1 missed" />
+          <Text variant="hint">Green done · red missed · part filled · grey not yet</Text>
+        </Demo>
+      </div>
+      <Demo caption="Day rows (today, done, missed, past)">
+        <div className="grid gap-1.5">
+          <DayRow
+            lead={{ big: "20", small: "Fri" }}
+            title="Eigenvalues: $\det(A - \lambda I) = 0$"
+            end={<Pill tone="blue">study</Pill>}
+            count="2/5"
+            today
+          >
+            <Checkbox
+              variant="task"
+              checked={false}
+              onChange={() => {}}
+              label="Find the eigenvalues of $\begin{pmatrix}2&1\\1&2\end{pmatrix}$"
+            />
+          </DayRow>
+          <DayRow
+            lead={{ big: "18", small: "Wed" }}
+            title="Matrices"
+            end={<Pill tone="green">light</Pill>}
+            count="✓"
+            past
+            tone="won"
+          >
+            <Text>All done.</Text>
+          </DayRow>
+          <DayRow
+            lead={{ big: "17", small: "Tue" }}
+            title="Limits $\lim_{x \to 0}$"
+            end={<Pill tone="amber">short day</Pill>}
+            count="1/4"
+            past
+            tone="missed"
+          >
+            <Text>One of four ticked.</Text>
+          </DayRow>
+        </div>
+      </Demo>
     </Section>
   );
 }

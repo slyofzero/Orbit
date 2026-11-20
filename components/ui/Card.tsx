@@ -1,17 +1,18 @@
 import type { ReactNode } from "react";
 import { cx } from "@/components/utils/cx";
-import { SparkleBadge } from "@/components/ui/Special";
+import { GLOW, SparkleBadge, type Glow } from "@/components/ui/Special";
 import { txt } from "@/components/utils/txt";
 import { Heading } from "@/components/ui/Heading";
 
 /** A white sheet. `hero` = the dark navy panel (at most one per screen).
- *  `special` = animated gradient border and a sparkle badge. */
+ *  `special` = animated gradient border and a sparkle badge; `glow` = how strongly it glows (low · medium · high). */
 export function Card({
   title,
   subtitle,
   actions,
   hero = false,
   special = false,
+  glow = "medium",
   className,
   children,
 }: {
@@ -20,6 +21,8 @@ export function Card({
   actions?: ReactNode;
   hero?: boolean;
   special?: boolean;
+  /** special only: how strongly it glows (default medium) */
+  glow?: Glow;
   className?: string;
   children?: ReactNode;
 }) {
@@ -28,7 +31,7 @@ export function Card({
       className={cx(
         "rounded-lg px-[22px] py-5",
         special
-          ? "special-border animate-flow-border border-2 shadow-[0_14px_34px_-22px_var(--special-c)]"
+          ? cx("special-border animate-flow-border border-2", GLOW[glow])
           : hero
             ? "border border-hero bg-hero text-on-hero"
             : "border border-line bg-sheet",

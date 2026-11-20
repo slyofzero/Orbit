@@ -268,6 +268,19 @@
   -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
   mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px));
 }
+/* the coloured glow under a special panel, in three strengths (the `glow` prop: GLOW in Special.tsx).
+   Uses the special colours, so it turns warm inside `warm`. medium = the original look. */
+@utility special-glow-low {
+  box-shadow: 0 6px 16px -12px var(--special-c);
+}
+@utility special-glow-medium {
+  box-shadow: 0 14px 34px -22px var(--special-c);
+}
+@utility special-glow-high {
+  box-shadow:
+    0 22px 50px -18px var(--special-c),
+    0 0 28px -12px var(--special-b);
+}
 /* everything special inside becomes the WARM gradient (rose-red, red-orange, orange, a touch of amber) */
 @utility warm {
   --special-a: var(--warm-a);

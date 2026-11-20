@@ -1,7 +1,7 @@
 // Shared UI components. Every one is shown at /dev/components (dev mode only).
 export { Rich } from "@/components/ui/Rich";
 export { RichEditor } from "@/components/ui/RichEditor";
-export { SparkleBadge, isSpecial, Warm } from "@/components/ui/Special";
+export { SparkleBadge, isSpecial, Warm, GLOW, type Glow } from "@/components/ui/Special";
 export { Divider, type DividerVariant } from "@/components/ui/Divider";
 export { Heading } from "@/components/ui/Heading";
 export { Button, IconButton, Spinner, type ButtonVariant, type ButtonSize } from "@/components/ui/Button";
@@ -38,3 +38,6 @@ export { Calendar, type CalendarDay, type CalendarTone } from "@/components/ui/C
 export { BarChart, type Bar } from "@/components/ui/BarChart";
 export { StatTile, type StatTileTone } from "@/components/ui/StatTile";
 export { ActionRow } from "@/components/ui/ActionRow";
+export { DateTile } from "@/components/ui/DateTile";
+export { DayRow, type DayRowTone } from "@/components/ui/DayRow";
+export { DayStrip, type DayStripSegment, type DayStripState } from "@/components/ui/DayStrip";

@@ -22,6 +22,7 @@ import type { AnswerOutcome, PlanDayKind, PlanDayStatus, QuestionMcqRow, Questio
 import { addDays, weekday, type IsoDate } from "@/lib/dates";
 import { buildHero, type HeroDay, type HeroMilestone } from "@/lib/runway";
 import { parsePlanFile } from "@/lib/planFile";
+import type { PlannerDay } from "@/lib/planner";
 
 export interface QueryDef<P, R> {
   kind: "read" | "write";
@@ -344,7 +345,38 @@ export const QUERIES = {
     ),
   ),
 
+  // ---------------------------------------------------------------- planner
+  /** The planner: the active plan and every one of its days with progress counts (null = no plan). */
+  "planner.days": read(["plans", "plan_days", "plan_day_progress"], (sql) => {
+    const plan = sql.get<{ id: string; name: string; starts_on: IsoDate; ends_on: IsoDate }>(
+      "SELECT id, name, starts_on, ends_on FROM plans WHERE is_active = 1",
+    );
+    if (!plan) return null;
+    const days = sql.all<PlannerDay>(
+      `SELECT d.on_date, d.title, d.kind, d.hours, p.status,
+              coalesce(p.tasks_total, 0) AS tasks_total, coalesce(p.tasks_done, 0) AS tasks_done,
+              coalesce(p.questions_total, 0) AS questions_total, coalesce(p.questions_done, 0) AS questions_done
+       FROM plan_days d LEFT JOIN plan_day_progress p ON p.day_id = d.id
+       WHERE d.plan_id = ? ORDER BY d.on_date LIMIT 2000`,
+      [plan.id],
+    );
+    return { plan, days };
+  }),
+
   // ---------------------------------------------------------------- plan progress
+  /** Ticks or unticks every task of one day (v1's "Tick all" / "Untick all"), in one transaction. */
+  "plan.tickDay": write(["plan_task_ticks"], (sql, p: { dayId: number; done: boolean }) => {
+    if (p.done)
+      sql.run(
+        `INSERT INTO plan_task_ticks (task_id, done_at) SELECT t.id, ? FROM plan_tasks t
+         WHERE t.day_id = ? AND NOT EXISTS (SELECT 1 FROM plan_task_ticks k WHERE k.task_id = t.id)`,
+        [Date.now(), p.dayId],
+      );
+    else
+      sql.run("DELETE FROM plan_task_ticks WHERE task_id IN (SELECT id FROM plan_tasks WHERE day_id = ?)", [p.dayId]);
+    return p.done;
+  }),
+
   /** Ticks or unticks one plan task. Ticking works on any day, even a locked one (v1: the lock only stops
    *  editing). The triggers in db/schema.sql update the day's plan_day_progress in the same transaction. */
   "plan.tickTask": write(["plan_task_ticks"], (sql, p: { taskId: number; done: boolean }) => {
