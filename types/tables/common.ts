@@ -46,6 +46,8 @@ export type StrMatch = "exact" | "list" | "set";
 export type AnswerOutcome = "correct" | "incorrect" | "skipped";
 /** How much of a plan day got done. Only days with at least one task or question have one. */
 export type PlanDayStatus = "done" | "partial" | "incomplete";
+/** What sort of day it is (from v1). `crunch` is shown as "short day". */
+export type PlanDayKind = "study" | "light" | "mock" | "crunch" | "buffer" | "exam" | "taper";
 /**
  * Where a mock attempt stands.
  *   in_progress = started, not finished (can be resumed after a refresh)

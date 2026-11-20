@@ -3,7 +3,7 @@
 // lives in plan_day_progress.
 // PRIMARY KEY (id). UNIQUE (plan_id, on_date): one row per date per plan.
 
-import type { IsoDate, PlanDayId, PlanId } from "@/types/tables/common";
+import type { IsoDate, PlanDayId, PlanDayKind, PlanId } from "@/types/tables/common";
 
 export interface PlanDayRow {
   id: PlanDayId; // PRIMARY KEY; tasks, linked questions and progress refer to this
@@ -11,4 +11,6 @@ export interface PlanDayRow {
   on_date: IsoDate; // between plans.starts_on and plans.ends_on
   title: string | null; // short heading for the day, e.g. "Eigenvalues"
   note: string | null; // longer guidance for the day
+  kind: PlanDayKind; // study | light | mock | crunch | buffer | exam | taper; colours the calendar
+  hours: number | null; // hours planned for the day; null = not given
 }

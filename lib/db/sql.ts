@@ -48,6 +48,7 @@ export const TABLES = [
   "plan_task_ticks",
   "plan_question_ticks",
   "plan_day_progress",
+  "milestones",
 ] as const;
 export type TableName = (typeof TABLES)[number];
 

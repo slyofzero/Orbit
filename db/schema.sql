@@ -392,8 +392,22 @@ CREATE TABLE plan_days (
   on_date  TEXT NOT NULL CHECK (on_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'),
   title    TEXT,
   note     TEXT,
+  kind     TEXT NOT NULL DEFAULT 'study'
+           CHECK (kind IN ('study', 'light', 'mock', 'crunch', 'buffer', 'exam', 'taper')),
+  hours    REAL CHECK (hours BETWEEN 0 AND 24),   -- NULL = not given
   UNIQUE (plan_id, on_date)
 ) STRICT;
+
+-- The dates a plan counts down to (exam, quiz…). May fall outside the plan's own dates.
+CREATE TABLE milestones (
+  id       INTEGER PRIMARY KEY,
+  plan_id  TEXT NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
+  name     TEXT NOT NULL,
+  short    TEXT,                                  -- calendar tag; NULL = use name
+  on_date  TEXT NOT NULL CHECK (on_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'),
+  note     TEXT
+) STRICT;
+CREATE INDEX milestones_by_date ON milestones(plan_id, on_date);
 
 -- A day must fall inside its plan's dates, and a plan can't shrink past its days.
 CREATE TRIGGER plan_days_in_range_ins BEFORE INSERT ON plan_days
