@@ -45,4 +45,4 @@ The owner has **no hosting budget**. Orbit is deployed on **Vercel's free (Hobby
 ## About the owner and how to work with them
 The owner prefers: short, plain final replies; paste-ready code; the **problem explained first, then the code**; a big 🔴 CAUTION line for anything the user must NOT do (for example when a destructive action is possible). They copy and paste rather than read, so keep UI wording self-explanatory.
 
-**Commits.** Never commit on your own. Commit only when the owner runs the `smart-commit` skill, and then follow that skill.
+**Commits.** Never commit on your own. Commit only when the owner runs the `smart-commit` skill, and then follow that skill. Whenever `/smart-commit` runs, check whether the handoff (`HANDOFF.md` and `TODO.md` in `%TEMP%\handoff\Orbit\`, plus `docs/HANDOFF.md`) already covers the work being committed; if not, remind the owner to run `/handoff`.
