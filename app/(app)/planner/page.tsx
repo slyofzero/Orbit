@@ -2,13 +2,13 @@
 // /planner: v1's planner. Tabs: "Next 3 days" (day cards you can step through), "Full plan" (every day,
 // by month and week; v1 grouped by phase, which plans don't have yet) and "Missed" (past days left
 // unfinished). The open tab is in the address (?tab=next | full_plan | missed); each tab's content pops
-// in, piece by piece, when it opens. The header's plan actions aren't built yet (useSoon, TODO.md).
+// in, piece by piece, when it opens. The plan's actions live on Manage plan (/planner/manage).
 
 import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { useTab } from "@/components/utils/useTab";
 import { Page } from "@/components/app/Page";
 import { cx } from "@/components/utils/cx";
-import { KIND_LABEL, KIND_PILL, useSoon } from "@/components/dashboard/kit";
+import { KIND_LABEL, KIND_PILL } from "@/components/dashboard/kit";
 import { IconChevronLeft, IconChevronRight } from "@/components/icons";
 import { DayCard } from "@/components/planner/DayCard";
 import { RowBody } from "@/components/planner/DayBody";
@@ -99,34 +99,18 @@ function Planner({
   plan: { name: string; starts_on: IsoDate; ends_on: IsoDate };
   days: PlannerDay[];
 } & Clock) {
-  const soon = useSoon();
   const [view, setView] = useTab(VIEWS, "next");
   const [offset, setOffset] = useState(0); // how many days the 3-day window is shifted from today
   const missed = missedDays(days, today);
-  const linked = days.some((d) => d.questions_total > 0);
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2.5">
+      <div className="flex flex-wrap items-center gap-2.5 justify-between">
         <Heading level={1} className="mr-2">
           Planner
         </Heading>
-        <Button variant="soft" onClick={soon("Improving the plan with AI")}>
-          Improve plan
-        </Button>
-        {linked && (
-          <Button variant="soft" onClick={soon("Unlinking questions")}>
-            Unlink questions
-          </Button>
-        )}
-        <Button variant="soft" onClick={soon("Editing the plan")}>
-          Edit plan
-        </Button>
-        <Button variant="soft" onClick={soon("Exporting the plan")}>
-          Export plan
-        </Button>
-        <Button variant="soft" onClick={soon("Uploading a new plan")}>
-          Upload plan
+        <Button variant="soft" href="/planner/manage">
+          Manage plan
         </Button>
       </div>
       <Text variant="hint" className="mt-1 mb-4">

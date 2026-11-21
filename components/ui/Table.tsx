@@ -16,7 +16,9 @@ export type Column<T> = {
 
 /** A data table. Scrolls sideways on narrow screens. Keep `rows` to one page (≤ a few hundred).
  *  `specialRow` highlights the rows it returns true for (e.g. your best topic). `rowHref` makes a row open that
- *  address in a new tab when clicked (or Enter on the focused row); clicks on a button or link inside it don't. */
+ *  address in a new tab when clicked (or Enter on the focused row); clicks on a button or link inside it don't.
+ *  `groupBy` draws a heavier line wherever the group changes from one row to the next (e.g. tasks of one day).
+ *  `rowTone` tints a whole row green or red (e.g. done / missed), the same colours as the Topics progress rows. */
 export function Table<T>({
   columns,
   rows,
@@ -25,6 +27,8 @@ export function Table<T>({
   caption,
   specialRow,
   rowHref,
+  groupBy,
+  rowTone,
 }: {
   columns: Column<T>[];
   rows: T[];
@@ -33,6 +37,8 @@ export function Table<T>({
   caption?: string;
   specialRow?: (row: T) => boolean;
   rowHref?: (row: T) => string | null;
+  groupBy?: (row: T) => string | number;
+  rowTone?: (row: T) => "green" | "red" | null;
 }) {
   const [sort, setSort] = useState<{ key: string; dir: 1 | -1 } | null>(null);
   const sorted = useMemo(() => {
@@ -98,7 +104,9 @@ export function Table<T>({
               </td>
             </tr>
           ) : (
-            sorted.map((r) => {
+            sorted.map((r, i) => {
+              const tone = rowTone?.(r) ?? null;
+              const newGroup = !!groupBy && i > 0 && groupBy(r) !== groupBy(sorted[i - 1]);
               const href = rowHref?.(r) ?? null;
               const open = () => href && window.open(href, "_blank", "noopener");
               return (
@@ -123,7 +131,13 @@ export function Table<T>({
                       : undefined
                   }
                   className={cx(
-                    "hover:bg-sheet-2 [&:last-child>td]:border-b-0",
+                    "[&:last-child>td]:border-b-0",
+                    tone === "green"
+                      ? "bg-green/20 hover:bg-green/30"
+                      : tone === "red"
+                        ? "bg-red/20 hover:bg-red/30"
+                        : "hover:bg-sheet-2",
+                    newGroup && "[&>td]:border-t-2 [&>td]:border-t-line",
                     href &&
                       "cursor-pointer focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent",
                     specialRow?.(r) &&

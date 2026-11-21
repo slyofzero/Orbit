@@ -27,7 +27,7 @@ export { Table, type Column } from "@/components/ui/Table";
 export { Dialog } from "@/components/ui/Dialog";
 export { EmptyState } from "@/components/ui/EmptyState";
 export { ToastProvider, useToast, type ToastTone, type ToastAction } from "@/components/ui/Toast";
-export { DatePicker } from "@/components/ui/DatePicker";
+export { DatePicker, DateFilter } from "@/components/ui/DatePicker";
 export { Dropdown, type DropdownOption } from "@/components/ui/Dropdown";
 export { Tooltip, HelpTip, type TipPlacement } from "@/components/ui/Tooltip";
 export { FieldLabel } from "@/components/ui/Field";

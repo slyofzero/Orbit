@@ -16,6 +16,7 @@ import {
   Card,
   Checkbox,
   CodeEditor,
+  DateFilter,
   DatePicker,
   Dialog,
   Dropdown,
@@ -95,7 +96,7 @@ import {
 import { ImageProvider } from "@/components/utils";
 import { OrbitScene } from "@/components/background/OrbitScene";
 import { LaunchWarp } from "@/components/background/LaunchWarp";
-import { addDays, todayIST } from "@/lib/dates";
+import { addDays, todayIST, type DateRange } from "@/lib/dates";
 import type { CodeLang } from "@/lib/codeIndent";
 import { hashImage, imageRef } from "@/lib/images";
 import {
@@ -652,6 +653,7 @@ function Pickers() {
   const [start, setStart] = useState<string | null>(null);
   const [topic, setTopic] = useState<string | null>("la");
   const [type, setType] = useState<string | null>(null);
+  const [range, setRange] = useState<DateRange | null>(null);
   return (
     <Section
       id="pickers"
@@ -675,6 +677,16 @@ function Pickers() {
             onChange={setStart}
             clearable
             placeholder="Not set: $\varnothing$"
+          />
+          <DateFilter
+            label="Date filter (typed or picked)"
+            value={range}
+            onChange={setRange}
+            hint={
+              range
+                ? `${range.unit}: ${range.from} to ${range.to}`
+                : "Type 23 Nov, today, saturday, this week, November or next month; pick from the list. The calendar is the fallback."
+            }
           />
           <Dropdown
             label="Topic $\tau$"
@@ -1654,6 +1666,26 @@ function TableDemo() {
         Clickable rows (rowHref): a row opens its address in a new tab
       </Text>
       <Table caption="Topics, clickable" columns={cols} rows={TOPICS} rowKey={(r) => r.topic} rowHref={() => "/dev"} />
+      <Text variant="caption" as="span">
+        Grouped rows (groupBy): a heavier line where the group changes, here strong ($\ge 70\%$) and the rest
+      </Text>
+      <Table
+        caption="Topics, grouped"
+        columns={cols}
+        rows={[...TOPICS].sort((a, b) => b.accuracy - a.accuracy)}
+        rowKey={(r) => r.topic}
+        groupBy={(r) => (r.accuracy >= 0.7 ? "strong" : "rest")}
+      />
+      <Text variant="caption" as="span">
+        {"Tinted rows (rowTone): green or red per row, here accuracy $\\ge 75\\%$ and $< 60\\%$"}
+      </Text>
+      <Table
+        caption="Topics, tinted"
+        columns={cols}
+        rows={TOPICS}
+        rowKey={(r) => r.topic}
+        rowTone={(r) => (r.accuracy >= 0.75 ? "green" : r.accuracy < 0.6 ? "red" : null)}
+      />
       <Table
         caption="Empty"
         columns={cols}

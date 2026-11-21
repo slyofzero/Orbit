@@ -4,6 +4,13 @@
 import { MONTHS, addDays, formatDate, formatLong, formatShort, parseIso, weekday, type IsoDate } from "@/lib/dates";
 import type { PlanDayKind, PlanDayStatus } from "@/types/tables";
 
+/** Manage plan's task lists: from today on, before today, or every task (the `planner.tasks` query). */
+export const TASK_WHEN = ["upcoming", "past", "all"] as const;
+export type TaskWhen = (typeof TASK_WHEN)[number];
+/** How many plan days one page of Manage plan's task table shows. */
+export const DAY_PAGE = 5;
+export const TASK_WHEN_LABEL: Record<TaskWhen, string> = { upcoming: "From today", past: "Past", all: "All" };
+
 /** One plan day with its progress counts (the `planner.days` query). */
 export interface PlannerDay {
   on_date: IsoDate;

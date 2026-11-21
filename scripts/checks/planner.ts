@@ -12,11 +12,13 @@ import {
   windowDays,
   type PlannerDay,
 } from "@/lib/planner";
+import { addDays, weekday } from "@/lib/dates";
 import { QUERIES, type QueryDef } from "@/lib/db/queries";
 import { transaction } from "@/lib/db/sql";
 import { ok, freshDb, bunSql } from "@/scripts/checks/helpers";
 
 console.log("planner rules (lib/planner.ts)");
+
 {
   const today = "2026-11-20"; // a Friday
   ok(
@@ -139,4 +141,82 @@ console.log("planner rules (lib/planner.ts)");
   ok(statusOf() === "done", "plan.tickDay: ticks every task (twice is harmless)");
   run("plan.tickDay", { dayId: todayDay, done: false });
   ok(statusOf() === "incomplete", "plan.tickDay: unticks every task");
+
+  // Manage plan's task table: pages of plan days
+  type Tasks = {
+    rows: { id: number; on_date: string; body: string; done: boolean; kind: string }[];
+    page: number;
+    pages: number;
+    matched: { days: number; tasks: number };
+    counts: { all: number; upcoming: number; past: number; done: number; days: number };
+  };
+  const tasks = (p: Record<string, unknown>) =>
+    run<Tasks>("planner.tasks", { search: "", when: "all", kind: null, today, page: 0, days: 5, ...p });
+  const dates = (t: Tasks) => [...new Set(t.rows.map((r) => r.on_date))];
+  const all = tasks({ days: 2000 });
+  ok(
+    all.matched.tasks === all.counts.all &&
+      all.rows.length === all.counts.all &&
+      all.matched.days === all.counts.days &&
+      all.counts.upcoming + all.counts.past === all.counts.all &&
+      all.counts.days > 70 &&
+      all.rows.every((r, i) => i === 0 || all.rows[i - 1].on_date <= r.on_date),
+    "planner.tasks: every task, in day order, with counts",
+  );
+  const up = tasks({ when: "upcoming" });
+  ok(
+    dates(up).length === 5 &&
+      dates(up)[0] === dates(all).find((d) => d >= today) &&
+      up.rows.length === all.rows.filter((r) => dates(up).includes(r.on_date)).length,
+    "planner.tasks: From today opens on today, 5 days with all their tasks",
+  );
+  const past = tasks({ when: "past", days: 2000 });
+  ok(
+    past.matched.tasks === all.counts.past &&
+      past.rows.every((r) => r.on_date < today) &&
+      past.rows.every((r, i) => i === 0 || past.rows[i - 1].on_date >= r.on_date),
+    "planner.tasks: Past is before today, newest first",
+  );
+  const here = tasks({ page: null });
+  ok(
+    here.page === Math.floor(dates(all).filter((d) => d < today).length / 5) && dates(here).some((d) => d >= today),
+    "planner.tasks: All opens on the page holding today",
+  );
+  const p2 = tasks({ page: 1 });
+  ok(p2.page === 1 && dates(p2).join() === dates(all).slice(5, 10).join(), "planner.tasks: page 2 is days 6 to 10");
+  ok(
+    tasks({ page: 9999 }).page === Math.ceil(all.counts.days / 5) - 1,
+    "planner.tasks: a page past the end is the last",
+  );
+  ok(all.counts.done === all.rows.filter((r) => r.done).length, "planner.tasks: done flags match the count");
+  const word = all.rows[0].body.split(/\s+/)[0];
+  const found = tasks({ search: word.toUpperCase(), days: 2000 });
+  ok(found.matched.tasks > 0 && found.matched.tasks <= all.matched.tasks, "planner.tasks: search ignores case");
+  const pastDay = past.rows[0].on_date;
+  const onDay = tasks({ when: "upcoming", range: { from: pastDay, to: pastDay } });
+  ok(
+    onDay.rows.length > 0 &&
+      onDay.rows.every((r) => r.on_date === pastDay) &&
+      onDay.rows.length === all.rows.filter((r) => r.on_date === pastDay).length,
+    "planner.tasks: a one-day range shows that day's tasks only, whatever the tab",
+  );
+  const wk = { from: addDays(today, -3), to: addDays(today, 3) };
+  const inWeek = tasks({ when: "past", range: wk, days: 2000 });
+  ok(
+    inWeek.rows.length === all.rows.filter((r) => r.on_date >= wk.from && r.on_date <= wk.to).length &&
+      inWeek.rows.some((r) => r.on_date >= today),
+    "planner.tasks: a week range shows every task in it, whatever the tab",
+  );
+  const sat = tasks({ range: { from: "2000-01-01", to: "2999-12-31", weekday: 5 }, days: 2000 });
+  ok(
+    sat.rows.length > 0 &&
+      sat.rows.every((r) => weekday(r.on_date) === 5) &&
+      sat.rows.length === all.rows.filter((r) => weekday(r.on_date) === 5).length,
+    "planner.tasks: a weekday range shows every Saturday's tasks and nothing else",
+  );
+  const kind = all.rows[0].kind;
+  ok(
+    tasks({ kind, days: 2000 }).rows.every((r) => r.kind === kind),
+    "planner.tasks: kind filter",
+  );
 }
