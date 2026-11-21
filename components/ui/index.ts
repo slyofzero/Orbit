@@ -36,6 +36,7 @@ export { Text, Code, type TextVariant } from "@/components/ui/Text";
 export { Link, type LinkVariant } from "@/components/ui/Link";
 export { Disclosure } from "@/components/ui/Disclosure";
 export { FileInput } from "@/components/ui/FileInput";
+export { ImportProblems } from "@/components/ui/ImportProblems";
 export { HelpDialog } from "@/components/ui/Tooltip";
 export { Calendar, type CalendarDay, type CalendarTone } from "@/components/ui/Calendar";
 export { BarChart, type Bar } from "@/components/ui/BarChart";

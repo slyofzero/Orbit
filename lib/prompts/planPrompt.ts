@@ -4,7 +4,8 @@
 // Nothing here may assume a particular exam: Orbit works for any goal.
 
 import { addDays, type IsoDate } from "@/lib/dates";
-import { DAY_KINDS, LIMITS, PLAN_FORMAT, PLAN_VERSION, WEEKDAY_NAMES } from "@/lib/planFile";
+import { FILE_SCHEMA } from "@/lib/importFix";
+import { DAY_KINDS, LIMITS, PLAN_FORMAT, PLAN_VERSION } from "@/lib/planFile";
 
 /** A small, valid example plan, dated from `today` so the AI sees realistic dates. */
 export function examplePlan(today: IsoDate) {
@@ -79,32 +80,16 @@ Wait for my answers. Then plan in this order: hardest topics early, regular revi
 
 STEP 2: WRITE THE FILE. Reply with ONLY the JSON (no explanation before or after), so I can save it as a .json file.
 
-The format:
-{
-  "format": "${PLAN_FORMAT}",
-  "version": ${PLAN_VERSION},
-  "name": "short name for the plan (at most ${LIMITS.name} characters)",
-  "description": "one or two sentences: what it's for and how it's paced (optional)",
-  "starts_on": "YYYY-MM-DD (optional; default: the first day listed)",
-  "ends_on": "YYYY-MM-DD (optional; default: the last day listed)",
-  "milestones": [ { "name": "…", "short": "a tag of at most ${LIMITS.milestoneShort} characters (optional)", "date": "YYYY-MM-DD", "note": "… (optional)" } ],
-  "days": [ … ]
-}
+The schema (the // notes explain each field; leave them out of the JSON):
+${FILE_SCHEMA.plan}
 
-Each entry in "days" is EITHER one date OR a range:
-- One date: { "date": "YYYY-MM-DD", "title": "…", "kind": "…", "hours": 2, "tasks": ["…"], "note": "…" }
-- A range:  { "from": "YYYY-MM-DD", "to": "YYYY-MM-DD", "weekdays": ["mon","tue","wed","thu","fri"], "title": "…", "kind": "…", "hours": 2, "tasks": ["…"] }
-  "weekdays" (optional) keeps only those days of the week: ${WEEKDAY_NAMES.map((w) => `"${w}"`).join(", ")}. Leave it out to include every day.
+How to fill it in:
+- Each entry in "days" is EITHER one date OR a range (with an optional "weekdays" filter; leave it out to include every day).
 - If a date is covered by a single "date" entry AND a range, the single date wins. If two ranges overlap, the later one wins.
 - Dates with no entry are rest days. Don't list rest days.
-
-Fields of a day:
-- "title" (required): what the day is about, at most ${LIMITS.title} characters.
-- "kind" (optional, default "study"): ${DAY_KINDS.map((k) => `"${k}" = ${KIND_MEANING[k]}`).join("; ")}.
-- "hours" (optional): a number from 0 to 24.
-- "tasks" (optional): up to ${LIMITS.tasks} short, concrete checklist items I can tick off, e.g. "Solve 10 problems on limits" (not "Study limits").
-- "note" (optional): extra guidance for the day.
-- "questions" (optional): ids of questions from my question pack to practise that day. Leave it out unless I give you the ids.
+- "kind": ${DAY_KINDS.map((k) => `"${k}" = ${KIND_MEANING[k]}`).join("; ")}.
+- "tasks": short, concrete checklist items I can tick off, e.g. "Solve 10 problems on limits" (not "Study limits").
+- "questions": leave it out unless I give you the question ids.
 
 Rules:
 - Dates are YYYY-MM-DD. The whole plan is at most ${LIMITS.days} days, and every day must fall between "starts_on" and "ends_on".

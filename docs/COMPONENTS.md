@@ -102,6 +102,7 @@ open http://localhost:3000/dev/components
 | `Button` | `Button.tsx` | Any action | `variant`: `primary` (one per screen) · `secondary` · `soft` · `ghost` · `danger` · `special`; `size` sm/md/lg; `icon`, `iconAfter`, `loading`, `block`; `href` makes it a link with the same look |
 | `IconButton` | `Button.tsx` | An action shown as an icon only | `label` (required: read aloud and shown on hover); `size` sm/md; `variant` `outline` / `ghost` (toolbars, inside other components) |
 | `Spinner` | `Button.tsx` | Something is loading | `label`, `special` (gradient ring) |
+| `ImportProblems` | `ImportProblems.tsx` | What every import screen (plan, question file, progress) shows when a file is refused: a numbered list of the exact problems and a "Copy how to fix this" button. The copied text (`lib/importFix.ts`) lists the errors, says how to fix them and restates the file format, so it works pasted into any AI chat | `kind` `plan` / `questions` / `backup`; `errors` (the parser's messages); `fileName` (when several files are checked together) |
 | `CopyButton` | `CopyButton.tsx` | Copy text to the clipboard | `text` (string or a function, so long text is built only when clicked); `label` (omit for an icon button, then `hint` is its hover text); `tone` `match` (page colours, default) / `contrast` (inverted: dark on light, light on dark); icon turns into ✓ "Copied!" (✗ if the browser blocks it) |
 | `Link` | `Link.tsx` | Navigation | `variant`: `inline` (underlined, in text) · `nav` (menu item, `active`) · `subtle`; `http(s)`/`mailto` open in a new tab |
 

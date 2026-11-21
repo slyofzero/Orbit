@@ -12,6 +12,7 @@ import "@/scripts/checks/images";
 import "@/scripts/checks/planFile";
 import "@/scripts/checks/questionFile";
 import "@/scripts/checks/backup";
+import "@/scripts/checks/importFix";
 import "@/scripts/checks/runway";
 import "@/scripts/checks/quotes";
 import "@/scripts/checks/grading";

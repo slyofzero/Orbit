@@ -3,7 +3,8 @@
 // and scripts/checks/questionFile.ts checks that each example passes the importer. Change both together.
 // Nothing here may assume a particular exam: Orbit works for any goal.
 
-import { DIFFICULTIES, LIMITS, PACK_FORMAT, PACK_VERSION, QUESTION_TYPES, STR_MATCHES } from "@/lib/questionFile";
+import { FILE_SCHEMA } from "@/lib/importFix";
+import { DIFFICULTIES, LIMITS, PACK_FORMAT, PACK_VERSION } from "@/lib/questionFile";
 import type { PracticeTab } from "@/lib/practice";
 
 type Example = Record<string, unknown>;
@@ -150,35 +151,16 @@ Wait for my answers. If I want more questions than fit in one reply, write them 
 
 STEP 2: WRITE THE FILE. Reply with ONLY the JSON (no explanation before or after), so I can save it as a .json file.
 
-The format:
-{
-  "format": "${PACK_FORMAT}",
-  "version": ${PACK_VERSION},
-  "name": "short name for this set (at most ${LIMITS.name} characters)",
-  "questions": [ … ],
-  "mocks": [ … ]   (only for a full mock test; leave it out otherwise)
-}
+The schema (the // notes explain each field; leave them out of the JSON):
+${FILE_SCHEMA.questions}
 
-Each question has these fields:
-- "id" (optional): a short label, like "la-1". Only needed when a mock lists the question. Each id is used once.
-- "subject" and "topic" (required): e.g. "Linear Algebra" and "Eigenvalues". Use the same spelling every time, so questions group together.
-- "type" (required): ${QUESTION_TYPES.map((t) => `"${t}"`).join(", ")}.
-- "text" (required): the question, at most ${LIMITS.text} characters.
-- "difficulty": ${DIFFICULTIES.map((d) => `"${d}"`).join(", ")} (default "medium").
-- "marks": a number above 0 (default 1). "negative_marks": 0 or more, the marks lost for a wrong answer (default 0).
+How to fill it in:
+- Use the same spelling of "subject" and "topic" every time, so questions group together.
 - "explanation": a worked explanation of the answer (strongly recommended).
-- "tags": up to ${LIMITS.tags} short labels, e.g. ["conceptual", "formula"] (optional).
-- "pool": "practice" (default) or "mock" (only used inside a mock test).
-
-The answer depends on the type:
-- "mcq": "options": ${LIMITS.minOptions} to ${LIMITS.maxOptions} texts, and "answer": ONE letter, "A" for the first option, "B" for the second…
-- "msq": the same "options", and "answer": a list of letters, e.g. ["A", "C"] (at least one).
-- "nat": "answer": a number (not text), and "tolerance": how far off a right answer may be (default 0 = exact).
-- "str": "answer": the accepted text, or a list of accepted texts (any one is right). "match": ${STR_MATCHES.map((m) => `"${m}"`).join(", ")} (default "exact"; "list" = comma-separated items in order; "set" = the same items in any order). "case_sensitive": true or false (default false).
-- "code": no "answer". Optional "starter": the code the editor opens with. The "explanation" holds the model solution.
+- "answer": "A" is the first option, "B" the second… For "code" there is no "answer"; the "explanation" holds the model solution.
+- "match" for "str": "exact" = the text as is; "list" = comma-separated items in order; "set" = the same items in any order.
+- A section's "minutes" may be null to share the test's clock.
 ${w.extra}
-
-Mocks (only if I asked for a mock test): "mocks": [ { "name": "…", "minutes": the whole test's time limit as a whole number, "instructions": "shown before the test (optional)", "full_screen": false, "sections": [ { "name": "…", "minutes": a time limit for this section only, or null to share the test's clock, "questions": ["id", …] } ] } ]. Every id must be a question in "questions"; a question is in at most one section of a mock.
 
 Rules:
 - At most ${LIMITS.questions} questions in one file.

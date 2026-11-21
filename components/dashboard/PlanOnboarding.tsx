@@ -12,6 +12,7 @@ import {
   Dialog,
   FileInput,
   Heading,
+  ImportProblems,
   Pill,
   Stat,
   Tabs,
@@ -43,10 +44,6 @@ export function Step({ n, title, children, delay }: { n: number; title: string; 
     </li>
   );
 }
-
-const fixRequest = (errors: string[]) =>
-  "Orbit couldn't import my plan file. Please fix these problems and send the whole corrected JSON again (only the JSON):\n" +
-  errors.map((e) => `- ${e}`).join("\n");
 
 /** `onLaunched` runs once a plan is imported (the page plays the launch sequence). */
 export function PlanOnboarding({ onLaunched }: { onLaunched?: (name: string) => void }) {
@@ -187,23 +184,7 @@ export function PlanOnboarding({ onLaunched }: { onLaunched?: (name: string) => 
               </Step>
             </ol>
 
-            {check && !plan && (
-              <Callout tone="warn" title="This file needs a few fixes first">
-                <ul className="m-0 grid gap-1 pl-5">
-                  {check.errors.map((e) => (
-                    <li key={e}>
-                      <Text as="span">{e}</Text>
-                    </li>
-                  ))}
-                </ul>
-                <div className="mt-3 flex flex-wrap items-center gap-2.5">
-                  <CopyButton text={fixRequest(check.errors)} label="Copy these errors for the AI" />
-                  <Text variant="hint" as="span">
-                    Paste them into the same chat; it will send a fixed file.
-                  </Text>
-                </div>
-              </Callout>
-            )}
+            {check && !plan && <ImportProblems kind="plan" errors={check.errors} />}
 
             {plan && sum && (
               <div className="special-border animate-flow-border grid animate-card-in gap-4 rounded-[22px] border-2 p-5">

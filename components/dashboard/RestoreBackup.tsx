@@ -5,7 +5,7 @@
 // plan is back, the app frame moves on to /dashboard by itself.
 
 import { useEffect, useState } from "react";
-import { Button, Callout, FileInput, Heading, Pill, Stat, Text, useToast } from "@/components/ui";
+import { Button, Callout, FileInput, Heading, ImportProblems, Pill, Stat, Text, useToast } from "@/components/ui";
 import { useMutation } from "@/lib/db/client";
 import { formatLong, todayIST } from "@/lib/dates";
 import { parseBackup, type BackupParse } from "@/lib/backup";
@@ -76,17 +76,7 @@ export function RestoreBackup() {
         buttonLabel="Choose the backup"
       />
 
-      {errors.length > 0 && (
-        <Callout tone="warn" title="This backup can't be restored">
-          <ul className="m-0 grid gap-1 pl-5">
-            {errors.map((e) => (
-              <li key={e}>
-                <Text as="span">{e}</Text>
-              </li>
-            ))}
-          </ul>
-        </Callout>
-      )}
+      {errors.length > 0 && <ImportProblems kind="backup" errors={errors} />}
 
       {check?.backup && sum && (
         <div className="grid gap-4 rounded-[18px] border border-line bg-sheet-2/70 p-4">

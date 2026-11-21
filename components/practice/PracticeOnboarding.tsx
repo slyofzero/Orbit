@@ -9,7 +9,19 @@
 import { useEffect, useState } from "react";
 import { Step } from "@/components/dashboard/PlanOnboarding";
 import { useScene, type SceneName } from "@/components/background/Backdrop";
-import { Button, Callout, CopyButton, Dialog, FileInput, Heading, Link, Pill, Stat, Text } from "@/components/ui";
+import {
+  Button,
+  Callout,
+  CopyButton,
+  Dialog,
+  FileInput,
+  Heading,
+  ImportProblems,
+  Link,
+  Pill,
+  Stat,
+  Text,
+} from "@/components/ui";
 import type { Celebration } from "@/components/practice/ImportCelebration";
 import { useMutation } from "@/lib/db/client";
 import type { PracticeTab } from "@/lib/practice";
@@ -100,10 +112,6 @@ async function sha256(text: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
-
-const fixRequest = (errors: string[]) =>
-  "Orbit couldn't import my question file. Please fix these problems and send the whole corrected JSON again (only the JSON):\n" +
-  errors.map((e) => `- ${e}`).join("\n");
 
 /** `kind` is the tab that has nothing to show. */
 export function PracticeOnboarding({
@@ -281,21 +289,7 @@ export function PracticeOnboarding({
         </ol>
 
         {bad.map((x) => (
-          <Callout key={x.name} tone="warn" title={`${x.name} needs a few fixes first`}>
-            <ul className="m-0 grid gap-1 pl-5">
-              {x.parse.errors.map((e) => (
-                <li key={e}>
-                  <Text as="span">{e}</Text>
-                </li>
-              ))}
-            </ul>
-            <div className="mt-3 flex flex-wrap items-center gap-2.5">
-              <CopyButton text={fixRequest(x.parse.errors)} label="Copy these errors for the AI" />
-              <Text variant="hint" as="span">
-                Paste them into the same chat; it will send a fixed file.
-              </Text>
-            </div>
-          </Callout>
+          <ImportProblems key={x.name} kind="questions" fileName={x.name} errors={x.parse.errors} />
         ))}
 
         {good.length > 0 && (

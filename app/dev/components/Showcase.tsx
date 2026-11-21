@@ -49,6 +49,7 @@ import {
   Link,
   Disclosure,
   FileInput,
+  ImportProblems,
   type Column,
   NavRail,
   QuoteBanner,
@@ -514,6 +515,18 @@ function Buttons() {
           <CopyButton text="small" label="Copy" size="sm" variant="ghost" />
           <CopyButton text="icon, contrast" tone="contrast" hint="Copy (contrast)" />
           <CopyButton text="Inverted for contrast" label="Copy · contrast" tone="contrast" />
+        </div>
+      </Demo>
+      <Demo caption="Import problems · components/ui/ImportProblems.tsx: what a refused plan / question / progress file shows; the button copies how to fix it">
+        <div className="grid gap-3">
+          <ImportProblems
+            kind="plan"
+            errors={[
+              'days[0].date "2026-02-30" is not a real date (use YYYY-MM-DD).',
+              'days[2].kind "party" must be one of: study, light, mock, crunch, buffer, exam, taper.',
+            ]}
+          />
+          <ImportProblems kind="backup" fileName="progress.json" errors={["This isn't a backup file."]} />
         </div>
       </Demo>
     </Section>
