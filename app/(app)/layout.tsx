@@ -2,13 +2,16 @@
 // canvas, and can show toasts.
 import { Backdrop } from "@/components/background/Backdrop";
 import { AppFrame } from "@/components/app/AppFrame";
+import { LaunchProvider } from "@/components/app/Launch";
 import { ToastProvider } from "@/components/ui";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <Backdrop>
       <ToastProvider>
-        <AppFrame>{children}</AppFrame>
+        <LaunchProvider>
+          <AppFrame>{children}</AppFrame>
+        </LaunchProvider>
       </ToastProvider>
     </Backdrop>
   );

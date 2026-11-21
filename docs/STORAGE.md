@@ -25,7 +25,7 @@ Why not IndexedDB (via Dexie)? It would also stay off the main thread for storag
  ───────────────────────────────                         ───────────────────────────────
  components ──► lib/db/client.ts ──postMessage──────────► lib/db/worker.ts
    useQuery("db.counts")            ◄── results ───────   opens SQLite (opfs-sahpool), migrates
-   useMutation("plan.tickTask")                           runs NAMED queries (lib/db/queries.ts)
+   useMutation("plan.tickTask")                           runs NAMED queries (lib/db/queries/)
                     ▲ │                                   one transaction per write
    BroadcastChannel │ │ "changed" / results               reports every table a write changed
    "orbit-db:<profile>"
@@ -37,16 +37,16 @@ Why not IndexedDB (via Dexie)? It would also stay off the main thread for storag
 |---|---|
 | `lib/db/client.ts` | `useQuery`, `useMutation`, `useDbStatus`, `dbCall`. Elects the leader tab and routes calls. |
 | `lib/db/worker.ts` | Opens the database and runs named queries. The only code that touches SQLite. |
-| `lib/db/queries.ts` | **The named queries**: every piece of SQL the app runs. |
+| `lib/db/queries/` | **The named queries**: every piece of SQL the app runs, one file per area (`plan.ts`, `practice.ts`, `backup.ts`…) joined in `index.ts`. |
 | `lib/db/sql.ts` | The `Sql` interface queries are written against, `TABLES`, `transaction()`. |
 | `lib/db/codec.ts` | Arrays ⇄ JSON text, booleans ⇄ 0/1, so screens get the `types/tables/` shapes. |
 | `lib/db/effects.ts` | Works out from the schema which tables a write changes through triggers and cascades. |
 | `lib/db/migrate.ts`, `migrations.ts` | Schema upgrades on open. |
 | `app/dev/db` | Dev page to try it live in several tabs. |
 
-- **Named queries, not SQL strings from the UI.** The registry in `lib/db/queries.ts` holds every query (`"db.counts"`, later `"practice.page"`, `"stats.topicStrength"`…). A screen sends a name and parameters and gets plain, typed objects back. The worker keeps each statement prepared after its first use.
+- **Named queries, not SQL strings from the UI.** The registry in `lib/db/queries/` (`index.ts` joins one file per area) holds every query (`"db.counts"`, later `"practice.page"`, `"stats.topicStrength"`…). A screen sends a name and parameters and gets plain, typed objects back. The worker keeps each statement prepared after its first use.
 - **Change notifications.** A write query lists the tables its own SQL writes. The worker adds every table its triggers and cascades reach (from the schema, `lib/db/effects.ts`) and announces them to every tab. `useQuery` re-runs only queries that read one of those tables. For example, an answer refreshes `question_stats` and `plan_day_progress` readers too.
-- **The same queries run in tests.** `scripts/check.ts` runs the real registry, migrations and change tracking on bun's SQLite.
+- **The same queries run in tests.** `bun run check` (`scripts/checks/`) runs the real registry, migrations and change tracking on bun's SQLite.
 
 ### Several tabs
 `opfs-sahpool` lets only one connection open the file, so the tabs elect a **leader**:
@@ -163,7 +163,8 @@ The triggers run the same statements limited to the question or day that changed
 **Trigger rule:** triggers never use `INSERT OR REPLACE` / `OR IGNORE`. SQLite lets an outer statement's `OR` clause override the ones inside the triggers it fires, which silently skipped cache updates in testing. Use `DELETE` + `INSERT` and `WHERE NOT EXISTS`.
 
 ### Backup and restore
-- **Backup** = export the profile's database file (`orbit-<profile>-YYYY-MM-DD.sqlite3`). One file, includes images. It opens in any SQLite tool (DB Browser for SQLite, `sqlite3`), so your data is never locked inside Orbit.
+- **Built so far: a JSON backup** (`lib/backup.ts`): `backup.export` writes every table as `orbit-backup-YYYY-MM-DD.json` (pictures as base64; the two caches are rebuilt by triggers), `backup.import` checks it, empties the database and puts the rows back in parent-first order, in one transaction. Start fresh is `app.startFresh`. The `.sqlite3` file backup below is not built.
+- **Backup** (planned) = export the profile's database file (`orbit-<profile>-YYYY-MM-DD.sqlite3`). One file, includes images. It opens in any SQLite tool (DB Browser for SQLite, `sqlite3`), so your data is never locked inside Orbit.
 - **Restore** = import that file into the pool, then run migrations.
 - **Packs and plans** keep a JSON interchange format for sharing and AI round-trips (pack v3: questions in the new shape, images as a separate folder or zip). The importer also accepts v2 exports and maps old IDs through `legacy_id`.
 

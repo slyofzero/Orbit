@@ -4,7 +4,7 @@
 //
 //   1. Loads SQLite WASM and the OPFS "opfs-sahpool" storage, opens /orbit-<profile>.sqlite3.
 //   2. Sets the connection PRAGMAs and migrates the file to the newest schema (lib/db/migrate.ts).
-//   3. Runs named queries (lib/db/queries.ts): reads directly, writes in one transaction, and
+//   3. Runs named queries (lib/db/queries/): reads directly, writes in one transaction, and
 //      reports every table a write may have changed (lib/db/effects.ts).
 
 import sqlite3InitModule from "@sqlite.org/sqlite-wasm";

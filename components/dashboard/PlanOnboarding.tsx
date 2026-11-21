@@ -2,9 +2,23 @@
 // What the dashboard shows until there is a plan: the "welcome" backdrop scene and three steps to launch
 // one (ask an AI → save the file → drop it here). The file is checked as soon as it lands (lib/planFile.ts),
 // previewed, and imported in one go (plan.import). The AI prompt is lib/prompts/planPrompt.ts.
+// A tab switches the steps for "Import progress": someone coming back restores a backup instead (RestoreBackup).
 
 import { useEffect, useState, type ReactNode } from "react";
-import { Button, Callout, CopyButton, Dialog, FileInput, Heading, Pill, Stat, Text, useToast } from "@/components/ui";
+import {
+  Button,
+  Callout,
+  CopyButton,
+  Dialog,
+  FileInput,
+  Heading,
+  Pill,
+  Stat,
+  Tabs,
+  Text,
+  useToast,
+} from "@/components/ui";
+import { RestoreBackup } from "@/components/dashboard/RestoreBackup";
 import { LAUNCH_MS } from "@/components/background/LaunchWarp";
 import { useScene } from "@/components/background/Backdrop";
 import { cx } from "@/components/utils";
@@ -13,7 +27,7 @@ import { formatLong, todayIST, type IsoDate } from "@/lib/dates";
 import { parsePlanFile, planSummary, type PlanParse } from "@/lib/planFile";
 import { planPrompt } from "@/lib/prompts/planPrompt";
 
-function Step({ n, title, children, delay }: { n: number; title: string; children: ReactNode; delay: number }) {
+export function Step({ n, title, children, delay }: { n: number; title: string; children: ReactNode; delay: number }) {
   return (
     <li
       className="grid animate-card-in grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 rounded-[22px] border border-line bg-sheet/80 p-5 backdrop-blur-sm"
@@ -40,6 +54,7 @@ export function PlanOnboarding({ onLaunched }: { onLaunched?: (name: string) => 
   const toast = useToast();
   const [today, setToday] = useState<IsoDate | null>(null);
   useEffect(() => setToday(todayIST()), []);
+  const [mode, setMode] = useState<"plan" | "progress">("plan");
   const [peek, setPeek] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [text, setText] = useState("");
@@ -75,7 +90,7 @@ export function PlanOnboarding({ onLaunched }: { onLaunched?: (name: string) => 
       () => toast(`**${r.name}** is launched: ${r.days} days, ${r.tasks} tasks. Have a good first day!`, "special"),
       LAUNCH_MS,
     );
-    // the dashboard switches to the plan view by itself (it re-reads the plans table)
+    // the app frame moves on to /dashboard by itself (it re-reads the plans table)
   };
 
   return (
@@ -92,150 +107,166 @@ export function PlanOnboarding({ onLaunched }: { onLaunched?: (name: string) => 
           </Text>
         </div>
 
-        <ol className="m-0 grid list-none gap-3.5 p-0">
-          <Step n={1} title="Ask an AI to draft it" delay={120}>
-            <Text variant="muted">
-              Copy this prompt into any AI chat. It asks about your goal, your dates and your free time, then writes the
-              whole plan for you.
-            </Text>
+        <Tabs
+          label="How to start"
+          value={mode}
+          onChange={setMode}
+          tabs={[
+            { value: "plan", label: "New plan" },
+            { value: "progress", label: "Import progress" },
+          ]}
+        />
 
-            <div className="flex gap-4">
-              <div className="flex flex-wrap items-center gap-2.5">
-                <CopyButton
-                  variant="primary"
-                  text={() => planPrompt(today ?? todayIST())}
-                  label="Copy the AI prompt"
-                  copiedLabel="Copied. Paste it into your AI chat"
-                />
-              </div>
-              <Button variant="soft" onClick={() => setPeek(true)}>
-                Peek at the prompt
-              </Button>
-            </div>
-            <Dialog
-              open={peek}
-              onClose={() => setPeek(false)}
-              title="The AI prompt"
-              footer={
-                <>
-                  <Button variant="ghost" onClick={() => setPeek(false)}>
-                    Close
+        {mode === "progress" && <RestoreBackup />}
+
+        {mode === "plan" && (
+          <>
+            <ol className="m-0 grid list-none gap-3.5 p-0">
+              <Step n={1} title="Ask an AI to draft it" delay={120}>
+                <Text variant="muted">
+                  Copy this prompt into any AI chat. It asks about your goal, your dates and your free time, then writes
+                  the whole plan for you.
+                </Text>
+
+                <div className="flex gap-4">
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <CopyButton
+                      variant="primary"
+                      text={() => planPrompt(today ?? todayIST())}
+                      label="Copy the AI prompt"
+                      copiedLabel="Copied. Paste it into your AI chat"
+                    />
+                  </div>
+                  <Button variant="soft" onClick={() => setPeek(true)}>
+                    Peek at the prompt
                   </Button>
-                  <CopyButton
-                    variant="primary"
-                    text={() => planPrompt(today ?? todayIST())}
-                    label="Copy the prompt"
-                    copiedLabel="Copied. Paste it into your AI chat"
-                  />
-                </>
-              }
-            >
-              <Text variant="muted">
-                Paste this into any AI chat. It asks you a few questions first, then writes your plan.
-              </Text>
-              <pre className="mt-3 max-h-[55vh] overflow-auto rounded-md border border-line bg-sheet-2 p-3.5 font-mono text-xs leading-relaxed whitespace-pre-wrap text-ink-2">
-                {today ? planPrompt(today) : ""}
-              </pre>
-            </Dialog>
-          </Step>
+                </div>
+                <Dialog
+                  open={peek}
+                  onClose={() => setPeek(false)}
+                  title="The AI prompt"
+                  footer={
+                    <>
+                      <Button variant="ghost" onClick={() => setPeek(false)}>
+                        Close
+                      </Button>
+                      <CopyButton
+                        variant="primary"
+                        text={() => planPrompt(today ?? todayIST())}
+                        label="Copy the prompt"
+                        copiedLabel="Copied. Paste it into your AI chat"
+                      />
+                    </>
+                  }
+                >
+                  <Text variant="muted">
+                    Paste this into any AI chat. It asks you a few questions first, then writes your plan.
+                  </Text>
+                  <pre className="mt-3 max-h-[55vh] overflow-auto rounded-md border border-line bg-sheet-2 p-3.5 font-mono text-xs leading-relaxed whitespace-pre-wrap text-ink-2">
+                    {today ? planPrompt(today) : ""}
+                  </pre>
+                </Dialog>
+              </Step>
 
-          <Step n={2} title="Save its reply as a file" delay={240}>
-            <Text variant="muted">
-              When the AI answers with the plan (a block of JSON), save it as **my-plan.json** in any text editor.
-              Answering its questions honestly makes a better plan.
-            </Text>
-          </Step>
+              <Step n={2} title="Save its reply as a file" delay={240}>
+                <Text variant="muted">
+                  When the AI answers with the plan (a block of JSON), save it as **my-plan.json** in any text editor.
+                  Answering its questions honestly makes a better plan.
+                </Text>
+              </Step>
 
-          <Step n={3} title="Drop it here" delay={360}>
-            <FileInput
-              accept=".json,application/json"
-              files={files}
-              onChange={setFiles}
-              title="Drop your plan file here"
-              description="my-plan.json · checked the moment it lands"
-              buttonLabel="Choose the file"
-            />
-          </Step>
-        </ol>
+              <Step n={3} title="Drop it here" delay={360}>
+                <FileInput
+                  accept=".json,application/json"
+                  files={files}
+                  onChange={setFiles}
+                  title="Drop your plan file here"
+                  description="my-plan.json · checked the moment it lands"
+                  buttonLabel="Choose the file"
+                />
+              </Step>
+            </ol>
 
-        {check && !plan && (
-          <Callout tone="warn" title="This file needs a few fixes first">
-            <ul className="m-0 grid gap-1 pl-5">
-              {check.errors.map((e) => (
-                <li key={e}>
-                  <Text as="span">{e}</Text>
-                </li>
-              ))}
-            </ul>
-            <div className="mt-3 flex flex-wrap items-center gap-2.5">
-              <CopyButton text={fixRequest(check.errors)} label="Copy these errors for the AI" />
-              <Text variant="hint" as="span">
-                Paste them into the same chat; it will send a fixed file.
-              </Text>
-            </div>
-          </Callout>
-        )}
-
-        {plan && sum && (
-          <div className="special-border animate-flow-border grid animate-card-in gap-4 rounded-[22px] border-2 p-5">
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="text-3xl motion-safe:animate-bob" aria-hidden="true">
-                🚀
-              </span>
-              <div className="min-w-0 flex-1">
-                <Heading level={2}>Ready for launch: {plan.name}</Heading>
-                <Text variant="muted">{`${formatLong(plan.starts_on)} → ${formatLong(plan.ends_on)}`}</Text>
-              </div>
-            </div>
-            <div className="grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-4">
-              <Stat value={sum.span} label="days in all" />
-              <Stat value={sum.days} label="planned days" />
-              <Stat value={sum.tasks} label="tasks" />
-              <Stat value={sum.milestones} label="milestones" />
-            </div>
-            {plan.milestones.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {plan.milestones.map((m) => (
-                  <Pill key={m.name + m.date} tone="amber">{`${m.name} · ${formatLong(m.date)}`}</Pill>
-                ))}
-              </div>
-            )}
-            {check!.warnings.length > 0 && (
-              <Callout tone="info" title="Good to know">
+            {check && !plan && (
+              <Callout tone="warn" title="This file needs a few fixes first">
                 <ul className="m-0 grid gap-1 pl-5">
-                  {check!.warnings.map((w) => (
-                    <li key={w}>
-                      <Text as="span">{w}</Text>
+                  {check.errors.map((e) => (
+                    <li key={e}>
+                      <Text as="span">{e}</Text>
                     </li>
                   ))}
                 </ul>
+                <div className="mt-3 flex flex-wrap items-center gap-2.5">
+                  <CopyButton text={fixRequest(check.errors)} label="Copy these errors for the AI" />
+                  <Text variant="hint" as="span">
+                    Paste them into the same chat; it will send a fixed file.
+                  </Text>
+                </div>
               </Callout>
             )}
-            <div className="flex flex-wrap gap-2.5">
-              <Button variant="special" size="lg" loading={launch.pending} onClick={go}>
-                Launch this plan
-              </Button>
-              <Button variant="ghost" onClick={() => setFiles([])}>
-                Pick another file
-              </Button>
-            </div>
-          </div>
-        )}
 
-        {process.env.NODE_ENV === "development" && (
-          <div className={cx("flex flex-wrap items-center gap-2.5", !check && "opacity-70")}>
-            <Pill tone="amber">DEV</Pill>
-            <Button
-              size="sm"
-              variant="ghost"
-              loading={sample.pending}
-              onClick={async () => {
-                if (await sample.run({ today: today ?? todayIST() })) onLaunched?.("Sample plan"); // same launch sequence
-              }}
-            >
-              Skip all this: load the sample plan
-            </Button>
-          </div>
+            {plan && sum && (
+              <div className="special-border animate-flow-border grid animate-card-in gap-4 rounded-[22px] border-2 p-5">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="text-3xl motion-safe:animate-bob" aria-hidden="true">
+                    🚀
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <Heading level={2}>Ready for launch: {plan.name}</Heading>
+                    <Text variant="muted">{`${formatLong(plan.starts_on)} → ${formatLong(plan.ends_on)}`}</Text>
+                  </div>
+                </div>
+                <div className="grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-4">
+                  <Stat value={sum.span} label="days in all" />
+                  <Stat value={sum.days} label="planned days" />
+                  <Stat value={sum.tasks} label="tasks" />
+                  <Stat value={sum.milestones} label="milestones" />
+                </div>
+                {plan.milestones.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {plan.milestones.map((m) => (
+                      <Pill key={m.name + m.date} tone="amber">{`${m.name} · ${formatLong(m.date)}`}</Pill>
+                    ))}
+                  </div>
+                )}
+                {check!.warnings.length > 0 && (
+                  <Callout tone="info" title="Good to know">
+                    <ul className="m-0 grid gap-1 pl-5">
+                      {check!.warnings.map((w) => (
+                        <li key={w}>
+                          <Text as="span">{w}</Text>
+                        </li>
+                      ))}
+                    </ul>
+                  </Callout>
+                )}
+                <div className="flex flex-wrap gap-2.5">
+                  <Button variant="special" size="lg" loading={launch.pending} onClick={go}>
+                    Launch this plan
+                  </Button>
+                  <Button variant="ghost" onClick={() => setFiles([])}>
+                    Pick another file
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {process.env.NODE_ENV === "development" && (
+              <div className={cx("flex flex-wrap items-center gap-2.5", !check && "opacity-70")}>
+                <Pill tone="amber">DEV</Pill>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  loading={sample.pending}
+                  onClick={async () => {
+                    if (await sample.run({ today: today ?? todayIST() })) onLaunched?.("Sample plan"); // same launch sequence
+                  }}
+                >
+                  Skip all this: load the sample plan
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </section>

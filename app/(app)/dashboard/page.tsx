@@ -1,8 +1,10 @@
 "use client";
-// /dashboard: v1's home screen. With no plan yet it shows only the welcome that launches one; right after
-// a launch, LaunchWarp plays over the dashboard and its sections rise in as the overlay dissolves.
+// /dashboard: v1's home screen. With no plan the app frame sends the user to /onboarding; right after a
+// launch, LaunchWarp (components/app/Launch.tsx) plays over the dashboard and its sections rise in as the
+// overlay dissolves.
 import { useEffect, useState, type ReactNode } from "react";
-import { LAUNCH_MS, LaunchWarp } from "@/components/background/LaunchWarp";
+import { useLaunch } from "@/components/app/Launch";
+import { LAUNCH_MS } from "@/components/background/LaunchWarp";
 import { Agenda } from "@/components/dashboard/Agenda";
 import { CalendarCard, useDayFocus } from "@/components/dashboard/DayPanels";
 import { Hero } from "@/components/dashboard/Hero";
@@ -11,7 +13,6 @@ import { SettingsBackup } from "@/components/dashboard/SettingsBackup";
 import { StandingCard } from "@/components/dashboard/StandingCard";
 import { MockScoresCard, WeakestCard, WeekCard } from "@/components/dashboard/Thirds";
 import { cx } from "@/components/utils/cx";
-import { PlanOnboarding } from "@/components/dashboard/PlanOnboarding";
 import { SetupCard } from "@/components/dashboard/SetupCard";
 import { TopRow } from "@/components/dashboard/TopRow";
 import { useQuery } from "@/lib/db/client";
@@ -89,27 +90,13 @@ function Body({ landed, today, hour }: { landed: boolean; today: IsoDate; hour: 
 
 export default function DashboardPage() {
   const { data } = useQuery("setup.status");
-  const [launching, setLaunching] = useState<string | null>(null); // the plan being launched
-  const [landed, setLanded] = useState(false); // after a launch: sections rise in (once, as they mount)
-  if (!data) return null;
+  const { landed } = useLaunch(); // right after a launch the sections rise in (once, as they mount)
+  // No plan: AppFrame sends the user to /onboarding. The launch overlay lives in LaunchProvider, so it keeps
+  // playing across that route change.
+  if (!data?.hasPlan) return null;
 
-  const warp = launching && (
-    <LaunchWarp
-      title={launching}
-      onDone={() => setLaunching(null)} // keep `landed`: unwrapping the sections would rebuild them
-    />
-  );
-  // The overlay stays in the same place in the tree, so it keeps playing when the page switches
-  // from the welcome to the dashboard halfway through the launch.
-  const page = !data.hasPlan ? (
-    <PlanOnboarding
-      onLaunched={(name) => {
-        setLaunching(name);
-        setLanded(true);
-      }}
-    />
-  ) : (
-    // v1's page padding (the app frame has none, so the welcome above can run edge to edge)
+  // v1's page padding (the app frame has none, so the welcome can run edge to edge)
+  return (
     <div className="px-[clamp(18px,3.5vw,44px)] pt-[34px] pb-20 max-[760px]:pb-[100px]">
       <Rise on={landed} i={0}>
         <TopRow />
@@ -122,11 +109,5 @@ export default function DashboardPage() {
       </Rise>
       <DashboardBody landed={landed} />
     </div>
-  );
-  return (
-    <>
-      {page}
-      {warp}
-    </>
   );
 }

@@ -6,9 +6,20 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { OrbitScene } from "@/components/background/OrbitScene";
+import type { PracticeTab } from "@/lib/practice";
+import { PracticeScene } from "@/components/background/PracticeScene";
 
 /** How long a scene takes to fade in or out (ms). */
 const FADE_MS = 1000;
+
+function PracticeBackdrop({ kind }: { kind: PracticeTab }) {
+  return (
+    <>
+      <PracticeScene kind={kind} className="absolute inset-0 size-full" />
+      <div className="absolute inset-0 bg-linear-to-r from-pad via-pad/85 to-pad/10 max-[900px]:bg-pad/80" />
+    </>
+  );
+}
 
 /** What the backdrop can show. Add a scene here, then call `useScene(name)` in the page that wants it. */
 const SCENES = {
@@ -21,6 +32,10 @@ const SCENES = {
       <div className="absolute inset-0 bg-linear-to-r from-pad via-pad/85 to-pad/10 max-[900px]:bg-pad/80" />
     </>
   ),
+  /** Practice onboarding, one per tab (components/background/PracticeScene.tsx); the text side is washed out too. */
+  practiceTopics: <PracticeBackdrop kind="topics" />,
+  practiceProgramming: <PracticeBackdrop kind="programming" />,
+  practiceMocks: <PracticeBackdrop kind="mocks" />,
 } satisfies Record<string, ReactNode>;
 
 export type SceneName = keyof typeof SCENES;

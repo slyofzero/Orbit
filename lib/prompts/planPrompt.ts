@@ -1,6 +1,6 @@
 // The prompt the user pastes into any AI chat to get a plan file Orbit can import.
 // It is a product feature (AGENTS.md rule 9): it must describe lib/planFile.ts exactly, and
-// scripts/check.ts checks that its example passes the importer. Change both together.
+// scripts/checks/planFile.ts checks that its example passes the importer. Change both together.
 // Nothing here may assume a particular exam: Orbit works for any goal.
 
 import { addDays, type IsoDate } from "@/lib/dates";

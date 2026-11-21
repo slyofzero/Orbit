@@ -18,6 +18,9 @@ export { Runway, RunwayStat, Flame, CountUp, type RunwayTick, type RunwayFlag } 
 export { Card } from "@/components/ui/Card";
 export { Pill, Kbd, type PillTone } from "@/components/ui/Pill";
 export { Tabs, type Tab } from "@/components/ui/Tabs";
+export { SearchField } from "@/components/ui/SearchField";
+export { FilterMenu, type FilterChoice, type FilterGroup } from "@/components/ui/FilterMenu";
+export { ProgressRow, StatusDot, type StatusTone } from "@/components/ui/ProgressRow";
 export { Callout, type CalloutTone } from "@/components/ui/Callout";
 export { ProgressBar, Stat, type ProgressTone, type ProgressSegment } from "@/components/ui/Progress";
 export { Table, type Column } from "@/components/ui/Table";

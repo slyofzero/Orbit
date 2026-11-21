@@ -59,6 +59,11 @@ export const IconSearch = (p: P) => (
     <path d="M20 20l-3.5-3.5" />
   </Svg>
 );
+export const IconFilter = (p: P) => (
+  <Svg {...p}>
+    <path d="M3 5h18l-7 8v6l-4 2v-8L3 5z" />
+  </Svg>
+);
 export const IconArrowRight = (p: P) => (
   <Svg {...p}>
     <path d="M5 12h14M13 6l6 6-6 6" />

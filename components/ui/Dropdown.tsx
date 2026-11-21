@@ -3,7 +3,17 @@
 // Keyboard: ↑/↓ move, Home/End jump, Enter or Space picks, Esc closes, typing a letter jumps to it.
 // `searchable` adds a filter box at the top (for long lists such as topics).
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
 import { useDismiss } from "@/components/utils/useDismiss";
 import { IconCheck, IconChevronDown, IconSearch } from "@/components/icons";
 import { cx } from "@/components/utils/cx";
@@ -17,6 +27,7 @@ export type DropdownOption<V extends string> = {
   description?: string;
   icon?: ReactNode;
   disabled?: boolean;
+  group?: string; // a heading shown above the first option of each run of options with the same group
 };
 
 export function Dropdown<V extends string>({
@@ -54,7 +65,9 @@ export function Dropdown<V extends string>({
 
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return q ? options.filter((o) => (o.label + " " + (o.description ?? "")).toLowerCase().includes(q)) : options;
+    return q
+      ? options.filter((o) => (o.label + " " + (o.description ?? "") + " " + (o.group ?? "")).toLowerCase().includes(q))
+      : options;
   }, [options, query]);
   const selected = options.find((o) => o.value === value) ?? null;
 
@@ -188,28 +201,39 @@ export function Dropdown<V extends string>({
             >
               {shown.length === 0 && <li className="p-2.5 text-[0.9rem] text-gray">Nothing matches “{query}”.</li>}
               {shown.map((o, i) => (
-                <li
-                  key={o.value}
-                  id={`${id}-o${i}`}
-                  data-i={i}
-                  role="option"
-                  aria-selected={o.value === value}
-                  aria-disabled={o.disabled || undefined}
-                  className={cx(
-                    "flex items-center gap-2.5 rounded-sm px-2.5 py-2 aria-selected:font-bold aria-selected:text-accent",
-                    i === active && "bg-sheet-2",
-                    o.disabled ? "cursor-not-allowed opacity-45" : "cursor-pointer",
+                <Fragment key={o.value}>
+                  {o.group && o.group !== shown[i - 1]?.group && (
+                    <li
+                      role="presentation"
+                      className="px-2.5 pt-2.5 pb-1 text-[0.72rem] font-bold tracking-wide text-gray uppercase first:pt-1"
+                    >
+                      {txt(o.group)}
+                    </li>
                   )}
-                  onPointerMove={() => !o.disabled && setActive(i)}
-                  onClick={() => choose(o)}
-                >
-                  {o.icon && <span className="inline-grid shrink-0 place-items-center [&_svg]:size-4">{o.icon}</span>}
-                  <span className="grid min-w-0 flex-1">
-                    <span>{txt(o.label)}</span>
-                    {o.description && <span className="text-[0.8rem] font-normal text-gray">{txt(o.description)}</span>}
-                  </span>
-                  {o.value === value && <IconCheck className="size-4 shrink-0" />}
-                </li>
+                  <li
+                    id={`${id}-o${i}`}
+                    data-i={i}
+                    role="option"
+                    aria-selected={o.value === value}
+                    aria-disabled={o.disabled || undefined}
+                    className={cx(
+                      "flex items-center gap-2.5 rounded-sm px-2.5 py-2 aria-selected:font-bold aria-selected:text-accent",
+                      i === active && "bg-sheet-2",
+                      o.disabled ? "cursor-not-allowed opacity-45" : "cursor-pointer",
+                    )}
+                    onPointerMove={() => !o.disabled && setActive(i)}
+                    onClick={() => choose(o)}
+                  >
+                    {o.icon && <span className="inline-grid shrink-0 place-items-center [&_svg]:size-4">{o.icon}</span>}
+                    <span className="grid min-w-0 flex-1">
+                      <span>{txt(o.label)}</span>
+                      {o.description && (
+                        <span className="text-[0.8rem] font-normal text-gray">{txt(o.description)}</span>
+                      )}
+                    </span>
+                    {o.value === value && <IconCheck className="size-4 shrink-0" />}
+                  </li>
+                </Fragment>
               ))}
             </ul>
           </div>

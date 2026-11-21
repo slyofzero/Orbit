@@ -114,7 +114,7 @@ All fields take `label`, `hint`, `error` and **`help`** (a "?" tip beside the la
 | `TextArea` | `Field.tsx` | A few lines of plain text | all `<textarea>` props |
 | `RichEditor` | `RichEditor.tsx` | Writing formatted notes / questions | toolbar (bold, italic, underline, strike, heading, lists, quote, divider, link, picture, maths, code); Write / Preview / Both; shortcuts Ctrl+B/I/U/K/M/E; `onAddImage(file) → "img:<hash>"` enables upload and paste; every action undoable with Ctrl+Z |
 | `CodeEditor` | `CodeEditor.tsx` | Writing code | language picker (Python, C, C++, Java, JavaScript, SQL, plain text; `language`/`onLanguageChange` or `defaultLanguage`); highlighting, line numbers, indent guides; Enter keeps indent (+1 after `:` or `{ ( [`), Tab/Shift+Tab, Backspace removes a level, `}` outdents; rules in `lib/codeIndent.ts` |
-| `Dropdown` | `Dropdown.tsx` | Choosing one item from a list | `options` (`label`, `description`, `icon`, `disabled`); `searchable` adds a filter box; keyboard ↑/↓, Home/End, type a letter to jump |
+| `Dropdown` | `Dropdown.tsx` | Choosing one item from a list | `options` (`label`, `description`, `icon`, `disabled`, `group` = a heading above each run of options sharing it); `searchable` adds a filter box; keyboard ↑/↓, Home/End, type a letter to jump |
 | `DatePicker` | `DatePicker.tsx` | Choosing a day | values are `YYYY-MM-DD` (IST); `min`, `max`, `clearable`; keyboard arrows, PageUp/PageDown, Home/End |
 | `FileInput` | `FileInput.tsx` | Picking files | `files` / `onChange(files)`; `multiple`; `accept`; `title`, `description`, `buttonLabel`; drop zone lights up with the special gradient while dragging; chosen files become cards (type tile or picture thumbnail, size, ✓ Ready, remove) |
 | `Checkbox` | `Choice.tsx` | On/off inside a form | `label`, `description`, `disabled`; `variant="task"` = v1's agenda task (round tick turning green, struck-through text, dashed line), `burst` = confetti pieces when ticked (`components/utils/burst.ts`) |
@@ -129,14 +129,18 @@ All fields take `label`, `hint`, `error` and **`help`** (a "?" tip beside the la
 | `Card` | `Card.tsx` | A sheet holding one idea | `title` (h2, v1's card-title size), `subtitle`, `actions` (wrap under the title on narrow screens); `hero` (the one dark panel per screen); `special`, with `glow` low · medium (default) · high |
 | `Pill` | `Pill.tsx` | Status, difficulty, counts, tags | `tone`: neutral · accent · green · red · amber · blue · ink · hi · red-solid · accent-solid · special (day kinds: study blue, light green, short day amber, mock accent-solid, exam red-solid, taper hi, buffer neutral) |
 | `Kbd` | `Pill.tsx` | A keyboard key | text shown literally |
-| `Tabs` | `Tabs.tsx` | Switching between views | `tabs` (`label`, `count`); arrow keys; `special`: `true` or a list of values |
+| `Tabs` | `Tabs.tsx` | Switching between views | `tabs` (`label`, `count`); arrow keys; `special`: `true` or a list of values; `shape`: `pills` (default) · `bar` (one rounded bar, the open tab filled: v1's Practice sections; no `special`) |
+| `SearchField` | `SearchField.tsx` | A toolbar search box ("Find a topic") | `label` (read aloud), `value`, `onChange(text)`, `placeholder` (plain text); search icon, clear button once typed; grows up to 340px |
+| `FilterMenu` | `FilterMenu.tsx` | v1's Filter button and pop-up | `groups` (`key`, `label`, `choices`: `value` unique across groups, `label`, `count`), `picked` / `onChange(values)`; search box, chosen chips + Clear all, 20 chips per group then "… N more"; renders nothing without choices; closes on Esc / outside click |
+| `ProgressRow` | `ProgressRow.tsx` | v1's practice row, its own progress bar | `lead`, `title`, `end`, `good` / `bad` (0-100: share tinted green, then red), `hint`; `href` = link, else `onClick` = button |
+| `StatusDot` | `ProgressRow.tsx` | A topic's rating dot | `tone` green · amber · red, `label` (read aloud, hover) |
 | `Callout` | `Callout.tsx` | A highlighted message | `tone`: info · success · warn · **caution** (title always starts "CAUTION:", for anything destructive) · special |
 | `ProgressBar` | `Progress.tsx` | Progress towards a total | `value`, `max`, `label`; `tone`: accent · green · red · amber · warm · gold · special; `segments` (stretches side by side, each as wide as its `max`, e.g. own questions warm + bonus gold); `showLabel={false}` |
 | `Stat` | `Progress.tsx` | One big number | `value`, `label`, `hint`, `trend` up/down |
 | `Table` | `Table.tsx` | Rows of data | `columns` (`header`, `cell`, `align`, `sortValue` makes it sortable, `special` highlights the column); `rowKey`; `empty`; `specialRow(row)`; scrolls sideways on phones; keep to one page of rows |
 | `Divider` | `Divider.tsx` | A line between sections | `variant`: solid · dashed · dotted · double · thick · accent · fade · special; `label` (and `align="start"`) |
 | `EmptyState` | `EmptyState.tsx` | A list or page with nothing yet | `title`, text, `action`; say why it is empty and offer the next step |
-| `Disclosure` | `Disclosure.tsx` | Show / hide extra content in place; the body slides open and shut (`disclosure-motion`, styles/animations/disclosure.css) | `title`, `defaultOpen` |
+| `Disclosure` | `Disclosure.tsx` | Show / hide extra content in place; the body slides open and shut (`disclosure-motion`, styles/animations/disclosure.css) | `title`, `defaultOpen`; `open` + `onOpenChange` = controlled by the page (e.g. forced open while searching); `bodyClassName` replaces the body's padding and layout (default: indented under the title) |
 | `ProgressRing` | `ProgressRing.tsx` | A round meter (tasks done today) | `value`, `max`, `label`; `tone` hi · accent · green; size via `className` (default 52px); track takes the text colour, so it works on the hero |
 
 ### App frame and dashboard pieces (from v1)
@@ -193,5 +197,5 @@ They all share **`QuestionFrame`**: type, difficulty and marks (+marks, −negat
 2. Add `components/ui/<Name>.tsx`; export it from `components/ui/index.ts`.
 3. Render every piece of text through `txt()` (or `Text` / `Heading`); support `special` if it is a component people would celebrate with.
 4. Style it with Tailwind utilities and theme tokens only (shared looks: `components/utils/styles.ts`); check light and dark.
-5. Pure logic (parsing, maths, rules) goes in `lib/` with a test in `scripts/check.ts`.
+5. Pure logic (parsing, maths, rules) goes in `lib/` with a test in `scripts/checks/`.
 6. Add a demo to `/dev/components` that includes some LaTeX, and a row to this file.

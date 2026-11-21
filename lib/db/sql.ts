@@ -1,5 +1,5 @@
 // The small database interface every query is written against. The worker implements it over
-// SQLite WASM (lib/db/worker.ts); scripts/check.ts implements it over bun:sqlite, so the same
+// SQLite WASM (lib/db/worker.ts); scripts/checks/helpers.ts implements it over bun:sqlite, so the same
 // queries are tested without a browser.
 
 export type SqlValue = string | number | null | Uint8Array;

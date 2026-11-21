@@ -67,6 +67,11 @@ import {
   DayRow,
   DayStrip,
   type DayStripSegment,
+  SearchField,
+  FilterMenu,
+  ProgressRow,
+  StatusDot,
+  type FilterGroup,
 } from "@/components/ui";
 import {
   IconPlus,
@@ -206,6 +211,7 @@ const SECTIONS: [string, string][] = [
   ["switches", "Switch & segmented"],
   ["pills", "Pills"],
   ["tabs", "Tabs"],
+  ["search", "Search, filter & rows"],
   ["cards", "Cards & stats"],
   ["progress", "Progress"],
   ["calendar", "Calendar & charts"],
@@ -274,6 +280,7 @@ export function Showcase() {
           <Switches />
           <Pills />
           <TabsDemo />
+          <SearchDemo />
           <Cards />
           <ProgressDemo />
           <CalendarDemo />
@@ -1167,6 +1174,123 @@ function TabsDemo() {
       <Demo caption="Special: one tab, or all of them">
         <Tabs label="Stats sections (one special)" value={tab} onChange={setTab} special={["mistakes"]} tabs={tabs} />
         <Tabs label="Stats sections (all special)" value={tab} onChange={setTab} special tabs={tabs} />
+      </Demo>
+      <Demo caption='shape="bar": one rounded bar with the open tab filled (page sections, e.g. Practice)'>
+        <Tabs label="Stats sections (bar)" shape="bar" value={tab} onChange={setTab} tabs={tabs} />
+      </Demo>
+    </Section>
+  );
+}
+
+const FILTER_GROUPS: FilterGroup[] = [
+  {
+    key: "difficulty",
+    label: "Difficulty",
+    choices: [
+      { value: "difficulty:easy", label: "Easy", count: 12 },
+      { value: "difficulty:medium", label: "Medium", count: 30 },
+      { value: "difficulty:hard", label: "Hard", count: 9 },
+    ],
+  },
+  {
+    key: "subject",
+    label: "Subject",
+    choices: [
+      { value: "subject:la", label: "Linear algebra $A$", count: 21 },
+      { value: "subject:prob", label: "Probability $P(E)$", count: 18 },
+    ],
+  },
+  {
+    key: "topic",
+    label: "Topic",
+    choices: Array.from({ length: 27 }, (_, i) => ({
+      value: `topic:t${i}`,
+      label: i === 0 ? "Eigenvalues $\\lambda$" : `Topic number ${i + 1}`,
+      count: 1 + ((i * 7) % 9),
+    })),
+  },
+];
+
+function SearchDemo() {
+  const [q, setQ] = useState("");
+  const [picked, setPicked] = useState<string[]>(["difficulty:hard"]);
+  const [open, setOpen] = useState(false);
+  const [topic, setTopic] = useState<string | null>("eig");
+  return (
+    <Section
+      id="search"
+      title="Search, filter & rows"
+      path="components/ui/SearchField.tsx · FilterMenu.tsx · ProgressRow.tsx"
+      note="The pieces of a topic list: a search box, a Filter pop-up, and rows that are their own progress bar."
+    >
+      <Demo caption="SearchField + Filter, side by side in a toolbar">
+        <div className="flex flex-wrap items-center gap-3">
+          <SearchField label="Find a topic" placeholder="Find a topic" value={q} onChange={setQ} />
+          <FilterMenu groups={FILTER_GROUPS} picked={picked} onChange={setPicked} />
+        </div>
+        <Text variant="hint">{`Searching for “${q}”; chosen: ${picked.length ? picked.join(", ") : "none"}`}</Text>
+      </Demo>
+      <Demo caption="ProgressRow: green = share answered right, red = answered wrong; the dot is your own rating">
+        <div className="grid gap-1.5 sm:grid-cols-2">
+          <ProgressRow
+            lead={<StatusDot tone="green" label="Know" />}
+            title="Eigenvalues $\lambda$"
+            end="**12** / 30 q"
+            good={30}
+            bad={10}
+            hint="12 answered of 30: 9 right, 3 wrong"
+            onClick={() => {}}
+          />
+          <ProgressRow
+            lead={<StatusDot tone="amber" label="Shaky" />}
+            title="Conditional probability $P(A\mid B)$"
+            end="24+ q"
+            onClick={() => {}}
+          />
+          <ProgressRow
+            lead={<StatusDot tone="red" label="No idea" />}
+            title="Gradient descent $\nabla f$"
+            end="**5** / 20 q"
+            good={5}
+            bad={20}
+            onClick={() => {}}
+          />
+        </div>
+      </Demo>
+      <Demo caption="Disclosure: controlled (open / onOpenChange) with a flush body, as a subject section">
+        <Disclosure
+          open={open}
+          onOpenChange={setOpen}
+          bodyClassName="grid gap-1.5 p-2.5 pt-0 sm:grid-cols-2"
+          title={
+            <span className="flex min-w-0 flex-1 items-center gap-3">
+              <span className="flex-1">Linear algebra $A$</span>
+              <Text as="span" variant="hint" className="font-normal">
+                1/3 started
+              </Text>
+            </span>
+          }
+        >
+          <ProgressRow lead={<StatusDot tone="green" label="Know" />} title="Matrices" end="8 q" onClick={() => {}} />
+          <ProgressRow lead={<StatusDot tone="red" label="No idea" />} title="SVD" end="5 q" onClick={() => {}} />
+        </Disclosure>
+        <Text variant="hint">{`The page owns the state: it is ${open ? "open" : "shut"}.`}</Text>
+      </Demo>
+      <Demo caption="Dropdown with groups (options with the same group sit under one heading)">
+        <div className="max-w-xs">
+          <Dropdown
+            label="Topic test $T$"
+            value={topic}
+            onChange={setTopic}
+            searchable
+            options={[
+              { value: "eig", label: "Eigenvalues", group: "Linear algebra" },
+              { value: "svd", label: "SVD", group: "Linear algebra" },
+              { value: "bayes", label: "Bayes' rule $P(A\\mid B)$", group: "Probability" },
+              { value: "dist", label: "Distributions", group: "Probability" },
+            ]}
+          />
+        </div>
       </Demo>
     </Section>
   );

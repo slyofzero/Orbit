@@ -12,7 +12,7 @@ The `rehaul` branch is a rebuild. The old localStorage app is on `main` and in g
 ## Commands
 - `bun install`, then `bun run dev`, open http://localhost:3000
 - `bunx tsc --noEmit`: type check (must be clean)
-- `bun run check`: `scripts/check.ts`, the logic test suite. It must print `ALL OK`.
+- `bun run check`: `scripts/check.ts` runs the logic test suite, one file per area in `scripts/checks/`. It must print `ALL OK`.
 - `bun run format`: Prettier on every `.tsx` file (`.prettierrc.json`: 120 columns, double quotes, semicolons, trailing commas). `bun run format:check` must pass.
 - `bun run build` / `bun run start`: production build
 - http://localhost:3000/dev/db: the database worker live (connection, table counts, sample writes). Open it in two tabs to see them share one database.
@@ -27,10 +27,10 @@ The owner has **no hosting budget**. Orbit is deployed on **Vercel's free (Hobby
 - Before adding a dependency or feature, check it works on Vercel's free plan. If it would need a paid plan, stop and ask the owner.
 
 ## Rules that always apply
-1. **Storage follows `docs/STORAGE.md`.** SQLite WASM in one Web Worker, OPFS `opfs-sahpool`, one file per profile. The UI thread never touches the database: screens call `useQuery` / `useMutation` (`lib/db/client.ts`) with a query NAME from `lib/db/queries.ts`, the only place SQL lives. Any number of tabs work (one leads, the rest go through it). Every list has a `LIMIT`; every write is one transaction.
+1. **Storage follows `docs/STORAGE.md`.** SQLite WASM in one Web Worker, OPFS `opfs-sahpool`, one file per profile. The UI thread never touches the database: screens call `useQuery` / `useMutation` (`lib/db/client.ts`) with a query NAME from `lib/db/queries/` (one file per area), the only place SQL lives. Any number of tabs work (one leads, the rest go through it). Every list has a `LIMIT`; every write is one transaction.
 2. **The schema is `db/schema.sql`; changes are migrations.** Never edit a shipped migration; add `db/migrations/NNN-*.sql` and bump `PRAGMA user_version`.
 3. **Never break saved data.** Old v2 exports and localStorage data must still import (through `legacy_id`).
-4. **Pure logic goes in `lib/` and gets a test in `scripts/check.ts`.** UI components stay thin. Run `bunx tsc --noEmit` and `bun run check` before you say you are done.
+4. **Pure logic goes in `lib/` and gets a test in `scripts/checks/<area>.ts`** (add a line for a new file in `scripts/check.ts`). UI components stay thin. Run `bunx tsc --noEmit` and `bun run check` before you say you are done.
 5. **Plans and question packs are user data.** Imports are validated first and refuse or warn; never save unchecked data.
 6. **ALL user-visible text renders as markdown + LaTeX, everywhere** (headings, labels, table cells, tooltips, options, buttons, toasts…). Shared components in `components/ui` and `components/question` do this automatically for every string prop through `txt()` (`components/utils/txt.tsx`). In your own JSX, never print a user-facing string raw: use `<Rich text={…} />` (or `<Rich block …/>` for multi-paragraph text) or `txt(…)`. Syntax: `lib/markdown.ts`. Plain text skips parsing and results are cached, so it is cheap.
 7. **Dates are plain `YYYY-MM-DD` strings in IST.** Do not use `new Date()` for day logic.
