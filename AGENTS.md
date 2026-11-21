@@ -2,6 +2,8 @@
 
 Read this first. Then read `docs/HANDOFF.md` (what is done and what is next) and `docs/STORAGE.md` (the storage design and its rules). Read `docs/STATS.md` before touching anything that records answers or shows statistics. Read `docs/PLANS.md` before touching plans, the plan file / import, day progress or streaks. Read `docs/COMPONENTS.md` before building or changing any screen (every shared component, the UI rules, and what the dev-only `/dev` route is for). Table shapes are in `types/tables/` (one file per table; subjects, topics, tags and packs in `catalog/`, question tables in `questions/` (per-type ones in `questions/question_types/`), mock tests in `mocks/`, plan tables in `plans/`). Import them from `@/types/tables`.
 
+**Handoff and TODO.** The `/handoff` skill keeps `HANDOFF.md` and `TODO.md` together, by default in the OS temp folder: `%TEMP%\handoff\Orbit\` (Windows) or `$TMPDIR/handoff/Orbit/`. The owner can ask for them in the project root instead ("in pwd"). `TODO.md` now lives in `%TEMP%\handoff\Orbit\TODO.md` (not in the repo); `docs/HANDOFF.md` is the project's own handoff doc and stays in `docs/`. When you park or finish something, update that `TODO.md`.
+
 ## What Orbit is
 Orbit is a personal, **exam-agnostic study hub**: a day-by-day planner, topic-wise practice, mock tests that copy a real exam screen, a mistake log, rich statistics and an admin area. It is a Next.js 15 / React 19 / TypeScript app. There is no server database and no login: everything the user owns lives in the **browser**.
 
@@ -42,3 +44,5 @@ The owner has **no hosting budget**. Orbit is deployed on **Vercel's free (Hobby
 
 ## About the owner and how to work with them
 The owner prefers: short, plain final replies; paste-ready code; the **problem explained first, then the code**; a big 🔴 CAUTION line for anything the user must NOT do (for example when a destructive action is possible). They copy and paste rather than read, so keep UI wording self-explanatory.
+
+**Commits.** Never commit on your own. Commit only when the owner runs the `smart-commit` skill, and then follow that skill.

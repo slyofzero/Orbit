@@ -3,11 +3,11 @@
 Where the rebuild stands and what to know before picking it up. Read `AGENTS.md` first; details live in the docs it points to.
 
 ## How we work (owner's rules for this rebuild)
-- **Small, reviewable steps.** One feature per step; the owner reviews the diff and commits. Never commit yourself.
+- **Small, reviewable steps.** One feature per step; the owner reviews the diff and commits. Never commit on your own; commit only when the owner runs the `smart-commit` skill (then follow that skill).
 - **Ask before adding or editing components.** New shared components (`components/ui`) or edits to existing ones need the owner's OK. Fewer than ~10 components touched per step.
 - **v1 is the starting point.** Recreate v1's look with the shared components; the owner then asks for changes on top (the planner's carousel, for example). Reference: run v1 (`git worktree add <dir> main`, `bun install`, `bun --bun next dev -p 3200`), load `exports/gate-da-2027-plan.json` through its upload page, and screenshot `/`.
 - **The owner checks visuals.** For a UI step, run `bunx tsc --noEmit`, `bun run check` and `bun run format:check`, then ask the owner to look (give the URL). Don't drive headless Chrome yourself unless asked.
-- **Unfinished work is in `TODO.md`.** Add to it when something is parked or offered; tick items off when done.
+- **Unfinished work is in `TODO.md`** (in `%TEMP%\handoff\Orbit\`, not the repo; see `AGENTS.md`). Add to it when something is parked or offered; tick items off when done.
 
 ## Done (newest last)
 | Area | What exists | Read |
