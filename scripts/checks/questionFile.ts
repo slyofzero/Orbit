@@ -8,7 +8,7 @@ import { ok, freshDb, bunSql } from "@/scripts/checks/helpers";
 
 console.log("question file (lib/questionFile.ts)");
 {
-  const TABS = ["topics", "programming", "mocks"] as const;
+  const TABS = ["pack", "topics", "programming", "mocks"] as const;
   for (const kind of TABS) {
     const ex = parseQuestionFile(JSON.stringify(exampleQuestions(kind)));
     ok(
@@ -22,10 +22,18 @@ console.log("question file (lib/questionFile.ts)");
     );
     ok(!/\b(GATE|JEE|NEET|UPSC|SAT|GRE)\b/.test(pr), `the ${kind} prompt names no particular exam`);
     const sum = questionSummary(ex.file!);
+    if (kind === "pack") {
+      const lean = parseQuestionFile(JSON.stringify({ ...exampleQuestions("topics"), mocks: [] }));
+      ok(
+        lean.file !== null && lean.errors.length === 0 && pr.includes('"mocks": []'),
+        "the pack prompt says to leave unwanted mocks as [], and the importer takes it",
+      );
+    }
     ok(
       (kind === "topics" && sum.practice === 4 && sum.programming === 0 && sum.mocks === 0) ||
         (kind === "programming" && sum.programming === 1 && sum.practice === 0) ||
-        (kind === "mocks" && sum.mockQuestions === 2 && sum.mocks === 1),
+        (kind === "mocks" && sum.mockQuestions === 2 && sum.mocks === 1) ||
+        (kind === "pack" && sum.practice === 4 && sum.programming === 1 && sum.mockQuestions === 2 && sum.mocks === 1),
       `questionSummary counts the ${kind} example by Practice tab`,
     );
   }

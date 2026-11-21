@@ -223,6 +223,12 @@ export function UploadPanel({ onLoaded }: { onLoaded: (c: Celebration) => void }
         <div className="mt-3 flex flex-wrap gap-2">
           <CopyButton
             variant="primary"
+            text={() => questionsPrompt("pack")}
+            label="Copy AI prompt: whole pack"
+            copiedLabel="Copied. Paste it into your AI chat"
+          />
+          <CopyButton
+            variant="soft"
             text={() => questionsPrompt("topics")}
             label="Copy AI prompt: topic questions"
             copiedLabel="Copied. Paste it into your AI chat"

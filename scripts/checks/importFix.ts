@@ -52,7 +52,9 @@ console.log("import fix instructions (lib/importFix.ts)");
   );
   ok(
     planPrompt("2026-11-21").includes(FILE_SCHEMA.plan) &&
-      (["topics", "programming", "mocks"] as const).every((t) => questionsPrompt(t).includes(FILE_SCHEMA.questions)),
+      (["pack", "topics", "programming", "mocks"] as const).every((t) =>
+        questionsPrompt(t).includes(FILE_SCHEMA.questions),
+      ),
     "every AI prompt carries the same typed schema as the fix text",
   );
   ok(

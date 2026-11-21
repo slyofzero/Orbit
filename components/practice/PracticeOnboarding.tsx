@@ -1,7 +1,8 @@
 "use client";
 // What a Practice tab shows until its kind of question is loaded: an animated backdrop for the tab
 // (components/background/PracticeScene.tsx) and three steps (ask an AI → save the file → drop it here), like
-// the plan's welcome (PlanOnboarding). One component for all three tabs; only the words differ.
+// the plan's welcome (PlanOnboarding). One component for all three tabs; only the words differ. Every tab hands
+// out the same whole-pack prompt (practice, programming and mock tests in one file).
 // A dropped file is checked at once (lib/questionFile.ts), previewed, and imported in one go (pack.import).
 // Several files can be dropped together (the AI writes long sets in parts). The AI prompt is
 // lib/prompts/questionsPrompt.ts.
@@ -37,7 +38,6 @@ type Copy = {
   word: string; // shown with the animated "special" colours
   after: string;
   lead: string;
-  ask: string;
   dropTitle: string;
   /** What a file must hold to fill this tab. */
   has: (s: ReturnType<typeof questionSummary>) => number;
@@ -53,7 +53,6 @@ const COPY: Record<PracticeTab, Copy> = {
     word: "questions",
     after: ".",
     lead: "Topic practice is built from a question set that **you** load: your subjects, your topics and your questions (multiple choice, multiple select, numeric and short answer). Nothing is built in, so it works for any exam.",
-    ask: "Open any AI chat and tell it which subject and topics you are studying, how many questions you want and the mix of easy, medium and hard. Ask for **multiple choice**, **multiple select**, **numeric** and **short-answer** questions, each with a worked explanation.",
     dropTitle: "Drop your question file here",
     has: (s) => s.practice,
     hasNone: "practice questions",
@@ -66,7 +65,6 @@ const COPY: Record<PracticeTab, Copy> = {
     word: "problems",
     after: " to solve.",
     lead: "These are questions where you **write code** in an editor and then mark your own answer right or wrong. They come from a question file that you load, the same way as topic questions.",
-    ask: "Open any AI chat and tell it the language and the topics you want to practise, how many problems you want and how hard. Ask for a clear problem statement, optional **starter code** and a **model solution with an explanation** for each.",
     dropTitle: "Drop your programming questions here",
     has: (s) => s.programming,
     hasNone: "programming questions",
@@ -79,12 +77,14 @@ const COPY: Record<PracticeTab, Copy> = {
     word: "paper",
     after: " to sit.",
     lead: "A full-length mock is a fixed paper with its own questions, sections and a countdown timer, shown on a screen that copies the real exam. Papers come from a file that **you** load, so they match your exam.",
-    ask: "Open any AI chat and tell it the exam, its sections, the marks per question, the negative marking and the time limit. Ask for a full paper (or a past paper whose questions you have) with an **answer and explanation for every question**.",
     dropTitle: "Drop your mock test file here",
     has: (s) => s.mocks + s.mockQuestions,
     hasNone: "mock tests",
   },
 };
+
+const ASK =
+  "Open any AI chat and paste the prompt. It asks what you are studying, then writes your **whole pack** in one file: **practice questions** by subject and topic, **programming questions** and **mock tests**. Say which parts you want: a part you don't want is simply left empty.";
 
 const TAB_LINK: Record<PracticeTab, string> = {
   topics: "/practice?tab=topics",
@@ -221,7 +221,7 @@ export function PracticeOnboarding({
     if (out.added || out.mocks) onLoaded?.({ questions: out.added, mocks: out.mocks });
   };
 
-  const prompt = () => questionsPrompt(kind);
+  const prompt = () => questionsPrompt("pack");
   const stats: [number, string][] = (
     [
       [total.practice, "practice questions"],
@@ -250,7 +250,7 @@ export function PracticeOnboarding({
         <ol className="m-0 grid list-none gap-3.5 p-0">
           <Step n={1} title="Ask an AI to write them" delay={120}>
             <Text variant="muted" block>
-              {c.ask}
+              {ASK}
             </Text>
             <div className="flex flex-wrap items-center gap-2.5">
               <CopyButton

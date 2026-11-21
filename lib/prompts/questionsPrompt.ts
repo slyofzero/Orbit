@@ -1,5 +1,7 @@
-// The prompt the user pastes into any AI chat to get a question file Orbit can import (Practice → Topics,
-// Programming, Mocks). It is a product feature (AGENTS.md rule 9): it must describe lib/questionFile.ts exactly,
+// The prompt the user pastes into any AI chat to get a question file Orbit can import. "pack" (used by every
+// Practice tab's empty screen and first on Manage pack → Upload) asks for the whole pack: practice questions,
+// programming questions and mock tests in one file, with an empty list for a part the user doesn't want. The
+// per-tab kinds (Upload's other buttons) ask for one part only. It is a product feature (AGENTS.md rule 9): it must describe lib/questionFile.ts exactly,
 // and scripts/checks/questionFile.ts checks that each example passes the importer. Change both together.
 // Nothing here may assume a particular exam: Orbit works for any goal.
 
@@ -8,6 +10,8 @@ import { DIFFICULTIES, LIMITS, PACK_FORMAT, PACK_VERSION } from "@/lib/questionF
 import type { PracticeTab } from "@/lib/practice";
 
 type Example = Record<string, unknown>;
+/** Which prompt: the whole pack, or one Practice tab's part of it. */
+export type PromptKind = PracticeTab | "pack";
 
 const mcq: Example = {
   id: "la-1",
@@ -92,32 +96,37 @@ const mockQ2: Example = {
   answer: 3,
 };
 
-/** A small, valid example file for a tab, so the AI sees the exact shape. */
-export function exampleQuestions(kind: PracticeTab): Record<string, unknown> {
+const mock: Example = {
+  name: "Maths mock 1",
+  minutes: 30,
+  instructions: "Eight questions. **Negative marking** applies to multiple-choice questions.",
+  full_screen: false,
+  sections: [
+    { name: "Linear algebra", minutes: null, questions: ["m1-1"] },
+    { name: "Counting", minutes: 10, questions: ["m1-2"] },
+  ],
+};
+
+/** A small, valid example file for a prompt, so the AI sees the exact shape. */
+export function exampleQuestions(kind: PromptKind): Record<string, unknown> {
   const head = { format: PACK_FORMAT, version: PACK_VERSION };
+  if (kind === "pack")
+    return { ...head, name: "Maths pack", questions: [mcq, msq, nat, str, code, mockQ, mockQ2], mocks: [mock] };
   if (kind === "programming") return { ...head, name: "Programming practice", questions: [code] };
-  if (kind === "mocks")
-    return {
-      ...head,
-      name: "Maths mock 1",
-      questions: [mockQ, mockQ2],
-      mocks: [
-        {
-          name: "Maths mock 1",
-          minutes: 30,
-          instructions: "Eight questions. **Negative marking** applies to multiple-choice questions.",
-          full_screen: false,
-          sections: [
-            { name: "Linear algebra", minutes: null, questions: ["m1-1"] },
-            { name: "Counting", minutes: 10, questions: ["m1-2"] },
-          ],
-        },
-      ],
-    };
+  if (kind === "mocks") return { ...head, name: "Maths mock 1", questions: [mockQ, mockQ2], mocks: [mock] };
   return { ...head, name: "Maths practice", questions: [mcq, msq, nat, str] };
 }
 
-const WHAT: Record<PracticeTab, { want: string; ask: string; extra: string }> = {
+const WHAT: Record<PromptKind, { want: string; ask: string; extra: string }> = {
+  pack: {
+    want: "a whole question pack (practice questions by subject and topic, programming questions and mock tests, all in one file)",
+    ask: `2. PRACTICE: which subject(s) and topics, how many questions per topic, and the mix of ${DIFFICULTIES.join(" / ")}. The kinds are "mcq" (one correct choice), "msq" (several correct choices), "nat" (a number) and "str" (a short text answer); mix them unless I say otherwise.
+3. PROGRAMMING and MOCK TESTS: whether I want each. For programming: the language, the topics, how many problems and how hard, and whether I want starter code. For mock tests: how many papers, their sections, the marks per question, the negative marking and the time limit, and whether to copy a real paper's style.`,
+    extra: `The pack has three parts. Write every part I asked for; a part I don't want stays empty:
+- Practice: questions with "type" "mcq", "msq", "nat" or "str" and no "pool" (they appear in topic practice).
+- Programming: questions with "type": "code". Put the language in the "text" (e.g. "(Python)"), and the model solution, in a fenced code block, with a short explanation in "explanation". There is no "answer" for code questions. If I want no programming questions, write none.
+- Mock tests: every question of a paper goes in "questions" with "pool": "mock" (used only inside the mock, not in topic practice), and the paper goes in "mocks", listing its questions by "id" in its "sections". Each question is in exactly one section. If I want no mock tests, write "mocks": [] and no "pool": "mock" questions.`,
+  },
   topics: {
     want: "practice questions, grouped by subject and topic",
     ask: `2. Which subject(s) and topics, how many questions per topic, and the mix of ${DIFFICULTIES.join(" / ")}.
@@ -138,8 +147,8 @@ const WHAT: Record<PracticeTab, { want: string; ask: string; extra: string }> = 
   },
 };
 
-/** The full prompt text for one Practice tab. */
-export function questionsPrompt(kind: PracticeTab): string {
+/** The full prompt text: the whole pack, or one Practice tab's part. */
+export function questionsPrompt(kind: PromptKind): string {
   const w = WHAT[kind];
   return `You are helping me write ${w.want} for an app called Orbit. Orbit imports them from a JSON file you write.
 
