@@ -1,14 +1,22 @@
 "use client";
 // Manage plan (/planner/manage): the plan's counterpart of Manage pack. The title row holds the plan's actions
-// (Link questions, Unlink questions, Edit plan, Export plan, Upload plan: not built yet, useSoon, TODO.md) and
-// Back to planner. Below, every task of the plan in a table: From today · Past · All, a DateFilter (a day, week,
+// (Link questions, Unlink questions, Export plan, Upload plan: components/planner/PlanActions.tsx; Edit plan opens
+// /planner/edit) and Back to planner. Below, every task of the plan in a table: From today · Past · All, a DateFilter (a day, week,
 // month or weekday, typed or picked; it overrides the tabs) and the day's kind. A page is DAY_PAGE (5) plan days, each day's
 // tasks together with a heavier line between days; a done task's row is green, one missed on a past day red. From
 // today opens on today, Past on the latest day, All on the page holding today; changing a filter goes back there.
 
 import { useEffect, useState } from "react";
-import { KIND_LABEL, KIND_PILL, useSoon } from "@/components/dashboard/kit";
-import { IconChevronLeft, IconChevronRight } from "@/components/icons";
+import { KIND_LABEL, KIND_PILL } from "@/components/dashboard/kit";
+import { IconChevronLeft, IconChevronRight, IconPencil, IconSparkle, IconUnlink, IconUpload } from "@/components/icons";
+import {
+  LinkQuestions,
+  UnlinkQuestions,
+  UploadPlan,
+  pageNav,
+  useExportPlan,
+  type Clock,
+} from "@/components/planner/PlanActions";
 import {
   Button,
   DateFilter,
@@ -24,7 +32,7 @@ import {
 } from "@/components/ui";
 import { useQuery } from "@/lib/db/client";
 import type { ResultOf } from "@/lib/db/queries";
-import { formatRange, formatShort, formatDate, todayIST, type DateRange, type IsoDate } from "@/lib/dates";
+import { formatRange, formatShort, formatDate, istHour, todayIST, type DateRange } from "@/lib/dates";
 import { previewText } from "@/lib/manage";
 import { DAY_PAGE, TASK_WHEN, TASK_WHEN_LABEL, type TaskWhen } from "@/lib/planner";
 import type { PlanDayKind } from "@/types/tables";
@@ -35,13 +43,21 @@ const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? o
 
 /** Reads the clock only in the browser, so the server and the first render agree. */
 export function ManagePlan() {
-  const [today, setToday] = useState<IsoDate | null>(null);
-  useEffect(() => setToday(todayIST()), []);
-  return today ? <Tasks today={today} /> : null;
+  const [clock, setClock] = useState<Clock | null>(null);
+  useEffect(() => setClock({ today: todayIST(), hour: istHour() }), []);
+  return clock ? <Tasks clock={clock} /> : null;
 }
 
-function Tasks({ today }: { today: IsoDate }) {
-  const soon = useSoon();
+function Tasks({ clock }: { clock: Clock }) {
+  const { today } = clock;
+  const exportPlan = useExportPlan();
+  const [dialog, setDialog] = useState<"link" | "unlink" | "upload" | null>(null);
+  const shut = () => setDialog(null);
+  // back from Edit plan: the page slides in from the left (styles/animations/page-slide.css)
+  const [back] = useState(() => pageNav.leftEdit);
+  useEffect(() => {
+    pageNav.leftEdit = false;
+  }, []);
   const [when, setWhen] = useState<TaskWhen>("upcoming");
   const [kind, setKind] = useState<PlanDayKind | "">("");
   const [range, setRange] = useState<DateRange | null>(null); // a day, week, month or weekday; overrides the tabs
@@ -96,29 +112,29 @@ function Tasks({ today }: { today: IsoDate }) {
   ];
 
   return (
-    <>
+    <div className={back ? "motion-safe:animate-page-from-left" : undefined}>
       <div className="mb-[18px] flex flex-wrap items-center gap-3">
         <Heading level={1}>Manage plan</Heading>
         <div className="ml-auto flex flex-wrap gap-2">
           {data && (
             <>
-              <Button variant="soft" onClick={soon("Linking questions to the plan with AI")}>
+              <Button variant="special" icon={<IconSparkle />} onClick={() => setDialog("link")}>
                 Link questions
               </Button>
               {data.linked && (
-                <Button variant="soft" onClick={soon("Unlinking questions")}>
+                <Button variant="soft" icon={<IconUnlink />} onClick={() => setDialog("unlink")}>
                   Unlink questions
                 </Button>
               )}
-              <Button variant="soft" onClick={soon("Editing the plan")}>
+              <Button variant="soft" icon={<IconPencil />} href="/planner/edit">
                 Edit plan
               </Button>
-              <Button variant="soft" onClick={soon("Exporting the plan")}>
+              <Button variant="soft" loading={exportPlan.pending} onClick={exportPlan.run}>
                 Export plan
               </Button>
             </>
           )}
-          <Button variant="soft" onClick={soon("Uploading a new plan")}>
+          <Button variant="soft" icon={<IconUpload />} onClick={() => setDialog("upload")}>
             Upload plan
           </Button>
           <Button variant="secondary" href="/planner" icon={<IconChevronLeft />}>
@@ -126,6 +142,9 @@ function Tasks({ today }: { today: IsoDate }) {
           </Button>
         </div>
       </div>
+      <LinkQuestions open={dialog === "link"} onClose={shut} clock={clock} />
+      <UnlinkQuestions open={dialog === "unlink"} onClose={shut} clock={clock} />
+      <UploadPlan open={dialog === "upload"} onClose={shut} clock={clock} current={data?.plan.name ?? null} />
 
       {!data ? (
         <EmptyState icon="🗓️" title="There is no plan yet.">
@@ -245,6 +264,6 @@ function Tasks({ today }: { today: IsoDate }) {
           )}
         </>
       )}
-    </>
+    </div>
   );
 }

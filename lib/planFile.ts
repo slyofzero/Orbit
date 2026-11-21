@@ -275,6 +275,35 @@ export function parsePlanFile(input: unknown): PlanParse {
   return { plan: { name, description, starts_on, ends_on, milestones, days }, errors, warnings };
 }
 
+/** Export plan: a plan as the file parsePlanFile reads back (every day as its own "date", no ranges).
+ *  Optional fields that are empty are left out, so the file stays short. Ticks are progress, not plan: they
+ *  aren't in it (Export progress on the dashboard keeps those). */
+export function planToFile(p: PlanFile) {
+  return {
+    format: PLAN_FORMAT,
+    version: PLAN_VERSION,
+    name: p.name,
+    ...(p.description ? { description: p.description } : {}),
+    starts_on: p.starts_on,
+    ends_on: p.ends_on,
+    milestones: p.milestones.map((m) => ({
+      name: m.name,
+      ...(m.short ? { short: m.short } : {}),
+      date: m.date,
+      ...(m.note ? { note: m.note } : {}),
+    })),
+    days: p.days.map((d) => ({
+      date: d.date,
+      title: d.title,
+      kind: d.kind,
+      ...(d.hours !== null ? { hours: d.hours } : {}),
+      ...(d.note ? { note: d.note } : {}),
+      tasks: d.tasks,
+      ...(d.questions.length ? { questions: d.questions } : {}),
+    })),
+  };
+}
+
 /** Counts for a preview: days, study days (with tasks), tasks, linked questions. */
 export function planSummary(p: PlanFile) {
   return {

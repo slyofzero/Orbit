@@ -14,8 +14,20 @@ import {
 } from "@/lib/planner";
 import { addDays, weekday } from "@/lib/dates";
 import { QUERIES, type QueryDef } from "@/lib/db/queries";
+import { checkDay, idsFromText } from "@/lib/planEdit";
+import { parsePlanFile, planToFile } from "@/lib/planFile";
+import {
+  PROMPT_LIMIT,
+  isTooLong,
+  linkFiles,
+  linkPrompt,
+  parseLinks,
+  readAnswer,
+  type LinkInput,
+} from "@/lib/planLinks";
+import { examplePlan } from "@/lib/prompts/planPrompt";
 import { transaction } from "@/lib/db/sql";
-import { ok, freshDb, bunSql } from "@/scripts/checks/helpers";
+import { ok, freshDb, bunSql, seed } from "@/scripts/checks/helpers";
 
 console.log("planner rules (lib/planner.ts)");
 
@@ -218,5 +230,280 @@ console.log("planner rules (lib/planner.ts)");
   ok(
     tasks({ kind, days: 2000 }).rows.every((r) => r.kind === kind),
     "planner.tasks: kind filter",
+  );
+}
+
+console.log("plan actions (lib/planLinks.ts, lib/planEdit.ts, lib/db/queries/planEdit.ts)");
+{
+  // Export plan: what planToFile writes, parsePlanFile reads back unchanged
+  const ex = parsePlanFile(JSON.stringify(examplePlan("2026-11-20"))).plan!;
+  const back = parsePlanFile(JSON.stringify(planToFile(ex)));
+  ok(
+    back.plan !== null && JSON.stringify(back.plan) === JSON.stringify(ex),
+    "planToFile: an exported plan imports back exactly the same",
+  );
+
+  // the AI reply
+  ok(
+    JSON.stringify(readAnswer('```json\n{"days": []}\n```').value) === '{"days":[]}',
+    "readAnswer: strips a code fence",
+  );
+  const cut = readAnswer('{"days": [{"date": "2026-11-21", "questions": ["q_1"]}');
+  ok(
+    cut.errors.length === 0 && cut.warnings.length === 1 && Array.isArray((cut.value as { days: unknown[] }).days),
+    "readAnswer: a reply cut off early gets its closing brackets back, with a warning",
+  );
+  ok(readAnswer("not json at all").errors.length === 1, "readAnswer: plain text is refused");
+  const rules = {
+    dates: new Set(["2026-11-19", "2026-11-21", "2026-11-22"]),
+    practice: new Set(["q_1", "q_2", "q_3"]),
+    mock: new Set(["m_1"]),
+    locked: new Set(["2026-11-19"]),
+  };
+  const r = parseLinks(
+    {
+      days: [
+        { date: "2026-11-21", questions: ["q_1", "q_1", "nope", "m_1", "q_2"] },
+        { date: "2026-11-19", questions: ["q_3"] },
+        { date: "2030-01-01", questions: ["q_3"] },
+        { date: "2026-11-22", practice: ["q_3"] },
+      ],
+    },
+    rules,
+  );
+  ok(
+    JSON.stringify(r.links) ===
+      '[{"date":"2026-11-21","questions":["q_1","q_2"]},{"date":"2026-11-22","questions":["q_3"]}]' &&
+      r.days === 2 &&
+      r.questions === 3,
+    "parseLinks: keeps known ids once, reads v1's \"practice\", in the reply's order",
+  );
+  ok(
+    r.warnings.length === 4 &&
+      r.warnings.some((w) => w.includes("locked")) &&
+      r.warnings.some((w) => w.includes("nope")) &&
+      r.warnings.some((w) => w.includes("mock test")) &&
+      r.warnings.some((w) => w.includes("2030-01-01")),
+    "parseLinks: reports a locked day, an unknown id, a mock question and a date outside the plan",
+  );
+  ok(
+    parseLinks({ days: [{ date: "2026-11-19", questions: ["q_1"] }] }, rules).links === null &&
+      parseLinks({ nothing: 1 }, rules).errors.length === 1,
+    "parseLinks: nothing usable (only a locked day, or the wrong shape) is refused",
+  );
+  const input: LinkInput = {
+    plan: { name: "P", description: "my words" },
+    days: [
+      { date: "2026-11-19", kind: "study", hours: 2, title: "Old day", tasks: ["x"] },
+      { date: "2026-11-21", kind: "study", hours: 2, title: "Graphs", tasks: ["Read about **trees**"] },
+    ],
+    topics: [{ id: "tp_1", name: "Graphs", subject: "Maths", rating: "no_idea" }],
+    questions: [
+      { id: "q_1", topic_id: "tp_1", type: "mcq", marks: 1, difficulty: "easy", tags: [], text: "What is a tree?" },
+    ],
+    current: [{ date: "2026-11-21", questions: ["q_1"] }],
+    locked: ["2026-11-19"],
+  };
+  const prompt = linkPrompt(input);
+  ok(
+    prompt.includes("q_1 | tp_1 | mcq | 1m | easy") &&
+      prompt.includes("Graphs") &&
+      !prompt.includes("Old day") &&
+      prompt.includes("I ALREADY HAVE LINKS") &&
+      prompt.includes("my words") &&
+      prompt.includes("no idea"),
+    "linkPrompt: open days, topics with feelings, questions and current links; locked days left out",
+  );
+  ok(
+    !/\b(GATE|JEE|NEET|UPSC|SAT|GRE)\b/.test(prompt + linkFiles(input).prompt),
+    "link prompts name no particular exam",
+  );
+  const files = linkFiles(input);
+  ok(
+    files.bank.questionCount === 1 && files.plan.days.length === 1 && files.prompt.includes("question-bank.json"),
+    "linkFiles: plan.json holds the open days, question-bank.json every question",
+  );
+  ok(isTooLong("x".repeat(PROMPT_LIMIT + 1)) && !isTooLong("x"), "isTooLong: past PROMPT_LIMIT");
+
+  // the day editor's rules
+  const form = { title: " Day ", kind: "study" as const, hours: "", note: "", tasks: [], questions: [] };
+  ok(checkDay({ ...form, title: "  " }).day === null, "checkDay: a day needs a title");
+  ok(checkDay({ ...form, hours: "25" }).day === null, "checkDay: hours from 0 to 24");
+  const c = checkDay({
+    ...form,
+    hours: "1.5",
+    tasks: [
+      { id: 1, body: " a " },
+      { id: null, body: "  " },
+    ],
+    questions: ["q_1", "q_1"],
+  });
+  ok(
+    c.day?.title === "Day" && c.day.hours === 1.5 && c.day.tasks.length === 1 && c.day.questions.length === 1,
+    "checkDay: trims, drops blank task rows and repeated questions",
+  );
+  ok(idsFromText('["q_1", "q_2"]\nq_3, q_1').join() === "q_1,q_2,q_3", "idsFromText: any list of ids, each once");
+
+  // the queries, against the real schema
+  const d = freshDb();
+  const s = bunSql(d);
+  const run = <R>(name: keyof typeof QUERIES, params?: unknown) =>
+    transaction(s, () => (QUERIES[name] as unknown as QueryDef<unknown, R>).run(s, params));
+  const n = (q: string, p: (string | number)[] = []) => (d.query(q).get(...p) as { n: number }).n;
+  const today = "2026-11-20";
+  seed(d, 6);
+  d.exec("UPDATE questions SET pool = 'mock' WHERE id = 'q_5'");
+  run("dev.samplePlan", { today });
+  const days = d.query("SELECT id, on_date FROM plan_days ORDER BY on_date").all() as { id: number; on_date: string }[];
+  const past = days.find((x) => x.on_date < today)!;
+  const future = days.filter((x) => x.on_date > today);
+  const clock = { today, hour: 8 }; // today still open
+  d.query("INSERT INTO plan_day_questions (day_id, question_id, position) VALUES (?, 'q_0', 1)").run(past.id);
+
+  const exp = run<{ file: unknown; days: number; links: number }>("plan.export");
+  const again = parsePlanFile(JSON.stringify(exp.file));
+  ok(
+    again.plan !== null && again.plan.days.length === days.length && exp.links === 1,
+    "plan.export: the active plan as a file that parses, links included",
+  );
+
+  const li = run<{ input: LinkInput; open: number }>("plan.linkInput", clock);
+  ok(
+    li.input.questions.length === 5 &&
+      li.input.locked.every((x) => x < today) &&
+      li.open === days.filter((x) => x.on_date >= today).length,
+    "plan.linkInput: practice questions only; past days locked, today open before the lock hour",
+  );
+  const reply = JSON.stringify({
+    days: [
+      { date: future[0].on_date, questions: ["q_1", "q_2"] },
+      { date: past.on_date, questions: ["q_3"] },
+      { date: future[1].on_date, questions: ["q_5", "q_9"] },
+    ],
+  });
+  const chk = run<{ errors: string[]; days: number }>("plan.checkLinks", { ...clock, text: reply });
+  ok(chk.errors.length === 0 && chk.days === 1, "plan.checkLinks: checks a reply without saving");
+  ok(n("SELECT count(*) AS n FROM plan_day_questions") === 1, "plan.checkLinks writes nothing");
+  const ap = run<{ ok: boolean; days: number }>("plan.applyLinks", { ...clock, text: reply });
+  ok(
+    ap.ok &&
+      n("SELECT count(*) AS n FROM plan_day_questions WHERE day_id = ?", [future[0].id]) === 2 &&
+      n("SELECT count(*) AS n FROM plan_day_questions WHERE day_id = ?", [past.id]) === 1 &&
+      n("SELECT count(*) AS n FROM plan_day_questions WHERE question_id = 'q_3'") === 0,
+    "plan.applyLinks: links the open day; the past day keeps its own link and gets nothing new",
+  );
+  const ap2 = run<{ ok: boolean; cleared: number }>("plan.applyLinks", {
+    ...clock,
+    text: JSON.stringify({ days: [{ date: future[1].on_date, questions: ["q_4"] }] }),
+  });
+  ok(
+    ap2.ok &&
+      ap2.cleared === 1 &&
+      n("SELECT count(*) AS n FROM plan_day_questions WHERE day_id = ?", [future[0].id]) === 0,
+    "plan.applyLinks: the reply replaces the open days' links",
+  );
+  ok(
+    !run<{ ok: boolean }>("plan.applyLinks", { ...clock, text: "nope" }).ok &&
+      n("SELECT count(*) AS n FROM plan_day_questions") === 2,
+    "plan.applyLinks: a bad reply changes nothing",
+  );
+  ok(
+    n("SELECT questions_total AS n FROM plan_day_progress WHERE day_id = ?", [future[1].id]) === 1,
+    "plan.applyLinks: the day's progress counts follow",
+  );
+  const un = run<{ days: number; kept: number }>("plan.unlinkAll", clock);
+  ok(
+    un.days === 1 && un.kept === 1 && n("SELECT count(*) AS n FROM plan_day_questions") === 1,
+    "plan.unlinkAll: unlinks open days, locked days keep theirs",
+  );
+
+  // the day editor
+  const day = future[0].id;
+  const ed = run<{ tasks: { id: number; body: string }[] }>("plan.editDay", { dayId: day });
+  d.exec("DELETE FROM plan_task_ticks");
+  d.query("INSERT INTO plan_task_ticks (task_id, done_at) VALUES (?, 1)").run(ed.tasks[0].id);
+  const save = run<{ ok: boolean; tasks: number; questions: number; dropped: number }>("plan.saveDay", {
+    ...clock,
+    dayId: day,
+    form: {
+      title: "Edited",
+      kind: "light",
+      hours: "2",
+      note: "n",
+      tasks: [
+        { id: null, body: "brand new" },
+        { id: ed.tasks[0].id, body: "renamed" },
+      ],
+      questions: ["q_1", "q_5", "q_404"],
+    },
+  });
+  const after = run<{
+    day: { title: string; kind: string; hours: number };
+    tasks: { id: number; body: string; done: boolean }[];
+  }>("plan.editDay", { dayId: day });
+  ok(
+    save.ok &&
+      save.questions === 1 &&
+      save.dropped === 2 &&
+      after.day.title === "Edited" &&
+      after.day.kind === "light" &&
+      after.day.hours === 2 &&
+      after.tasks.map((t) => t.body).join() === "brand new,renamed",
+    "plan.saveDay: saves the details, the task order and only linkable questions",
+  );
+  ok(
+    after.tasks.find((t) => t.body === "renamed")!.done && !after.tasks.find((t) => t.body === "brand new")!.done,
+    "plan.saveDay: a tick follows its task when tasks are renamed or reordered",
+  );
+  ok(
+    n("SELECT count(*) AS n FROM plan_tasks WHERE day_id = ?", [day]) === 2 &&
+      n("SELECT tasks_total AS n FROM plan_day_progress WHERE day_id = ?", [day]) === 2,
+    "plan.saveDay: removed tasks are deleted and the progress counts follow",
+  );
+  const locked = run<{ ok: boolean }>("plan.saveDay", { ...clock, dayId: past.id, form: { ...form, title: "X" } });
+  const lateToday = days.find((x) => x.on_date === today);
+  ok(
+    !locked.ok &&
+      (!lateToday ||
+        !run<{ ok: boolean }>("plan.saveDay", { today, hour: 10, dayId: lateToday.id, form: { ...form, title: "X" } })
+          .ok),
+    "plan.saveDay: a past day, and today after the lock hour, are refused",
+  );
+  const free = (() => {
+    const taken = new Set(days.map((x) => x.on_date));
+    for (let i = 1; i < 60; i++) if (!taken.has(addDays(today, i))) return addDays(today, i);
+    return null;
+  })();
+  const plan = d.query("SELECT starts_on, ends_on FROM plans").get() as { starts_on: string; ends_on: string };
+  if (free && free <= plan.ends_on) {
+    const add = run<{ ok: boolean; dayId: number }>("plan.addDay", { date: free });
+    ok(
+      add.ok && n("SELECT count(*) AS n FROM plan_tasks WHERE day_id = ?", [add.dayId]) === 1,
+      "plan.addDay: a free date gets a new day with one task",
+    );
+    ok(!run<{ ok: boolean }>("plan.addDay", { date: free }).ok, "plan.addDay: a date already planned is refused");
+    ok(
+      run<{ ok: boolean }>("plan.deleteDay", { ...clock, dayId: add.dayId }).ok &&
+        n("SELECT count(*) AS n FROM plan_tasks WHERE day_id = ?", [add.dayId]) === 0,
+      "plan.deleteDay: deletes a day with its tasks",
+    );
+  }
+  ok(
+    !run<{ ok: boolean }>("plan.addDay", { date: addDays(plan.ends_on, 1) }).ok,
+    "plan.addDay: outside the plan refused",
+  );
+  ok(!run<{ ok: boolean }>("plan.deleteDay", { ...clock, dayId: past.id }).ok, "plan.deleteDay: a past day is refused");
+  ok(
+    run<{ ok: boolean }>("plan.saveDetails", { name: " New name ", description: "" }).ok &&
+      (d.query("SELECT name, description FROM plans").get() as { name: string; description: null }).name ===
+        "New name" &&
+      !run<{ ok: boolean }>("plan.saveDetails", { name: " ", description: "" }).ok,
+    "plan.saveDetails: renames the plan; a blank name is refused",
+  );
+  const hits = run<{ id: string }[]>("plan.findQuestions", { search: "WORD2" });
+  const byIds = run<{ id: string }[]>("plan.findQuestions", { search: "", ids: ["q_3", "q_5", "q_1"] });
+  ok(
+    hits.length === 1 && hits[0].id === "q_2" && byIds.map((h) => h.id).join() === "q_3,q_1",
+    "plan.findQuestions: by text (any case), or by ids in their order (mock questions left out)",
   );
 }

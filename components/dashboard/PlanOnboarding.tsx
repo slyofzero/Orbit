@@ -28,10 +28,26 @@ import { formatLong, todayIST, type IsoDate } from "@/lib/dates";
 import { parsePlanFile, planSummary, type PlanParse } from "@/lib/planFile";
 import { planPrompt } from "@/lib/prompts/planPrompt";
 
-export function Step({ n, title, children, delay }: { n: number; title: string; children: ReactNode; delay: number }) {
+/** One numbered step. `bare` drops the card (border, background, padding), e.g. inside a dialog. */
+export function Step({
+  n,
+  title,
+  children,
+  delay,
+  bare = false,
+}: {
+  n: number;
+  title: string;
+  children: ReactNode;
+  delay: number;
+  bare?: boolean;
+}) {
   return (
     <li
-      className="grid animate-card-in grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 rounded-[22px] border border-line bg-sheet/80 p-5 backdrop-blur-sm"
+      className={cx(
+        "grid animate-card-in grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2",
+        !bare && "rounded-[22px] border border-line bg-sheet/80 p-5 backdrop-blur-sm",
+      )}
       style={{ animationDelay: `${delay}ms`, animationFillMode: "both" }}
     >
       <span className="special-fill animate-flow grid size-10 place-items-center rounded-full font-display text-lg font-extrabold">

@@ -18,6 +18,7 @@
 
 import { databaseQueries } from "@/lib/db/queries/database";
 import { planQueries } from "@/lib/db/queries/plan";
+import { planEditQueries } from "@/lib/db/queries/planEdit";
 import { packQueries } from "@/lib/db/queries/pack";
 import { backupQueries } from "@/lib/db/queries/backup";
 import { dashboardQueries } from "@/lib/db/queries/dashboard";
@@ -35,6 +36,7 @@ export type { QueryDef };
 export const QUERIES = {
   ...databaseQueries,
   ...planQueries,
+  ...planEditQueries,
   ...packQueries,
   ...backupQueries,
   ...dashboardQueries,

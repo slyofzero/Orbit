@@ -96,6 +96,14 @@ Plans arrive as one JSON file, usually written by an AI chat from the prompt on 
 - **Question links** whose ids aren't in the question bank yet are left out, with a warning (load the pack first to keep them).
 - **v1 files** use a different shape (numbered weekdays, `phases`, `links`, a `questions` target count). They need their own converter (rule 3); not built yet.
 
+## 5c. Linking questions to days (Manage plan)
+
+- **Link questions** hands an AI chat the plan's open days (date, kind, hours, title, tasks), the topics with the user's ratings and every practice question (id, topic, type, marks, difficulty, tags, start of the text): `lib/planLinks.ts` `linkPrompt`. Past `PROMPT_LIMIT` characters it offers two files instead (`linkFiles`).
+- **The reply** is `{ "days": [ { "date": "YYYY-MM-DD", "questions": ["question id", …] } ] }` (v1's `"practice"` is read too). `parseLinks` drops unknown ids, mock-only questions, dates outside the plan and locked days, each with a warning; nothing usable refuses. The prompt, the files and the checker change together (AGENTS.md rule 9).
+- **Applying** replaces the links of every open day (an open day the reply leaves out loses its links). A link that stays is updated in place, so its tick survives.
+- **Locked days** (`lib/dashboard.ts` `dayLock`: past days, and today after 9 AM IST) are never changed by Link, Unlink or Edit plan.
+- v1 also linked a **mock test** and a short **note** per day; there is no column for either yet (§6), so the reply doesn't carry them.
+
 ## 6. Not in this design yet (add with a migration when needed)
 
 - **Phases and milestones** (the v1 coloured stretches and exam dates).
