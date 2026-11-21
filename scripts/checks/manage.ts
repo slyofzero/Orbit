@@ -25,6 +25,7 @@ import {
 } from "@/lib/manage";
 import { editBoxes, editPrompt } from "@/lib/prompts/editPrompt";
 import { parseQuestionFile } from "@/lib/questionFile";
+import { sampleFile, sampleFileName } from "@/lib/samplePacks";
 import { QUERIES, type QueryDef, type ResultOf } from "@/lib/db/queries";
 import { transaction } from "@/lib/db/sql";
 import type { QuestionDetail } from "@/lib/questions";
@@ -673,4 +674,36 @@ console.log("manage pack: mock tests (manage.mocks, manage.mock, sections, quest
   );
   q("manage.removeMock", { id: b.id });
   ok(count(d, `SELECT count(*) AS n FROM mocks WHERE id = '${b.id}'`) === 0, "delete mock: never taken = deleted");
+}
+
+// ---------------------------------------------------------------------------
+console.log("dev samples import like a file (lib/samplePacks.ts, dev.addSample*)");
+{
+  for (const kind of ["question", "code", "mock"] as const) {
+    const r = parseQuestionFile(JSON.stringify(sampleFile(kind, 3)));
+    ok(!!r.file && r.errors.length === 0 && r.warnings.length === 0, `sample ${kind}: a valid question file`);
+  }
+  ok(sampleFileName("mock", 3) === "sample-mock-3.json", "sample: file name");
+
+  const d = freshDb();
+  const s = bunSql(d);
+  const q = <N extends keyof typeof QUERIES>(name: N, params?: unknown) =>
+    transaction(s, () => (QUERIES[name] as unknown as QueryDef<unknown, ResultOf<N>>).run(s, params));
+  const a = q("dev.addSampleQuestion");
+  const b = q("dev.addSampleQuestion");
+  q("dev.addSampleCode");
+  const mockId = q("dev.addSampleMock");
+  const packs = q("manage.packs");
+  ok(a !== b && packs.length === 4, "dev: every button press is one imported pack");
+  ok(
+    packs.every((p) => p.file_name?.startsWith("sample-")) && packs.some((p) => p.mocks === 1 && p.questions === 3),
+    "dev: the packs carry the sample's file name; the mock pack holds its mock and 3 questions",
+  );
+  ok(
+    count(d, "SELECT count(*) AS n FROM questions WHERE pack_id IS NULL") === 0 &&
+      count(d, `SELECT count(*) AS n FROM mocks WHERE id = '${mockId}' AND full_screen = 1`) === 1,
+    "dev: nothing is saved outside a pack; the sample mock is full screen",
+  );
+  const gone = q("manage.removePack", { id: packs.find((p) => p.mocks === 1)!.id });
+  ok(gone.mocks === 1 && gone.questions === 3, "dev: a sample pack is removed like any other");
 }

@@ -169,6 +169,18 @@ console.log("sample question pack (samples/questions/sample-topics.json)");
   const parsed = parseQuestionFile(text);
   ok(parsed.file && parsed.warnings.length === 0, "sample pack: the dev button's file is valid, no warnings");
   ok(parsed.file && questionSummary(parsed.file).practice === 10, "sample pack: 10 practice questions");
+  const full = parseQuestionFile(
+    readFileSync(join(import.meta.dir, "..", "..", "samples", "questions", "sample-full-pack.json"), "utf8"),
+  );
+  const sum = full.file && questionSummary(full.file);
+  ok(
+    full.errors.length === 0 &&
+      full.warnings.length === 0 &&
+      sum?.practice === 32 &&
+      sum.programming === 7 &&
+      sum.mocks === 2,
+    "full sample pack (the Topics DEV button's file): valid, no warnings, 32 practice · 7 programming · 2 mocks",
+  );
 }
 {
   const d = freshDb();

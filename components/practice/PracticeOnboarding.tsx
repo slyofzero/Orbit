@@ -134,11 +134,12 @@ export function PracticeOnboarding({
   const addMock = useMutation("dev.addSampleMock");
   const toast = useToast();
   const [samplePending, setSamplePending] = useState(false);
-  /** Imports the sample question pack (samples/questions/sample-topics.json) like a dropped file. */
+  /** Imports the full sample pack (samples/questions/sample-full-pack.json: practice, programming and 2 mocks)
+   *  like a dropped file. */
   const loadSamplePack = async (): Promise<Celebration | undefined> => {
-    const { default: pack } = await import("@/samples/questions/sample-topics.json");
+    const { default: pack } = await import("@/samples/questions/sample-full-pack.json");
     const text = JSON.stringify(pack, null, 2);
-    const r = await imp.run({ text, fileName: "sample-topics.json", fileHash: await sha256(text) });
+    const r = await imp.run({ text, fileName: "sample-full-pack.json", fileHash: await sha256(text) });
     if (!r) return; // the hook already showed the error
     if (!r.ok) {
       toast(r.errors[0], "error");
@@ -148,7 +149,7 @@ export function PracticeOnboarding({
   };
   // the dev shortcut of each tab: a sample of what the tab holds
   const sample: { label: string; go: () => Promise<Celebration | undefined> } = {
-    topics: { label: "the sample question pack (10 questions)", go: loadSamplePack },
+    topics: { label: "the full sample pack (32 practice, 7 programming, 2 mocks)", go: loadSamplePack },
     programming: {
       label: "one sample programming question",
       go: async () => ((await addCode.run()) ? { questions: 1, mocks: 0 } : undefined),

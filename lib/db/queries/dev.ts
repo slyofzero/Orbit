@@ -1,13 +1,19 @@
-// Dev-only queries for /dev/db (they refuse to run in production).
+// Dev-only queries for /dev/db and the Practice tabs' DEV buttons (they refuse to run in production).
 // Named queries (docs/STORAGE.md §2); how to write one: lib/db/queries/index.ts.
+// The "add a sample" buttons import a small question file (lib/samplePacks.ts) through pack.import, exactly like an
+// uploaded file, so each sample is a real pack (listed in Manage pack → Upload, removable there).
 
 import { read, write } from "@/lib/db/queries/core";
 
-import { decode, insertSql } from "@/lib/db/codec";
+import { decode } from "@/lib/db/codec";
 
 import { TABLES, type Sql } from "@/lib/db/sql";
 
-import type { AnswerOutcome, QuestionCodeRow, QuestionMcqRow, QuestionRow } from "@/types/tables";
+import { packQueries } from "@/lib/db/queries/pack";
+
+import { sampleFile, sampleFileName, type SampleKind } from "@/lib/samplePacks";
+
+import type { AnswerOutcome, QuestionMcqRow, QuestionRow } from "@/types/tables";
 
 import { addDays, weekday, type IsoDate } from "@/lib/dates";
 
@@ -16,125 +22,46 @@ function devOnly() {
   if (process.env.NODE_ENV === "production") throw new Error("This is a dev-only query.");
 }
 
-/** Inserts a bare `questions` row under the dev topic and returns its id (the type's own row is the caller's). */
-function devQuestion(sql: Sql, o: { type: QuestionRow["type"]; pool: QuestionRow["pool"]; stem: string }): string {
-  const now = Date.now();
-  const id = `q_dev${crypto.randomUUID().replace(/-/g, "").slice(0, 10)}`;
-  const q: QuestionRow = {
-    id,
-    type: o.type,
-    topic_id: "tp_dev",
-    pack_id: null,
-    pool: o.pool,
-    marks: 1,
-    negative_marks: o.type === "mcq" ? 1 / 3 : 0,
-    difficulty: "easy",
-    stem: o.stem,
-    explanation: null,
-    content_hash: id,
-    legacy_id: null,
-    created_at: now,
-    updated_at: now,
-    retired_at: null,
-  };
-  const ins = insertSql("questions", q as unknown as Record<string, unknown>);
-  sql.run(ins.query, ins.params);
-  return id;
+const IMPORT = packQueries["pack.import"];
+
+/** Imports the next sample of a kind through pack.import and returns the new pack's id. The number is the first
+ *  one whose question isn't in the bank yet, so the importer never skips it as already there. */
+function importSample(sql: Sql, kind: SampleKind): string {
+  let n = sql.get<{ n: number }>("SELECT count(*) + 1 AS n FROM packs")!.n;
+  const firstText = (k: number) => sampleFile(kind, k).questions[0].text;
+  while (sql.get("SELECT 1 FROM questions WHERE stem = ? AND retired_at IS NULL LIMIT 1", [firstText(n)])) n++;
+  const r = IMPORT.run(sql, {
+    text: JSON.stringify(sampleFile(kind, n), null, 2),
+    fileName: sampleFileName(kind, n),
+    fileHash: null,
+  });
+  if (!r.ok) throw new Error(`The sample ${kind} didn't import: ${r.errors[0]}`);
+  return r.packId;
 }
 
 export const devQueries = {
-  /** Adds one sample MCQ (and the subject / topic it needs). */
-  "dev.addSampleQuestion": write(["subjects", "topics", "questions", "question_mcq"], (sql) => {
+  /** Adds one sample practice MCQ (a one-question pack). Returns the question's id. */
+  "dev.addSampleQuestion": write(IMPORT.tables, (sql) => {
     devOnly();
-    sql.run("INSERT OR IGNORE INTO subjects (id, name) VALUES ('sb_dev', 'Dev subject')");
-    sql.run("INSERT OR IGNORE INTO topics (id, subject_id, name) VALUES ('tp_dev', 'sb_dev', 'Dev topic')");
-    const n = sql.get<{ n: number }>("SELECT count(*) + 1 AS n FROM questions")!.n;
-    const now = Date.now();
-    const id = `q_dev${crypto.randomUUID().replace(/-/g, "").slice(0, 10)}`; // random: two in one ms must differ
-    const q: QuestionRow = {
-      id,
-      type: "mcq",
-      topic_id: "tp_dev",
-      pack_id: null,
-      pool: "practice",
-      marks: 1,
-      negative_marks: 1 / 3,
-      difficulty: "easy",
-      stem: `Sample question ${n}: what is $\\int_0^1 ${n}x\\,dx$?`,
-      explanation: null,
-      content_hash: id,
-      legacy_id: null,
-      created_at: now,
-      updated_at: now,
-      retired_at: null,
-    };
-    const mcq: QuestionMcqRow = { question_id: id, options: [`$${n / 2}$`, `$${n}$`, `$${n * 2}$`, "$0$"], correct: 0 };
-    for (const [table, row] of [
-      ["questions", q],
-      ["question_mcq", mcq],
-    ] as const) {
-      const ins = insertSql(table, row as unknown as Record<string, unknown>);
-      sql.run(ins.query, ins.params);
-    }
-    return id;
+    const pack = importSample(sql, "question");
+    return sql.get<{ id: string }>("SELECT id FROM questions WHERE pack_id = ? LIMIT 1", [pack])!.id;
   }),
 
-  /** Adds one sample code question (shows in the Programming tab). */
-  "dev.addSampleCode": write(["subjects", "topics", "questions", "question_code"], (sql) => {
+  /** Adds one sample code question (a one-question pack; shows in the Programming tab). Returns its id. */
+  "dev.addSampleCode": write(IMPORT.tables, (sql) => {
     devOnly();
-    sql.run("INSERT OR IGNORE INTO subjects (id, name) VALUES ('sb_dev', 'Dev subject')");
-    sql.run("INSERT OR IGNORE INTO topics (id, subject_id, name) VALUES ('tp_dev', 'sb_dev', 'Dev topic')");
-    const n = sql.get<{ n: number }>("SELECT count(*) + 1 AS n FROM questions WHERE type = 'code'")!.n;
-    const id = devQuestion(sql, {
-      type: "code",
-      pool: "practice",
-      stem: `Sample program ${n}: write a function \`total(xs)\` that returns the sum of the list \`xs\`.\n\nFor example, \`total([1, 2, 3])\` is $6$.`,
-    });
-    const code: QuestionCodeRow = { question_id: id, starter: "def total(xs):\n    # your code here\n    pass\n" };
-    const ins = insertSql("question_code", code as unknown as Record<string, unknown>);
-    sql.run(ins.query, ins.params);
-    return id;
+    const pack = importSample(sql, "code");
+    return sql.get<{ id: string }>("SELECT id FROM questions WHERE pack_id = ? LIMIT 1", [pack])!.id;
   }),
 
-  /** Adds one sample mock: 30 minutes, full screen, one section, three mock-only MCQs (shows in the Mocks tab). */
-  "dev.addSampleMock": write(
-    ["subjects", "topics", "questions", "question_mcq", "mocks", "mock_sections", "mock_items"],
-    (sql) => {
-      devOnly();
-      sql.run("INSERT OR IGNORE INTO subjects (id, name) VALUES ('sb_dev', 'Dev subject')");
-      sql.run("INSERT OR IGNORE INTO topics (id, subject_id, name) VALUES ('tp_dev', 'sb_dev', 'Dev topic')");
-      const n = sql.get<{ n: number }>("SELECT count(*) + 1 AS n FROM mocks")!.n;
-      const now = Date.now();
-      const mockId = `mk_dev${crypto.randomUUID().replace(/-/g, "").slice(0, 10)}`;
-      sql.run(
-        `INSERT INTO mocks (id, name, instructions, minutes, full_screen, position, created_at, updated_at)
-         VALUES (?, ?, ?, 30, 1, ?, ?, ?)`,
-        [mockId, `Sample mock ${n}`, "A short sample paper: **3 questions**, 30 minutes.", n, now, now],
-      );
-      const section = sql.get<{ id: number }>(
-        "INSERT INTO mock_sections (mock_id, name, position, minutes) VALUES (?, 'Section A', 1, NULL) RETURNING id",
-        [mockId],
-      )!.id;
-      for (let k = 1; k <= 3; k++) {
-        const id = devQuestion(sql, {
-          type: "mcq",
-          pool: "mock",
-          stem: `Mock ${n}, question ${k}: what is $${k} + ${k}$?`,
-        });
-        const mcq: QuestionMcqRow = {
-          question_id: id,
-          options: [`$${k}$`, `$${2 * k}$`, `$${3 * k}$`, "$0$"],
-          correct: 1,
-        };
-        const ins = insertSql("question_mcq", mcq as unknown as Record<string, unknown>);
-        sql.run(ins.query, ins.params);
-        sql.run("INSERT INTO mock_items (section_id, question_id, position) VALUES (?, ?, ?)", [section, id, k]);
-      }
-      return mockId;
-    },
-  ),
+  /** Adds one sample mock (a pack with a 30-minute full-screen mock of three mock-only MCQs; shows in the Mocks
+   *  tab). Returns the mock's id. */
+  "dev.addSampleMock": write(IMPORT.tables, (sql) => {
+    devOnly();
+    const pack = importSample(sql, "mock");
+    return sql.get<{ id: string }>("SELECT id FROM mocks WHERE pack_id = ? LIMIT 1", [pack])!.id;
+  }),
 
-  /** Answers a random question with a random outcome (watch question_stats change). */
   "dev.answerRandom": write(["question_answers"], (sql) => {
     devOnly();
     const q = sql.get<{ id: string }>("SELECT id FROM questions WHERE retired_at IS NULL ORDER BY random() LIMIT 1");
