@@ -9,19 +9,8 @@
 import { useEffect, useState } from "react";
 import { Step } from "@/components/dashboard/PlanOnboarding";
 import { useScene, type SceneName } from "@/components/background/Backdrop";
-import {
-  Button,
-  Callout,
-  CopyButton,
-  Dialog,
-  FileInput,
-  Heading,
-  Link,
-  Pill,
-  Stat,
-  Text,
-  useToast,
-} from "@/components/ui";
+import { Button, Callout, CopyButton, Dialog, FileInput, Heading, Link, Pill, Stat, Text } from "@/components/ui";
+import type { Celebration } from "@/components/practice/ImportCelebration";
 import { useMutation } from "@/lib/db/client";
 import type { PracticeTab } from "@/lib/practice";
 import { questionsPrompt } from "@/lib/prompts/questionsPrompt";
@@ -36,7 +25,6 @@ type Copy = {
   after: string;
   lead: string;
   ask: string;
-  file: string;
   dropTitle: string;
   /** What a file must hold to fill this tab. */
   has: (s: ReturnType<typeof questionSummary>) => number;
@@ -53,7 +41,6 @@ const COPY: Record<PracticeTab, Copy> = {
     after: ".",
     lead: "Topic practice is built from a question set that **you** load: your subjects, your topics and your questions (multiple choice, multiple select, numeric and short answer). Nothing is built in, so it works for any exam.",
     ask: "Open any AI chat and tell it which subject and topics you are studying, how many questions you want and the mix of easy, medium and hard. Ask for **multiple choice**, **multiple select**, **numeric** and **short-answer** questions, each with a worked explanation.",
-    file: "my-questions.json",
     dropTitle: "Drop your question file here",
     has: (s) => s.practice,
     hasNone: "practice questions",
@@ -67,7 +54,6 @@ const COPY: Record<PracticeTab, Copy> = {
     after: " to solve.",
     lead: "These are questions where you **write code** in an editor and then mark your own answer right or wrong. They come from a question file that you load, the same way as topic questions.",
     ask: "Open any AI chat and tell it the language and the topics you want to practise, how many problems you want and how hard. Ask for a clear problem statement, optional **starter code** and a **model solution with an explanation** for each.",
-    file: "my-programming-questions.json",
     dropTitle: "Drop your programming questions here",
     has: (s) => s.programming,
     hasNone: "programming questions",
@@ -81,7 +67,6 @@ const COPY: Record<PracticeTab, Copy> = {
     after: " to sit.",
     lead: "A full-length mock is a fixed paper with its own questions, sections and a countdown timer, shown on a screen that copies the real exam. Papers come from a file that **you** load, so they match your exam.",
     ask: "Open any AI chat and tell it the exam, its sections, the marks per question, the negative marking and the time limit. Ask for a full paper (or a past paper whose questions you have) with an **answer and explanation for every question**.",
-    file: "my-mock-test.json",
     dropTitle: "Drop your mock test file here",
     has: (s) => s.mocks + s.mockQuestions,
     hasNone: "mock tests",
@@ -121,16 +106,30 @@ const fixRequest = (errors: string[]) =>
   errors.map((e) => `- ${e}`).join("\n");
 
 /** `kind` is the tab that has nothing to show. */
-export function PracticeOnboarding({ kind }: { kind: PracticeTab }) {
+export function PracticeOnboarding({
+  kind,
+  onLoaded,
+}: {
+  kind: PracticeTab;
+  /** Called once something new was saved: the page plays the "loaded!" transition (ImportCelebration). */
+  onLoaded?: (loaded: Celebration) => void;
+}) {
   const c = COPY[kind];
   useScene(c.scene);
-  const toast = useToast();
   const [peek, setPeek] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [checked, setChecked] = useState<Checked[]>([]);
   const [done, setDone] = useState<Done | null>(null);
   const imp = useMutation("pack.import");
-  const add = useMutation("dev.addSampleQuestion");
+  const addQuestion = useMutation("dev.addSampleQuestion");
+  const addCode = useMutation("dev.addSampleCode");
+  const addMock = useMutation("dev.addSampleMock");
+  // the dev shortcut of each tab: one sample of what the tab holds
+  const sample = {
+    topics: { label: "one sample question", run: addQuestion, loaded: { questions: 1, mocks: 0 } },
+    programming: { label: "one sample programming question", run: addCode, loaded: { questions: 1, mocks: 0 } },
+    mocks: { label: "one sample mock", run: addMock, loaded: { questions: 3, mocks: 1 } },
+  }[kind];
 
   // check every file as soon as it lands
   useEffect(() => {
@@ -190,11 +189,7 @@ export function PracticeOnboarding({ kind }: { kind: PracticeTab }) {
     out.warnings = [...new Set(out.warnings)];
     setFiles([]);
     setDone(out);
-    if (out.added || out.mocks)
-      toast(
-        `Loaded **${out.added}** question${out.added === 1 ? "" : "s"}${out.mocks ? ` and **${out.mocks}** mock${out.mocks === 1 ? "" : "s"}` : ""}. Happy practising!`,
-        "special",
-      );
+    if (out.added || out.mocks) onLoaded?.({ questions: out.added, mocks: out.mocks });
   };
 
   const prompt = () => questionsPrompt(kind);
@@ -268,7 +263,7 @@ export function PracticeOnboarding({ kind }: { kind: PracticeTab }) {
 
           <Step n={2} title="Save its reply as a file" delay={240}>
             <Text variant="muted" block>
-              {`When the AI answers with a block of JSON, save it as **${c.file}** in any text editor. If it says it can't fit everything in one reply, ask it to continue and save each part as its own file: you can drop them all together.`}
+              {`When the AI answers with a block of JSON, save it as a file ending in **.json** (any name will do) in any text editor. If it says it can't fit everything in one reply, ask it to continue and save each part as its own file: you can drop them all together.`}
             </Text>
           </Step>
 
@@ -279,7 +274,7 @@ export function PracticeOnboarding({ kind }: { kind: PracticeTab }) {
               files={files}
               onChange={setFiles}
               title={c.dropTitle}
-              description={`${c.file} · checked the moment it lands`}
+              description="Any .json file · checked the moment it lands"
               buttonLabel="Choose the file"
             />
           </Step>
@@ -390,11 +385,18 @@ export function PracticeOnboarding({ kind }: { kind: PracticeTab }) {
           </Callout>
         )}
 
-        {process.env.NODE_ENV === "development" && kind === "topics" && (
+        {process.env.NODE_ENV === "development" && (
           <div className="flex flex-wrap items-center gap-2.5">
             <Pill tone="amber">DEV</Pill>
-            <Button size="sm" variant="ghost" loading={add.pending} onClick={() => add.run()}>
-              Skip all this: add one sample question
+            <Button
+              size="sm"
+              variant="ghost"
+              loading={sample.run.pending}
+              onClick={async () => {
+                if (await sample.run.run()) onLoaded?.(sample.loaded);
+              }}
+            >
+              {`Skip all this: add ${sample.label}`}
             </Button>
           </div>
         )}

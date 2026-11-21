@@ -1,0 +1,65 @@
+/* The "loaded!" moment after questions or mocks are imported (components/practice/ImportCelebration.tsx):
+   the screen frosts over, a tick pops in with two rings spreading out and confetti flying off it, the words
+   rise, then everything dissolves into the freshly filled tab. Every timing is a share of --celebrate-ms
+   (set by the component, default 1800ms). Imported by styles/site.css. Reduced motion skips it (the component). */
+@theme inline {
+  --animate-celebrate-in: celebrate-in calc(var(--celebrate-ms, 1800ms) * 0.14) ease-out both;
+  --animate-celebrate-out: celebrate-out calc(var(--celebrate-ms, 1800ms) * 0.24) ease-in
+    calc(var(--celebrate-ms, 1800ms) * 0.76) forwards;
+  --animate-celebrate-tick: celebrate-tick calc(var(--celebrate-ms, 1800ms) * 0.3) cubic-bezier(0.34, 1.56, 0.64, 1)
+    calc(var(--celebrate-ms, 1800ms) * 0.06) both;
+  --animate-celebrate-ring: celebrate-ring calc(var(--celebrate-ms, 1800ms) * 0.5) ease-out
+    calc(var(--celebrate-ms, 1800ms) * 0.12) both;
+  --animate-celebrate-ring-late: celebrate-ring calc(var(--celebrate-ms, 1800ms) * 0.5) ease-out
+    calc(var(--celebrate-ms, 1800ms) * 0.26) both;
+  --animate-celebrate-piece: celebrate-piece calc(var(--celebrate-ms, 1800ms) * 0.5) cubic-bezier(0.15, 0.7, 0.3, 1)
+    calc(var(--celebrate-ms, 1800ms) * 0.14) both;
+  --animate-celebrate-text: celebrate-text calc(var(--celebrate-ms, 1800ms) * 0.3) cubic-bezier(0.2, 0.8, 0.2, 1)
+    calc(var(--celebrate-ms, 1800ms) * 0.24) both;
+
+  @keyframes celebrate-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes celebrate-out {
+    to {
+      opacity: 0;
+      transform: scale(1.03);
+      visibility: hidden;
+    }
+  }
+  @keyframes celebrate-tick {
+    from {
+      opacity: 0;
+      transform: scale(0.3) rotate(-25deg);
+    }
+  }
+  @keyframes celebrate-ring {
+    from {
+      opacity: 0.7;
+      transform: scale(0.6);
+    }
+    to {
+      opacity: 0;
+      transform: scale(3.2);
+    }
+  }
+  /* each piece flies along its own --dx / --dy, spinning, and fades */
+  @keyframes celebrate-piece {
+    from {
+      opacity: 1;
+      transform: translate(0, 0) scale(0.4) rotate(0deg);
+    }
+    to {
+      opacity: 0;
+      transform: translate(var(--dx), var(--dy)) scale(1) rotate(var(--rot));
+    }
+  }
+  @keyframes celebrate-text {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+  }
+}

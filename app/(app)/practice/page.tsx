@@ -4,9 +4,10 @@
 // A section with nothing loaded shows how to load some instead (PracticeOnboarding). The "Manage" button
 // isn't built yet (useSoon, TODO.md).
 
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import { Page } from "@/components/app/Page";
 import { useSoon } from "@/components/dashboard/kit";
+import { ImportCelebration, type Celebration } from "@/components/practice/ImportCelebration";
 import { MocksTab } from "@/components/practice/MocksTab";
 import { PracticeOnboarding } from "@/components/practice/PracticeOnboarding";
 import { ProgrammingTab } from "@/components/practice/ProgrammingTab";
@@ -29,6 +30,7 @@ function Practice() {
   const soon = useSoon();
   const [tab, setTab] = useTab(PRACTICE_TABS, "topics");
   const { data: counts } = useQuery("practice.counts");
+  const [loaded, setLoaded] = useState<Celebration | null>(null); // what was just imported: plays the transition
   if (!counts) return null;
   const empty = tabEmpty(tab, counts);
 
@@ -65,7 +67,7 @@ function Practice() {
       {/* keyed by the tab, so switching tabs mounts the new content and it pops in again */}
       <div key={tab} className="mt-5 animate-card-in">
         {empty ? (
-          <PracticeOnboarding kind={tab} />
+          <PracticeOnboarding kind={tab} onLoaded={setLoaded} />
         ) : tab === "topics" ? (
           <TopicsTab />
         ) : tab === "programming" ? (
@@ -74,6 +76,9 @@ function Practice() {
           <MocksTab />
         )}
       </div>
+
+      {/* plays over the page while the freshly loaded tab fills in underneath */}
+      {loaded && <ImportCelebration summary={loaded} onDone={() => setLoaded(null)} />}
     </Page>
   );
 }

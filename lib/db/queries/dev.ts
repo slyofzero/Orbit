@@ -5,15 +5,41 @@ import { read, write } from "@/lib/db/queries/core";
 
 import { decode, insertSql } from "@/lib/db/codec";
 
-import { TABLES } from "@/lib/db/sql";
+import { TABLES, type Sql } from "@/lib/db/sql";
 
-import type { AnswerOutcome, QuestionMcqRow, QuestionRow } from "@/types/tables";
+import type { AnswerOutcome, QuestionCodeRow, QuestionMcqRow, QuestionRow } from "@/types/tables";
 
 import { addDays, weekday, type IsoDate } from "@/lib/dates";
 
 /** Dev-only queries refuse to run in a production build. */
 function devOnly() {
   if (process.env.NODE_ENV === "production") throw new Error("This is a dev-only query.");
+}
+
+/** Inserts a bare `questions` row under the dev topic and returns its id (the type's own row is the caller's). */
+function devQuestion(sql: Sql, o: { type: QuestionRow["type"]; pool: QuestionRow["pool"]; stem: string }): string {
+  const now = Date.now();
+  const id = `q_dev${crypto.randomUUID().replace(/-/g, "").slice(0, 10)}`;
+  const q: QuestionRow = {
+    id,
+    type: o.type,
+    topic_id: "tp_dev",
+    pack_id: null,
+    pool: o.pool,
+    marks: 1,
+    negative_marks: o.type === "mcq" ? 1 / 3 : 0,
+    difficulty: "easy",
+    stem: o.stem,
+    explanation: null,
+    content_hash: id,
+    legacy_id: null,
+    created_at: now,
+    updated_at: now,
+    retired_at: null,
+  };
+  const ins = insertSql("questions", q as unknown as Record<string, unknown>);
+  sql.run(ins.query, ins.params);
+  return id;
 }
 
 export const devQueries = {
@@ -52,6 +78,61 @@ export const devQueries = {
     }
     return id;
   }),
+
+  /** Adds one sample code question (shows in the Programming tab). */
+  "dev.addSampleCode": write(["subjects", "topics", "questions", "question_code"], (sql) => {
+    devOnly();
+    sql.run("INSERT OR IGNORE INTO subjects (id, name) VALUES ('sb_dev', 'Dev subject')");
+    sql.run("INSERT OR IGNORE INTO topics (id, subject_id, name) VALUES ('tp_dev', 'sb_dev', 'Dev topic')");
+    const n = sql.get<{ n: number }>("SELECT count(*) + 1 AS n FROM questions WHERE type = 'code'")!.n;
+    const id = devQuestion(sql, {
+      type: "code",
+      pool: "practice",
+      stem: `Sample program ${n}: write a function \`total(xs)\` that returns the sum of the list \`xs\`.\n\nFor example, \`total([1, 2, 3])\` is $6$.`,
+    });
+    const code: QuestionCodeRow = { question_id: id, starter: "def total(xs):\n    # your code here\n    pass\n" };
+    const ins = insertSql("question_code", code as unknown as Record<string, unknown>);
+    sql.run(ins.query, ins.params);
+    return id;
+  }),
+
+  /** Adds one sample mock: 30 minutes, one section, three mock-only MCQs (shows in the Mocks tab). */
+  "dev.addSampleMock": write(
+    ["subjects", "topics", "questions", "question_mcq", "mocks", "mock_sections", "mock_items"],
+    (sql) => {
+      devOnly();
+      sql.run("INSERT OR IGNORE INTO subjects (id, name) VALUES ('sb_dev', 'Dev subject')");
+      sql.run("INSERT OR IGNORE INTO topics (id, subject_id, name) VALUES ('tp_dev', 'sb_dev', 'Dev topic')");
+      const n = sql.get<{ n: number }>("SELECT count(*) + 1 AS n FROM mocks")!.n;
+      const now = Date.now();
+      const mockId = `mk_dev${crypto.randomUUID().replace(/-/g, "").slice(0, 10)}`;
+      sql.run(
+        `INSERT INTO mocks (id, name, instructions, minutes, full_screen, position, created_at, updated_at)
+         VALUES (?, ?, ?, 30, 0, ?, ?, ?)`,
+        [mockId, `Sample mock ${n}`, "A short sample paper: **3 questions**, 30 minutes.", n, now, now],
+      );
+      const section = sql.get<{ id: number }>(
+        "INSERT INTO mock_sections (mock_id, name, position, minutes) VALUES (?, 'Section A', 1, NULL) RETURNING id",
+        [mockId],
+      )!.id;
+      for (let k = 1; k <= 3; k++) {
+        const id = devQuestion(sql, {
+          type: "mcq",
+          pool: "mock",
+          stem: `Mock ${n}, question ${k}: what is $${k} + ${k}$?`,
+        });
+        const mcq: QuestionMcqRow = {
+          question_id: id,
+          options: [`$${k}$`, `$${2 * k}$`, `$${3 * k}$`, "$0$"],
+          correct: 1,
+        };
+        const ins = insertSql("question_mcq", mcq as unknown as Record<string, unknown>);
+        sql.run(ins.query, ins.params);
+        sql.run("INSERT INTO mock_items (section_id, question_id, position) VALUES (?, ?, ?)", [section, id, k]);
+      }
+      return mockId;
+    },
+  ),
 
   /** Answers a random question with a random outcome (watch question_stats change). */
   "dev.answerRandom": write(["question_answers"], (sql) => {

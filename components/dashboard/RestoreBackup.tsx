@@ -72,7 +72,7 @@ export function RestoreBackup() {
         files={files}
         onChange={setFiles}
         title="Drop your backup file here"
-        description="orbit-backup-….json · checked the moment it lands"
+        description="Any .json backup · checked the moment it lands"
         buttonLabel="Choose the backup"
       />
 

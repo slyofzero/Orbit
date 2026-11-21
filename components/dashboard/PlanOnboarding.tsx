@@ -170,8 +170,8 @@ export function PlanOnboarding({ onLaunched }: { onLaunched?: (name: string) => 
 
               <Step n={2} title="Save its reply as a file" delay={240}>
                 <Text variant="muted">
-                  When the AI answers with the plan (a block of JSON), save it as **my-plan.json** in any text editor.
-                  Answering its questions honestly makes a better plan.
+                  When the AI answers with the plan (a block of JSON), save it as a file ending in **.json** (any name
+                  will do) in any text editor. Answering its questions honestly makes a better plan.
                 </Text>
               </Step>
 
@@ -181,7 +181,7 @@ export function PlanOnboarding({ onLaunched }: { onLaunched?: (name: string) => 
                   files={files}
                   onChange={setFiles}
                   title="Drop your plan file here"
-                  description="my-plan.json · checked the moment it lands"
+                  description="Any .json file · checked the moment it lands"
                   buttonLabel="Choose the file"
                 />
               </Step>

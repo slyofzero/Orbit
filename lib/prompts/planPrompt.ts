@@ -77,7 +77,7 @@ STEP 1: ASK ME FIRST. Before writing anything, ask me (in one short list):
 5. Anything else that matters (holidays, busy weeks, a preferred order).
 Wait for my answers. Then plan in this order: hardest topics early, regular revision, practice tests before big exams, easy days just before an exam.
 
-STEP 2: WRITE THE FILE. Reply with ONLY the JSON (no explanation before or after), so I can save it as "my-plan.json".
+STEP 2: WRITE THE FILE. Reply with ONLY the JSON (no explanation before or after), so I can save it as a .json file.
 
 The format:
 {

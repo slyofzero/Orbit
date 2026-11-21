@@ -1,12 +1,195 @@
 "use client";
-// The Mocks tab (step 6 builds it): full-length mocks, subject / topic tests and the history.
+// The Mocks tab (v1's): full-length mocks (fixed papers with their own timer), short tests built from the
+// practice questions (subject, topic, weak topics, quick mixed) and the history of every attempt. Data: the
+// `practice.mocks` query. Starting a test (the exam screen) isn't built yet, so every Start says so (useSoon).
 
-import { Card, Text } from "@/components/ui";
+import { useMemo, useState } from "react";
+import { useSoon } from "@/components/dashboard/kit";
+import {
+  Button,
+  Callout,
+  Card,
+  Dropdown,
+  EmptyState,
+  Heading,
+  Pill,
+  Table,
+  Text,
+  type Column,
+  type PillTone,
+} from "@/components/ui";
+import { useQuery } from "@/lib/db/client";
+import { groupBySubject, ratingOf, type MockCard, type MockHistoryRow } from "@/lib/practice";
+
+const STATUS: Record<MockHistoryRow["status"], { label: string; tone: PillTone }> = {
+  submitted: { label: "Submitted", tone: "green" },
+  in_progress: { label: "In progress", tone: "blue" },
+  abandoned: { label: "Abandoned", tone: "neutral" },
+  failed: { label: "Failed", tone: "red" },
+};
+
+/** "2 hours", "90 min". */
+const duration = (minutes: number) =>
+  minutes >= 60 && minutes % 60 === 0 ? `${minutes / 60} hour${minutes === 60 ? "" : "s"}` : `${minutes} min`;
+const num = (n: number) => String(Math.round(n * 100) / 100);
+/** A stored time (ms) as an Indian-time date for the history; display only, no day logic. */
+const when = (ms: number) =>
+  new Date(ms).toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+const HISTORY: Column<MockHistoryRow>[] = [
+  { key: "name", header: "Test", cell: (a) => a.name, sortValue: (a) => a.name },
+  { key: "date", header: "Date", cell: (a) => when(a.started_at), sortValue: (a) => a.started_at },
+  { key: "qs", header: "Qs", cell: (a) => a.questions, align: "right", sortValue: (a) => a.questions },
+  {
+    key: "status",
+    header: "Status",
+    cell: (a) => <Pill tone={STATUS[a.status].tone}>{STATUS[a.status].label}</Pill>,
+  },
+  {
+    key: "score",
+    header: "Score",
+    align: "right",
+    cell: (a) => (a.status === "submitted" && a.score !== null ? `${num(a.score)} / ${num(a.max_score ?? 0)}` : "—"),
+    sortValue: (a) => a.score ?? -Infinity,
+  },
+];
+
+function FullMock({ mock, first }: { mock: MockCard; first: boolean }) {
+  const soon = useSoon();
+  return (
+    <Card special={first} glow="low" className="grid content-start gap-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <Pill tone={first ? "special" : "accent"}>{duration(mock.minutes)}</Pill>
+        {mock.attempts > 0 && <Pill tone="green">{`${mock.attempts} attempt${mock.attempts === 1 ? "" : "s"}`}</Pill>}
+      </div>
+      <Heading level={2}>{mock.name}</Heading>
+      <Text variant="small" block>
+        {`${mock.questions} questions · ${num(mock.marks)} marks · ${mock.minutes} minutes. Its questions belong to this mock only.${mock.best !== null ? ` Best score **${num(mock.best)}**.` : ""}`}
+      </Text>
+      <div>
+        <Button variant={first ? "special" : "primary"} onClick={soon(`Starting ${mock.name}`)}>
+          {mock.attempts > 0 ? "Start again" : "Start"}
+        </Button>
+      </div>
+    </Card>
+  );
+}
 
 export function MocksTab() {
+  const soon = useSoon();
+  const { data } = useQuery("practice.mocks");
+  const [subject, setSubject] = useState<string | null>(null);
+  const [topic, setTopic] = useState<string | null>(null);
+
+  const groups = useMemo(() => groupBySubject(data?.topics ?? []), [data]);
+  if (!data) return null;
+
+  const subjectId = subject ?? groups[0]?.id ?? null;
+  const topicId = topic ?? data.topics[0]?.id ?? null;
+  const weak = data.topics.filter((t) => ratingOf(t.rating) !== "know").length;
+  const canBuild = data.practiceQuestions > 0 && groups.length > 0;
+
   return (
-    <Card>
-      <Text variant="muted">The mocks screen is built in a later step.</Text>
-    </Card>
+    <div className="grid gap-8">
+      <Callout tone="caution" title="CAUTION: mocks run in full screen">
+        Switching tabs or windows, pressing Esc or refreshing during a mock can end it and mark it **failed**. The timer
+        keeps running while you are away. Treat it like the real exam.
+      </Callout>
+
+      <section className="grid gap-3.5">
+        <div>
+          <Heading level={2}>Full-length mocks</Heading>
+          <Text variant="small">Complete papers with their own fixed questions, sections and timer.</Text>
+        </div>
+        {data.mocks.length === 0 ? (
+          <EmptyState icon="⏱️" title="No full-length mocks yet">
+            Your file has mock-only questions but no paper that uses them. Load a mock test file to see it here.
+          </EmptyState>
+        ) : (
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,320px),1fr))] gap-4">
+            {data.mocks.map((m, i) => (
+              <div
+                key={m.id}
+                className="animate-card-in [animation-fill-mode:both]"
+                style={{ animationDelay: `${Math.min(i, 8) * 70}ms` }}
+              >
+                <FullMock mock={m} first={i === 0} />
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {canBuild && (
+        <section className="grid gap-3.5">
+          <div>
+            <Heading level={2}>Subject and topic tests</Heading>
+            <Text variant="small">
+              Short tests built from your practice questions. Questions you haven&apos;t seen come first.
+            </Text>
+          </div>
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,320px),1fr))] gap-4">
+            <Card title="Subject test" subtitle="Questions from one subject.">
+              <div className="grid gap-3">
+                <Dropdown
+                  label="Subject"
+                  value={subjectId}
+                  onChange={setSubject}
+                  options={groups.map((g) => ({ value: g.id, label: g.name }))}
+                />
+                <div>
+                  <Button variant="primary" onClick={soon("Starting a subject test")}>
+                    Start
+                  </Button>
+                </div>
+              </div>
+            </Card>
+            <Card title="Topic test" subtitle="Questions from one topic.">
+              <div className="grid gap-3">
+                <Dropdown
+                  label="Topic"
+                  searchable
+                  value={topicId}
+                  onChange={setTopic}
+                  options={data.topics.map((t) => ({ value: t.id, label: t.name, group: t.subject_name }))}
+                />
+                <div>
+                  <Button variant="primary" onClick={soon("Starting a topic test")}>
+                    Start
+                  </Button>
+                </div>
+              </div>
+            </Card>
+            {weak > 0 && (
+              <Card title="Weak-topics test" subtitle={`Only your “No idea” and “Shaky” topics (${weak}).`}>
+                <Button variant="primary" onClick={soon("Starting a weak-topics test")}>
+                  Start weak-topics test
+                </Button>
+              </Card>
+            )}
+            <Card title="Quick mixed test" subtitle="About 15 questions drawn from every subject.">
+              <Button variant="primary" onClick={soon("Starting a quick test")}>
+                Start quick test
+              </Button>
+            </Card>
+          </div>
+        </section>
+      )}
+
+      <Card title="History">
+        <Table
+          columns={HISTORY}
+          rows={data.history}
+          rowKey={(a) => a.id}
+          empty="No attempts yet. Your scores will be listed here."
+        />
+      </Card>
+    </div>
   );
 }
