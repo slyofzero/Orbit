@@ -9,11 +9,13 @@ import {
   useCallback,
   useEffect,
   useId,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   type ReactElement,
   type ReactNode,
+  type RefObject,
 } from "react";
 import { txt } from "@/components/utils/txt";
 import { Dialog } from "@/components/ui/Dialog";
@@ -55,15 +57,84 @@ function useTip() {
 }
 
 const WRAP = "relative inline-flex items-center align-middle";
+// `popover` puts the bubble in the browser's top layer, above every card, stacking context and open dialog;
+// it is placed with `fixed` coordinates by TipBubble. The z-index only matters where popovers are unsupported.
 const BUBBLE =
-  "pointer-events-none absolute z-60 w-max max-w-[min(280px,72vw)] animate-tip-in rounded-[10px] bg-ink px-3 py-2 text-left font-body text-[0.84rem] leading-[1.45] font-semibold tracking-normal whitespace-normal text-sheet shadow-lg after:absolute after:size-[9px] after:rotate-45 after:bg-inherit after:content-[''] [&_a]:text-inherit [&_code]:bg-sheet/18 [&_code]:text-inherit";
-// the bubble sits beside the element; the little square (::after) is its arrow
+  "pointer-events-none fixed inset-auto z-[2147483647] m-0 w-max max-w-[min(280px,72vw)] animate-tip-in overflow-visible rounded-[10px] border-0 bg-ink px-3 py-2 text-left font-body text-[0.84rem] leading-[1.45] font-semibold tracking-normal whitespace-normal text-sheet shadow-lg after:absolute after:size-[9px] after:rotate-45 after:bg-inherit after:content-[''] [&_a]:text-inherit [&_code]:bg-sheet/18 [&_code]:text-inherit";
+// the little square (::after) is the arrow; --tip-arrow keeps it on the element when the bubble is pushed in from an edge
 const PLACE: Record<TipPlacement, string> = {
-  top: "bottom-[calc(100%+9px)] left-1/2 -translate-x-1/2 after:top-[calc(100%-5px)] after:left-[calc(50%-4.5px)]",
-  bottom: "top-[calc(100%+9px)] left-1/2 -translate-x-1/2 after:bottom-[calc(100%-5px)] after:left-[calc(50%-4.5px)]",
-  right: "top-1/2 left-[calc(100%+9px)] -translate-y-1/2 after:top-[calc(50%-4.5px)] after:right-[calc(100%-5px)]",
-  left: "top-1/2 right-[calc(100%+9px)] -translate-y-1/2 after:top-[calc(50%-4.5px)] after:left-[calc(100%-5px)]",
+  top: "after:top-[calc(100%-5px)] after:left-[calc(var(--tip-arrow,50%)-4.5px)]",
+  bottom: "after:bottom-[calc(100%-5px)] after:left-[calc(var(--tip-arrow,50%)-4.5px)]",
+  right: "after:top-[calc(var(--tip-arrow,50%)-4.5px)] after:right-[calc(100%-5px)]",
+  left: "after:top-[calc(var(--tip-arrow,50%)-4.5px)] after:left-[calc(100%-5px)]",
 };
+const GAP = 9; // px between the element and the bubble
+const EDGE = 8; // px the bubble keeps from the window's edges
+const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), Math.max(lo, hi));
+
+/** The bubble, shown in the top layer beside `anchor`; follows it on scroll and resize. */
+function TipBubble({
+  id,
+  anchor,
+  placement,
+  children,
+}: {
+  id: string;
+  anchor: RefObject<HTMLElement | null>;
+  placement: TipPlacement;
+  children: ReactNode;
+}) {
+  const ref = useRef<HTMLSpanElement>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    const a = anchor.current;
+    if (!el || !a) return;
+    try {
+      el.showPopover();
+    } catch {
+      // no Popover API: the bubble still shows, fixed, with the big z-index
+    }
+    const place = () => {
+      const r = a.getBoundingClientRect();
+      const w = el.offsetWidth;
+      const h = el.offsetHeight;
+      let left: number;
+      let top: number;
+      let arrow: number;
+      if (placement === "top" || placement === "bottom") {
+        const mid = r.left + r.width / 2;
+        left = clamp(mid - w / 2, EDGE, window.innerWidth - w - EDGE);
+        top = placement === "top" ? r.top - GAP - h : r.bottom + GAP;
+        arrow = clamp(mid - left, 12, w - 12);
+      } else {
+        const mid = r.top + r.height / 2;
+        top = clamp(mid - h / 2, EDGE, window.innerHeight - h - EDGE);
+        left = placement === "left" ? r.left - GAP - w : r.right + GAP;
+        arrow = clamp(mid - top, 12, h - 12);
+      }
+      el.style.left = `${left}px`;
+      el.style.top = `${top}px`;
+      el.style.setProperty("--tip-arrow", `${arrow}px`);
+    };
+    place();
+    window.addEventListener("scroll", place, true);
+    window.addEventListener("resize", place);
+    return () => {
+      window.removeEventListener("scroll", place, true);
+      window.removeEventListener("resize", place);
+      try {
+        el.hidePopover();
+      } catch {
+        // already hidden or unsupported
+      }
+    };
+  }, [anchor, placement]);
+  return (
+    <span ref={ref} id={id} role="tooltip" popover="manual" className={cx(BUBBLE, PLACE[placement])}>
+      {children}
+    </span>
+  );
+}
 /** The round "?" (a bit bigger inside h1 / h2). `lit` = highlighted (open, or its parent is hovered). */
 const helpIcon = (lit: boolean, margin = true) =>
   cx(
@@ -91,6 +162,7 @@ export function Tooltip({
 }) {
   const id = useId();
   const tip = useTip();
+  const wrap = useRef<HTMLSpanElement>(null);
   useEffect(() => {
     if (!tip.open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -105,6 +177,7 @@ export function Tooltip({
     : children;
   return (
     <span
+      ref={wrap}
       className={className ? cx("relative", className) : WRAP}
       onPointerEnter={tip.show}
       onPointerLeave={tip.hide}
@@ -113,9 +186,9 @@ export function Tooltip({
     >
       {child}
       {tip.open && (
-        <span id={id} role="tooltip" className={cx(BUBBLE, PLACE[placement])}>
+        <TipBubble id={id} anchor={wrap} placement={placement}>
           {tipBody(content)}
-        </span>
+        </TipBubble>
       )}
     </span>
   );
@@ -176,9 +249,9 @@ export function HelpTip({
         <IconHelp />
       </button>
       {tip.open && (
-        <span id={id} role="tooltip" className={cx(BUBBLE, PLACE[placement])}>
+        <TipBubble id={id} anchor={wrap} placement={placement}>
           {tipBody(children)}
-        </span>
+        </TipBubble>
       )}
     </span>
   );
