@@ -37,7 +37,8 @@ export const questionQueries = {
   /** The practice questions of a topic (every type but code; not mock-only, not retired), oldest first (a file's
    *  questions share one time, so they keep the file's order: rowid is the order they were saved in), each
    *  with its type row and your latest counted answer. The order never depends on your answers, so it stays put
-   *  while you work through them. */
+   *  while you work through them. `questionId` narrows it to that one question, and `topicId` may then be left
+   *  out: it is the question's own (Manage pack opens a single question this way). */
   "question.topic": read(
     [
       "topics",
@@ -50,26 +51,35 @@ export const questionQueries = {
       "question_code",
       "question_answers",
     ],
-    (sql, p: { topicId: string }): TopicQuestions => {
+    (sql, p: { topicId?: string | null; questionId?: string | null }): TopicQuestions => {
+      const topicId =
+        p.topicId ??
+        (p.questionId
+          ? (sql.get<{ topic_id: string }>("SELECT topic_id FROM questions WHERE id = ?", [p.questionId])?.topic_id ??
+            null)
+          : null);
+      if (!topicId) return { topic: null, items: [] };
       const topic =
         sql.get<{ id: string; name: string; subject_name: string }>(
           `SELECT t.id, t.name, s.name AS subject_name FROM topics t JOIN subjects s ON s.id = t.subject_id
            WHERE t.id = ? AND t.retired_at IS NULL`,
-          [p.topicId],
+          [topicId],
         ) ?? null;
       if (!topic) return { topic: null, items: [] };
 
-      const where = "q.topic_id = ? AND q.type <> 'code' AND q.pool = 'practice' AND q.retired_at IS NULL";
+      const one = p.questionId ? " AND q.id = ?" : "";
+      const where = `q.topic_id = ? AND q.type <> 'code' AND q.pool = 'practice' AND q.retired_at IS NULL${one}`;
+      const args = p.questionId ? [topicId, p.questionId] : [topicId];
       const rows = sql.all(
         `SELECT q.*,
                 (SELECT outcome FROM question_answers WHERE question_id = q.id AND outcome <> 'skipped'
                  ORDER BY recorded_at DESC, id DESC LIMIT 1) AS latest
          FROM questions q WHERE ${where} ORDER BY q.created_at, q.rowid LIMIT ${SITTING_MAX}`,
-        [p.topicId],
+        args,
       );
       const byId = new Map<string, QuestionDetail>();
       for (const type of ["mcq", "msq", "nat", "str"] as const)
-        for (const [id, d] of details(sql, type, where, [p.topicId])) byId.set(id, d);
+        for (const [id, d] of details(sql, type, where, args)) byId.set(id, d);
 
       const items: LoadedQuestion[] = [];
       for (const row of rows) {

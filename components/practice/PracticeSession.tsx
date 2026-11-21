@@ -1,5 +1,6 @@
 "use client";
-// The topic practice screen: /practice/session?topic=<id>. One question at a time with Previous / Next, a
+// The topic practice screen: /practice/session?topic=<id>, or ?q=<question id> for a sitting of just that one
+// question (Manage pack's Questions table opens a row this way). One question at a time with Previous / Next, a
 // palette to jump around, and a progress bar. Each answer is stored when you check it (`question.record`);
 // questions you opened and never answered are stored as skipped when you finish or leave, so their time counts
 // (docs/STATS.md). Only the first check of a question counts in a sitting; "Try again" is just for practice.
@@ -20,10 +21,19 @@ const BACK = "/practice?tab=topics";
 
 /** Reads the topic from the address; "Practise again" starts a fresh sitting by remounting it. */
 export function PracticeSessionScreen() {
-  const topicId = useSearchParams().get("topic");
+  const params = useSearchParams();
+  const topicId = params.get("topic");
+  const questionId = params.get("q");
   const [round, setRound] = useState(0);
-  if (!topicId) return <Missing />;
-  return <Sitting key={`${topicId}:${round}`} topicId={topicId} onAgain={() => setRound((r) => r + 1)} />;
+  if (!topicId && !questionId) return <Missing />;
+  return (
+    <Sitting
+      key={`${topicId}:${questionId}:${round}`}
+      topicId={topicId}
+      questionId={questionId}
+      onAgain={() => setRound((r) => r + 1)}
+    />
+  );
 }
 
 function Missing() {
@@ -34,8 +44,16 @@ function Missing() {
   );
 }
 
-function Sitting({ topicId, onAgain }: { topicId: string; onAgain: () => void }) {
-  const { data } = useQuery("question.topic", { topicId });
+function Sitting({
+  topicId,
+  questionId,
+  onAgain,
+}: {
+  topicId: string | null;
+  questionId: string | null;
+  onAgain: () => void;
+}) {
+  const { data } = useQuery("question.topic", { topicId, questionId });
   const record = useMutation("question.record");
   const [at, setAt] = useState<number | null>(null); // null = not moved yet: open on the first untried question
   const [visited, setVisited] = useState<string[]>([]); // opened this sitting, in order (palette + kept mounted)
@@ -97,7 +115,9 @@ function Sitting({ topicId, onAgain }: { topicId: string; onAgain: () => void })
   if (!data.topic || items.length === 0)
     return (
       <EmptyState icon="🔎" title="Nothing to practise here" action={<Button href={BACK}>Back to Practice</Button>}>
-        This topic has no practice questions (code questions are on the Programming tab).
+        {questionId
+          ? "This question isn't a practice question any more (it was deleted, or moved out of this topic or bank)."
+          : "This topic has no practice questions (code questions are on the Programming tab)."}
       </EmptyState>
     );
 

@@ -2,7 +2,8 @@
 // Manage pack → Questions (v1's QuestionsPanel): three banks, each question in exactly one (lib/manage.ts
 // QUESTION_BANKS): Practice, Programming (code questions) and Mock (mock-only questions; filter by mock). Find a
 // question by id or text, filter by topic, then edit or delete it, or add a new one; "Empty" clears the whole
-// bank after you type its phrase. ?q=<id> in the address opens that question. Shown in pages of MANAGE_PAGE (20)
+// bank after you type its phrase. ?q=<id> in the address opens that question. Clicking a row opens that one
+// question in a new tab (`openHref`). Shown in pages of MANAGE_PAGE (20)
 // rows, so a big pack never loads all at once; changing the bank, search or a filter goes back to page 1.
 
 import { useSearchParams } from "next/navigation";
@@ -31,6 +32,14 @@ type Editing =
   | { id: string }
   | { id: null; preset?: { mockId: string; sectionId: number | null }; type?: QuestionType }
   | null;
+/** Where a row opens (new tab): a practice question as a sitting of just itself, a code question on its
+ *  Programming screen, a mock-only question (no practice screen of its own) in the editor here. */
+const openHref = (r: Row) =>
+  r.pool === "mock"
+    ? `/practice/manage?q=${encodeURIComponent(r.id)}`
+    : r.type === "code"
+      ? `/practice/code?id=${encodeURIComponent(r.id)}`
+      : `/practice/session?q=${encodeURIComponent(r.id)}`;
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 export function QuestionsPanel({ overview }: { overview: Overview }) {
@@ -217,13 +226,15 @@ export function QuestionsPanel({ overview }: { overview: Overview }) {
       )}
       <Text variant="small" className="mb-2.5">
         {data
-          ? `${data.matched} of ${data.total} ${BANK_LABEL[bank].toLowerCase()} questions. Every question has one id, unique across all banks, and sits in exactly one bank.`
+          ? `${data.matched} of ${data.total} ${BANK_LABEL[bank].toLowerCase()} questions. Every question has one id, unique across all banks, and sits in exactly one bank. Click a row to open it in a new tab.`
           : " "}
       </Text>
 
-      {data && <Table columns={columns} rows={data.rows} rowKey={(r) => r.id} empty="Nothing matches." />}
+      {data && (
+        <Table columns={columns} rows={data.rows} rowKey={(r) => r.id} rowHref={openHref} empty="Nothing matches." />
+      )}
       {data && pager.pages > 1 && (
-        <nav aria-label="Pages of questions" className="mt-3 flex flex-wrap items-center gap-2.5">
+        <nav aria-label="Pages of questions" className="mt-3 flex flex-wrap items-center justify-center gap-2.5">
           <Button
             variant="soft"
             size="sm"

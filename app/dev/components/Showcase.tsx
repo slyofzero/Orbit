@@ -1650,6 +1650,10 @@ function TableDemo() {
         rowKey={(r) => r.topic}
         specialRow={(r) => r.topic.startsWith("Linear algebra")}
       />
+      <Text variant="caption" as="span">
+        Clickable rows (rowHref): a row opens its address in a new tab
+      </Text>
+      <Table caption="Topics, clickable" columns={cols} rows={TOPICS} rowKey={(r) => r.topic} rowHref={() => "/dev"} />
       <Table
         caption="Empty"
         columns={cols}

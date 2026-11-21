@@ -15,7 +15,8 @@ export type Column<T> = {
 };
 
 /** A data table. Scrolls sideways on narrow screens. Keep `rows` to one page (≤ a few hundred).
- *  `specialRow` highlights the rows it returns true for (e.g. your best topic). */
+ *  `specialRow` highlights the rows it returns true for (e.g. your best topic). `rowHref` makes a row open that
+ *  address in a new tab when clicked (or Enter on the focused row); clicks on a button or link inside it don't. */
 export function Table<T>({
   columns,
   rows,
@@ -23,6 +24,7 @@ export function Table<T>({
   empty = "Nothing here yet.",
   caption,
   specialRow,
+  rowHref,
 }: {
   columns: Column<T>[];
   rows: T[];
@@ -30,6 +32,7 @@ export function Table<T>({
   empty?: ReactNode;
   caption?: string;
   specialRow?: (row: T) => boolean;
+  rowHref?: (row: T) => string | null;
 }) {
   const [sort, setSort] = useState<{ key: string; dir: 1 | -1 } | null>(null);
   const sorted = useMemo(() => {
@@ -95,22 +98,46 @@ export function Table<T>({
               </td>
             </tr>
           ) : (
-            sorted.map((r) => (
-              <tr
-                key={rowKey(r)}
-                className={cx(
-                  "hover:bg-sheet-2 [&:last-child>td]:border-b-0",
-                  specialRow?.(r) &&
-                    "special-tint animate-flow [&>td:first-child]:font-bold [&>td:first-child]:shadow-[inset_3px_0_0_var(--special-b)]",
-                )}
-              >
-                {columns.map((c) => (
-                  <td key={c.key} className={cellClass(c)}>
-                    {txt(c.cell(r))}
-                  </td>
-                ))}
-              </tr>
-            ))
+            sorted.map((r) => {
+              const href = rowHref?.(r) ?? null;
+              const open = () => href && window.open(href, "_blank", "noopener");
+              return (
+                <tr
+                  key={rowKey(r)}
+                  tabIndex={href ? 0 : undefined}
+                  title={href ? "Opens in a new tab" : undefined}
+                  onClick={
+                    href
+                      ? (e) => {
+                          // a button, link or field inside the row does its own thing
+                          if ((e.target as HTMLElement).closest("button, a, input, textarea, [role=button]")) return;
+                          open();
+                        }
+                      : undefined
+                  }
+                  onKeyDown={
+                    href
+                      ? (e) => {
+                          if (e.key === "Enter" && e.target === e.currentTarget) open();
+                        }
+                      : undefined
+                  }
+                  className={cx(
+                    "hover:bg-sheet-2 [&:last-child>td]:border-b-0",
+                    href &&
+                      "cursor-pointer focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent",
+                    specialRow?.(r) &&
+                      "special-tint animate-flow [&>td:first-child]:font-bold [&>td:first-child]:shadow-[inset_3px_0_0_var(--special-b)]",
+                  )}
+                >
+                  {columns.map((c) => (
+                    <td key={c.key} className={cellClass(c)}>
+                      {txt(c.cell(r))}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })
           )}
         </tbody>
       </table>

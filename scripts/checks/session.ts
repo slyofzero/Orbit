@@ -196,4 +196,17 @@ console.log("sample question pack (samples/questions/sample-topics.json)");
     t.items.length === 4 && t.items.every((x, i) => x.question.stem === want[i]),
     "question.topic: an imported file's questions keep the file's order",
   );
+  const pick = t.items[2].question.id;
+  const one = QUERIES["question.topic"].run(sql, { topicId: topic.id, questionId: pick }) as TopicQuestions;
+  const gone = QUERIES["question.topic"].run(sql, { topicId: topic.id, questionId: "q_nope" }) as TopicQuestions;
+  const byId = QUERIES["question.topic"].run(sql, { questionId: pick }) as TopicQuestions; // no topic in the address
+  ok(
+    one.items.length === 1 &&
+      one.items[0].question.id === pick &&
+      one.items[0].detail &&
+      gone.items.length === 0 &&
+      byId.topic?.id === topic.id &&
+      byId.items.length === 1,
+    "question.topic with questionId: a sitting of just that question (Manage pack opens a row this way)",
+  );
 }
