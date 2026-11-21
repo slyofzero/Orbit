@@ -2,10 +2,9 @@
 // The Topics tab (v1's Practice home): "next on your plan" topics, a search box, status tabs (your own rating
 // of each topic) and the Filter pop-up, then the subjects as sections that open to their topics. Each topic
 // row is its own progress bar (green: answered right, red: answered wrong). Rules: lib/practice.ts; data:
-// the `practice.topics` query. Opening a topic (the practice screen) isn't built yet, so it says so (useSoon).
+// the `practice.topics` query. Opening a topic goes to its practice screen (PracticeSession.tsx).
 
 import { useMemo, useState } from "react";
-import { useSoon } from "@/components/dashboard/kit";
 import {
   Button,
   Disclosure,
@@ -41,8 +40,10 @@ const STATUS_TAB_LABEL: Record<StatusFilter, string> = { all: "All", ...STATUS_L
 /** "Probability (and statistics)" → "Probability": the short name for a button. */
 const shortName = (name: string) => name.split("(")[0].trim() || name;
 
+/** The practice screen of a topic (components/practice/PracticeSession.tsx). */
+const sessionHref = (topicId: string) => `/practice/session?topic=${encodeURIComponent(topicId)}`;
+
 export function TopicsTab() {
-  const soon = useSoon();
   const today = useMemo(() => todayIST(), []);
   const { data } = useQuery("practice.topics", { today });
   const [search, setSearch] = useState("");
@@ -102,7 +103,7 @@ export function TopicsTab() {
           </div>
           <div className="flex flex-wrap gap-2">
             {data.next.topics.slice(0, 3).map((t) => (
-              <Button key={t.id} variant="primary" onClick={soon(`Practising ${shortName(t.name)}`)}>
+              <Button key={t.id} variant="primary" href={sessionHref(t.id)}>
                 {shortName(t.name)}
               </Button>
             ))}
@@ -119,6 +120,7 @@ export function TopicsTab() {
           tabs={STATUS_FILTERS.map((s) => ({ value: s, label: STATUS_TAB_LABEL[s] }))}
         />
         <FilterMenu groups={filters} picked={picked} onChange={setPicked} />
+        <Legend />
       </div>
 
       {!anyShown ? (
@@ -141,7 +143,8 @@ export function TopicsTab() {
                 <Disclosure
                   open={isOpen(g.id)}
                   onOpenChange={() => toggle(g.id)}
-                  bodyClassName="grid gap-0.5 px-2 pt-0.5 pb-2.5"
+                  // v1's topic grid: one column on phones, two, then three side by side
+                  bodyClassName="grid gap-x-2 gap-y-0.5 px-2 pt-0.5 pb-2.5 min-[640px]:grid-cols-2 min-[1000px]:grid-cols-3"
                   title={
                     <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
                       <span className="font-display text-[1.05rem]">{g.name}</span>
@@ -178,7 +181,7 @@ export function TopicsTab() {
                         good={bar.good}
                         bad={bar.bad}
                         hint={t.tried > 0 && !filtering ? topicBarHint(t) : undefined}
-                        onClick={soon(`Practising ${shortName(t.name)}`)}
+                        href={sessionHref(t.id)}
                       />
                     );
                   })}
@@ -188,11 +191,35 @@ export function TopicsTab() {
           })}
         </div>
       )}
+    </div>
+  );
+}
 
-      <Text variant="hint">
-        The dot is your own rating of the topic: red is new to you, amber is shaky, green is solid. A row fills green
-        for questions you got right and red for ones you got wrong.
-      </Text>
+/** What the dots (your rating of a topic) and the row fill (right / wrong answers) mean. */
+function Legend() {
+  const ratings: TopicRating[] = ["no_idea", "shaky", "know"];
+  return (
+    <div className="ml-auto flex flex-wrap items-center gap-x-3.5 gap-y-1.5" aria-label="Legend">
+      {ratings.map((r) => (
+        <span key={r} className="inline-flex items-center gap-1.5">
+          <StatusDot tone={TONE[r]} label={STATUS_LABEL[r]} />
+          <Text as="span" variant="small">
+            {STATUS_LABEL[r]}
+          </Text>
+        </span>
+      ))}
+      <span className="inline-flex items-center gap-1.5">
+        <span aria-hidden="true" className="h-2.5 w-4 rounded-[3px] bg-green/30" />
+        <Text as="span" variant="small">
+          Right
+        </Text>
+      </span>
+      <span className="inline-flex items-center gap-1.5">
+        <span aria-hidden="true" className="h-2.5 w-4 rounded-[3px] bg-red/30" />
+        <Text as="span" variant="small">
+          Wrong
+        </Text>
+      </span>
     </div>
   );
 }

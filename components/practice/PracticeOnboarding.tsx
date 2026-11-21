@@ -21,6 +21,7 @@ import {
   Pill,
   Stat,
   Text,
+  useToast,
 } from "@/components/ui";
 import type { Celebration } from "@/components/practice/ImportCelebration";
 import { useMutation } from "@/lib/db/client";
@@ -129,14 +130,33 @@ export function PracticeOnboarding({
   const [checked, setChecked] = useState<Checked[]>([]);
   const [done, setDone] = useState<Done | null>(null);
   const imp = useMutation("pack.import");
-  const addQuestion = useMutation("dev.addSampleQuestion");
   const addCode = useMutation("dev.addSampleCode");
   const addMock = useMutation("dev.addSampleMock");
-  // the dev shortcut of each tab: one sample of what the tab holds
-  const sample = {
-    topics: { label: "one sample question", run: addQuestion, loaded: { questions: 1, mocks: 0 } },
-    programming: { label: "one sample programming question", run: addCode, loaded: { questions: 1, mocks: 0 } },
-    mocks: { label: "one sample mock", run: addMock, loaded: { questions: 3, mocks: 1 } },
+  const toast = useToast();
+  const [samplePending, setSamplePending] = useState(false);
+  /** Imports the sample question pack (samples/questions/sample-topics.json) like a dropped file. */
+  const loadSamplePack = async (): Promise<Celebration | undefined> => {
+    const { default: pack } = await import("@/samples/questions/sample-topics.json");
+    const text = JSON.stringify(pack, null, 2);
+    const r = await imp.run({ text, fileName: "sample-topics.json", fileHash: await sha256(text) });
+    if (!r) return; // the hook already showed the error
+    if (!r.ok) {
+      toast(r.errors[0], "error");
+      return;
+    }
+    return { questions: r.total, mocks: r.mocks };
+  };
+  // the dev shortcut of each tab: a sample of what the tab holds
+  const sample: { label: string; go: () => Promise<Celebration | undefined> } = {
+    topics: { label: "the sample question pack (10 questions)", go: loadSamplePack },
+    programming: {
+      label: "one sample programming question",
+      go: async () => ((await addCode.run()) ? { questions: 1, mocks: 0 } : undefined),
+    },
+    mocks: {
+      label: "one sample mock",
+      go: async () => ((await addMock.run()) ? { questions: 3, mocks: 1 } : undefined),
+    },
   }[kind];
 
   // check every file as soon as it lands
@@ -385,9 +405,15 @@ export function PracticeOnboarding({
             <Button
               size="sm"
               variant="ghost"
-              loading={sample.run.pending}
+              loading={samplePending}
               onClick={async () => {
-                if (await sample.run.run()) onLoaded?.(sample.loaded);
+                setSamplePending(true);
+                try {
+                  const loaded = await sample.go();
+                  if (loaded) onLoaded?.(loaded);
+                } finally {
+                  setSamplePending(false);
+                }
               }}
             >
               {`Skip all this: add ${sample.label}`}

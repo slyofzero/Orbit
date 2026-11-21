@@ -96,7 +96,16 @@ import { LaunchWarp } from "@/components/background/LaunchWarp";
 import { addDays, todayIST } from "@/lib/dates";
 import type { CodeLang } from "@/lib/codeIndent";
 import { hashImage, imageRef } from "@/lib/images";
-import { CodeQuestion, McqQuestion, MsqQuestion, NatQuestion, StrQuestion } from "@/components/question";
+import {
+  AnyQuestion,
+  CodeQuestion,
+  McqQuestion,
+  MsqQuestion,
+  NatQuestion,
+  QuestionPalette,
+  StrQuestion,
+} from "@/components/question";
+import type { PaletteState } from "@/lib/session";
 
 // ---------------------------------------------------------------------------
 // sample data
@@ -1968,6 +1977,40 @@ function RichDemo() {
   );
 }
 
+const PALETTE: PaletteState[] = [
+  "right",
+  "wrong",
+  "right",
+  "seen",
+  "new",
+  "new",
+  "new",
+  "new",
+  "new",
+  "new",
+  "new",
+  "new",
+];
+
+/** QuestionPalette (click a number) and AnyQuestion (picks the component from the question's type). */
+function PaletteDemo() {
+  const [current, setCurrent] = useState(3);
+  return (
+    <div className="grid gap-4">
+      <Text variant="caption" as="span">
+        {"Question palette $\\mathcal{Q}$ (click a number)"}
+      </Text>
+      <div className="max-w-[320px]">
+        <QuestionPalette states={PALETTE} current={current} onJump={setCurrent} />
+      </div>
+      <Text variant="caption" as="span">
+        AnyQuestion (here a number question, chosen by its type)
+      </Text>
+      <AnyQuestion number={7} question={Q_NAT} detail={{ question_id: Q_NAT.id, value: 1.72, tolerance: 0.01 }} />
+    </div>
+  );
+}
+
 function Questions() {
   return (
     <Section
@@ -2010,6 +2053,7 @@ function Questions() {
         question={{ ...Q_MCQ, id: "q_mcq2" }}
         detail={{ question_id: "q_mcq2", options: ["$0$", "$1$", "$3$", "$-1$"], correct: 1 }}
       />
+      <PaletteDemo />
     </Section>
   );
 }

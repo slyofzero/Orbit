@@ -141,7 +141,7 @@ All fields take `label`, `hint`, `error` and **`help`** (a "?" tip beside the la
 | `Table` | `Table.tsx` | Rows of data | `columns` (`header`, `cell`, `align`, `sortValue` makes it sortable, `special` highlights the column); `rowKey`; `empty`; `specialRow(row)`; scrolls sideways on phones; keep to one page of rows |
 | `Divider` | `Divider.tsx` | A line between sections | `variant`: solid · dashed · dotted · double · thick · accent · fade · special; `label` (and `align="start"`) |
 | `EmptyState` | `EmptyState.tsx` | A list or page with nothing yet | `title`, text, `action`; say why it is empty and offer the next step |
-| `Disclosure` | `Disclosure.tsx` | Show / hide extra content in place; the body slides open and shut (`disclosure-motion`, styles/animations/disclosure.css) | `title`, `defaultOpen`; `open` + `onOpenChange` = controlled by the page (e.g. forced open while searching); `bodyClassName` replaces the body's padding and layout (default: indented under the title) |
+| `Disclosure` | `Disclosure.tsx` | Show / hide extra content in place; the body grows and fades in when opened, shrinks and fades out when shut, in every browser (`disclosure-motion`, styles/animations/disclosure.css) | `title`, `defaultOpen`; `open` + `onOpenChange` = controlled by the page (e.g. forced open while searching); `bodyClassName` replaces the body's padding and layout (default: indented under the title) |
 | `ProgressRing` | `ProgressRing.tsx` | A round meter (tasks done today) | `value`, `max`, `label`; `tone` hi · accent · green; size via `className` (default 52px); track takes the text colour, so it works on the hero |
 
 ### App frame and dashboard pieces (from v1)
@@ -188,7 +188,9 @@ Each takes `question` (a `questions` row), `detail` (the matching type row from 
 | `StrQuestion` | text field | `exact` / `list` (in order) / `set` (any order); case rule from the question; any accepted answer counts |
 | `CodeQuestion` | `CodeEditor` with the starter code | no automatic check: the learner marks it right or wrong |
 
-They all share **`QuestionFrame`**: type, difficulty and marks (+marks, −negative marks or "No negative marking"), the stem, the answer area, **Check answer** → verdict with marks gained or lost → **Try again**, then the explanation. `OptionList` is the A/B/C/D list shared by MCQ and MSQ.
+Also here: **`AnyQuestion`** (shows a question with the component of its `type`, for lists of mixed questions) and **`QuestionPalette`** (the grid of numbered buttons beside a sitting: `states` one per question (`new` · `seen` · `right` · `wrong`, rules in `lib/session.ts`), `current`, `onJump`; the legend lists only the states present). The topic practice screen (`components/practice/PracticeSession.tsx`, `/practice/session?topic=`) is built from these; its clock is `components/utils/useSittingClock.ts` (`lib/activeClock.ts`).
+
+They all share **`QuestionFrame`**: type, difficulty and marks (+marks, −negative marks or "No negative marking"), the stem, the answer area, **Check answer** → the explanation, directly under the answer area → the verdict bar with marks gained or lost and **Try again** at its right end. `OptionList` is the A/B/C/D list shared by MCQ and MSQ.
 
 ---
 

@@ -1,20 +1,25 @@
-/* Disclosure open / close (components/ui/Disclosure.tsx): the body slides and fades instead of snapping.
-   Imported by styles/site.css. Uses ::details-content + interpolate-size, so browsers without them just
-   snap open / shut as before. Reduced motion switches it off (styles/site.css). */
+/* Disclosure open / close (components/ui/Disclosure.tsx): the body grows and fades in, and shrinks and fades out
+   before the <details> shuts. The component sets data-expanded a frame after opening and keeps <details> open
+   while it closes, so both directions animate, in every browser. data-settled lets the body overflow again once
+   it stops moving (pop-ups, focus rings). Imported by styles/site.css. Reduced motion switches it off
+   (styles/site.css). Keep the time in step with MOTION_MS in Disclosure.tsx. */
 @utility disclosure-motion {
-  interpolate-size: allow-keywords;
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 0.34s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.26s ease;
 
-  &::details-content {
-    block-size: 0;
-    opacity: 0;
+  & > * {
+    min-height: 0;
     overflow: clip;
-    transition:
-      block-size 0.32s cubic-bezier(0.16, 1, 0.3, 1),
-      opacity 0.24s ease,
-      content-visibility 0.32s allow-discrete;
   }
-  &[open]::details-content {
-    block-size: auto;
+  &[data-expanded] {
+    grid-template-rows: 1fr;
     opacity: 1;
+  }
+  &[data-settled] > * {
+    overflow: visible;
   }
 }

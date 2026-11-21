@@ -23,6 +23,7 @@ import { backupQueries } from "@/lib/db/queries/backup";
 import { dashboardQueries } from "@/lib/db/queries/dashboard";
 import { practiceQueries } from "@/lib/db/queries/practice";
 import { plannerQueries } from "@/lib/db/queries/planner";
+import { questionQueries } from "@/lib/db/queries/question";
 import { devQueries } from "@/lib/db/queries/dev";
 import type { QueryDef } from "@/lib/db/queries/core";
 
@@ -37,6 +38,7 @@ export const QUERIES = {
   ...dashboardQueries,
   ...practiceQueries,
   ...plannerQueries,
+  ...questionQueries,
   ...devQueries,
 };
 

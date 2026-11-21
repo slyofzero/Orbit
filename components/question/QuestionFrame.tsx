@@ -78,34 +78,32 @@ export function QuestionFrame({
 
       <div className="grid gap-2.5">{children}</div>
 
-      {result ? <VerdictBox q={q} result={result} /> : null}
-
-      <div className="flex flex-wrap items-center gap-2.5">
-        <span className="mr-auto text-[0.85rem] text-gray">{result ? "" : txt(instruction)}</span>
-        {result ? (
-          <Button variant="soft" icon={<IconRefresh />} onClick={onReset}>
-            Try again
-          </Button>
-        ) : (
-          (actions ?? (
+      {result ? (
+        <>
+          {q.explanation && (
+            <div className="grid gap-1.5 rounded-md bg-sheet-2 px-4 py-3">
+              <span className="text-[0.9rem] font-bold text-gray">Explanation</span>
+              <Rich text={q.explanation} block />
+            </div>
+          )}
+          <VerdictBox q={q} result={result} onReset={onReset} />
+        </>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2.5">
+          <span className="mr-auto text-[0.85rem] text-gray">{txt(instruction)}</span>
+          {actions ?? (
             <Button variant="primary" icon={<IconCheck />} disabled={!canCheck} onClick={onCheck}>
               Check answer
             </Button>
-          ))
-        )}
-      </div>
-
-      {result && q.explanation && (
-        <div className="grid gap-1.5 border-t border-dashed border-line pt-3.5">
-          <span className="text-[0.9rem] font-bold text-gray">Explanation</span>
-          <Rich text={q.explanation} block />
+          )}
         </div>
       )}
     </article>
   );
 }
 
-function VerdictBox({ q, result }: { q: QuestionRow; result: FrameResult }) {
+/** The verdict bar (right / wrong / not answered, marks, any detail) with Try again at its right end. */
+function VerdictBox({ q, result, onReset }: { q: QuestionRow; result: FrameResult; onReset: () => void }) {
   const { verdict, selfMarked, detail } = result;
   const by = selfMarked ? " (marked by you)" : "";
   const title =
@@ -116,9 +114,8 @@ function VerdictBox({ q, result }: { q: QuestionRow; result: FrameResult }) {
         : "Not answered · 0";
   return (
     <div
-      role="status"
       className={cx(
-        "grid gap-1.5 rounded-md border-l-4 px-4 py-3",
+        "flex flex-wrap items-center gap-x-4 gap-y-2.5 rounded-md border-l-4 py-2.5 pr-2.5 pl-4",
         verdict === "correct"
           ? "border-green bg-green-soft"
           : verdict === "incorrect"
@@ -126,16 +123,21 @@ function VerdictBox({ q, result }: { q: QuestionRow; result: FrameResult }) {
             : "border-gray bg-sheet-2",
       )}
     >
-      <span
-        className={cx(
-          "flex items-center gap-2 font-bold",
-          verdict === "correct" && "text-green",
-          verdict === "incorrect" && "text-red",
-        )}
-      >
-        {title}
-      </span>
-      {detail && <div>{txt(detail)}</div>}
+      <div role="status" className="grid min-w-0 flex-1 gap-1.5">
+        <span
+          className={cx(
+            "flex items-center gap-2 font-bold",
+            verdict === "correct" && "text-green",
+            verdict === "incorrect" && "text-red",
+          )}
+        >
+          {title}
+        </span>
+        {detail && <div>{txt(detail)}</div>}
+      </div>
+      <Button variant="soft" icon={<IconRefresh />} onClick={onReset}>
+        Try again
+      </Button>
     </div>
   );
 }

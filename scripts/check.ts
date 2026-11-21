@@ -19,6 +19,7 @@ import "@/scripts/checks/grading";
 import "@/scripts/checks/dashboard";
 import "@/scripts/checks/planner";
 import "@/scripts/checks/practice";
+import "@/scripts/checks/session";
 
 if (results.failed) {
   console.log(`\n${results.failed} FAILED`);
