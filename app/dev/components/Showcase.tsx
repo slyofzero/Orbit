@@ -26,6 +26,7 @@ import {
   Kbd,
   Pill,
   ProgressBar,
+  Radio,
   RadioGroup,
   Rich,
   RichEditor,
@@ -890,6 +891,7 @@ function Choices() {
               label="Solve $5$ problems (finishes the day)"
             />
           </div>
+          <RadioRowDemo />
           <RadioGroup
             legend="Which questions? $Q \subseteq \mathcal{Q}$"
             value={r}
@@ -907,6 +909,28 @@ function Choices() {
         </div>
       </Demo>
     </Section>
+  );
+}
+
+/** Radio on its own: v1's question editor, one radio beside each option row (which option is right). */
+function RadioRowDemo() {
+  const [right, setRight] = useState(1);
+  return (
+    <div className="grid gap-2">
+      <Text variant="caption">{"Radio (one per row): which option is right? $\\checkmark$"}</Text>
+      {["$x = 1$", "$x = 2$", "$x = -2$"].map((o, i) => (
+        <div key={o} className="flex items-center gap-2">
+          <Radio
+            name="demo-right"
+            checked={right === i}
+            onChange={() => setRight(i)}
+            label={`Option ${String.fromCharCode(65 + i)} is right`}
+          />
+          <b className="w-[18px]">{String.fromCharCode(65 + i)}</b>
+          <Text as="span">{o}</Text>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -1202,6 +1226,9 @@ function TabsDemo() {
       </Demo>
       <Demo caption='shape="bar": one rounded bar with the open tab filled (page sections, e.g. Practice)'>
         <Tabs label="Stats sections (bar)" shape="bar" value={tab} onChange={setTab} tabs={tabs} />
+      </Demo>
+      <Demo caption='shape="underline": plain words on a line, the open one underlined (v1 Manage pack sections)'>
+        <Tabs label="Stats sections (underline)" shape="underline" value={tab} onChange={setTab} tabs={tabs} />
       </Demo>
     </Section>
   );
@@ -1629,6 +1656,7 @@ function DialogDemo() {
   const [open, setOpen] = useState(false);
   const [party, setParty] = useState(false);
   const [warn, setWarn] = useState(false);
+  const [wide, setWide] = useState(false);
   return (
     <Section
       id="dialog"
@@ -1647,7 +1675,24 @@ function DialogDemo() {
           <Button variant="soft" onClick={() => setWarn(true)}>
             {"Warning that shakes (shake) $\\triangle$"}
           </Button>
+          <Button variant="soft" onClick={() => setWide(true)}>
+            {'Wide form (size="wide") $\\leftrightarrow$'}
+          </Button>
         </div>
+        <Dialog
+          size="wide"
+          open={wide}
+          onClose={() => setWide(false)}
+          title="Edit a question $q_1$"
+          footer={
+            <Button variant="primary" onClick={() => setWide(false)}>
+              Save changes
+            </Button>
+          }
+        >
+          {"A long form gets **760px** instead of $520$px, e.g. v1's question editor (Manage pack)."}
+          <TextField label="Question $x^2$" defaultValue="Solve x^2 = 4." />
+        </Dialog>
         <Dialog
           shake
           open={warn}

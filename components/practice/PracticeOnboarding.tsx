@@ -109,7 +109,7 @@ interface Done {
 }
 
 /** SHA-256 of a file's text, in hex (finds the same file dropped twice). */
-async function sha256(text: string): Promise<string> {
+export async function sha256(text: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }

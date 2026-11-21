@@ -18,7 +18,8 @@ const CLOSING = "[&[open][data-closing]]:backdrop:animate-fade-out";
  *  Opens with a fade + rise over a frosted backdrop, and closes with the reverse.
  *  `special` = animated gradient border, gradient title and a sparkle badge (celebrations);
  *  `glow` = how strongly it glows (low · medium · high, default medium);
- *  `shake` = shakes a little as it opens (a warning that needs attention, e.g. leaving a mock's full screen). */
+ *  `shake` = shakes a little as it opens (a warning that needs attention, e.g. leaving a mock's full screen);
+ *  `size`: `md` (default, 520px) · `wide` (760px: a long form, e.g. v1's question editor). */
 export function Dialog({
   open,
   onClose,
@@ -28,6 +29,7 @@ export function Dialog({
   special = false,
   glow = "medium",
   shake = false,
+  size = "md",
 }: {
   open: boolean;
   onClose: () => void;
@@ -37,6 +39,7 @@ export function Dialog({
   special?: boolean;
   glow?: Glow;
   shake?: boolean;
+  size?: "md" | "wide";
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -65,7 +68,8 @@ export function Dialog({
     <dialog
       ref={ref}
       className={cx(
-        "m-auto max-h-[calc(100vh-48px)] w-[min(520px,calc(100vw-32px))] rounded-lg p-0 text-ink shadow-lg backdrop:frosted",
+        "m-auto max-h-[calc(100vh-48px)] rounded-lg p-0 text-ink shadow-lg backdrop:frosted",
+        size === "wide" ? "w-[min(760px,calc(100vw-32px))]" : "w-[min(520px,calc(100vw-32px))]",
         OPENING,
         CLOSING,
         special

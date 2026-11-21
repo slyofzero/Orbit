@@ -120,6 +120,7 @@ All fields take `label`, `hint`, `error` and **`help`** (a "?" tip beside the la
 | `FileInput` | `FileInput.tsx` | Picking files | `files` / `onChange(files)`; `multiple`; `accept`; `title`, `description`, `buttonLabel`; drop zone lights up with the special gradient while dragging; chosen files become cards (type tile or picture thumbnail, size, ✓ Ready, remove) |
 | `Checkbox` | `Choice.tsx` | On/off inside a form | `label`, `description`, `disabled`; `variant="task"` = v1's agenda task (round tick turning green, struck-through text, dashed line), `burst` = confetti pieces when ticked (`components/utils/burst.ts`) |
 | `RadioGroup` | `Choice.tsx` | One of a few options, all visible | `legend`, `options` (`label`, `description`, `disabled`) |
+| `Radio` | `Choice.tsx` | One round radio on its own, in a row you lay out yourself (the question editor's "this option is right") | `name` (radios sharing it form a group), `checked`, `onChange`, `label` (read aloud only), `disabled` |
 | `Switch` | `Switch.tsx` | A setting that applies at once | `label` |
 | `Segmented` | `Segmented.tsx` | 2–4 mutually exclusive options side by side | `segments` (`label`, `icon`); arrow keys; `special`: `true` (all) or a list of values (just those) |
 | `ThemeToggle` | `ThemeToggle.tsx` | Light / System / Dark | `compact` = v1's rail pill (cosmic-event button via `onCosmic`, then one theme button showing the current choice; System → Light → Dark); switching plays v1's ripple (the new theme spreads in a circle from the click; `applyThemeWithRipple` in `lib/theme.ts`, skipped with reduce motion or without View Transitions) |
@@ -130,7 +131,7 @@ All fields take `label`, `hint`, `error` and **`help`** (a "?" tip beside the la
 | `Card` | `Card.tsx` | A sheet holding one idea | `title` (h2, v1's card-title size), `subtitle`, `actions` (wrap under the title on narrow screens); `hero` (the one dark panel per screen); `special`, with `glow` low · medium (default) · high |
 | `Pill` | `Pill.tsx` | Status, difficulty, counts, tags | `tone`: neutral · accent · green · red · amber · blue · ink · hi · red-solid · accent-solid · special (day kinds: study blue, light green, short day amber, mock accent-solid, exam red-solid, taper hi, buffer neutral) |
 | `Kbd` | `Pill.tsx` | A keyboard key | text shown literally |
-| `Tabs` | `Tabs.tsx` | Switching between views | `tabs` (`label`, `count`); arrow keys; `special`: `true` or a list of values; `shape`: `pills` (default) · `bar` (one rounded bar, the open tab filled: v1's Practice sections; no `special`) |
+| `Tabs` | `Tabs.tsx` | Switching between views | `tabs` (`label`, `count`); arrow keys; `special`: `true` or a list of values; `shape`: `pills` (default) · `bar` (one rounded bar, the open tab filled: v1's Practice sections; no `special`) · `underline` (plain words on a line, the open one underlined in the accent colour: v1's Manage pack sections; no `special`) |
 | `SearchField` | `SearchField.tsx` | A toolbar search box ("Find a topic") | `label` (read aloud), `value`, `onChange(text)`, `placeholder` (plain text); search icon, clear button once typed; grows up to 340px |
 | `FilterMenu` | `FilterMenu.tsx` | v1's Filter button and pop-up | `groups` (`key`, `label`, `choices`: `value` unique across groups, `label`, `count`), `picked` / `onChange(values)`; search box, chosen chips + Clear all, 20 chips per group then "… N more"; renders nothing without choices; closes on Esc / outside click |
 | `ProgressRow` | `ProgressRow.tsx` | v1's practice row, its own progress bar | `lead`, `title`, `end`, `good` / `bad` (0-100: share tinted green, then red), `hint`; `href` = link, else `onClick` = button |
@@ -165,7 +166,7 @@ All fields take `label`, `hint`, `error` and **`help`** (a "?" tip beside the la
 ### Overlays and feedback
 | Component | File | Use it for | Main options |
 |---|---|---|---|
-| `Dialog` | `Dialog.tsx` | A focused task or confirmation | `open`, `onClose`, `title`, `footer`, `special` (with `glow` low · medium · high); `shake` = shakes a little as it opens (a warning, e.g. leaving a mock's full screen; `dialog-shake` in `styles/animations/dialog.css`); closes on Esc, ×, or a click outside; fades in and out over a frosted backdrop |
+| `Dialog` | `Dialog.tsx` | A focused task or confirmation | `open`, `onClose`, `title`, `footer`, `special` (with `glow` low · medium · high); `shake` = shakes a little as it opens (a warning, e.g. leaving a mock's full screen; `dialog-shake` in `styles/animations/dialog.css`); `size` `md` (520px, default) · `wide` (760px, a long form such as the question editor); closes on Esc, ×, or a click outside; fades in and out over a frosted backdrop |
 | `Tooltip` | `Tooltip.tsx` | A short label for a button or link | `content`, `placement` top/bottom/left/right, `className` (replaces the inline wrapper layout, e.g. a chart column) |
 | `HelpTip` | `Tooltip.tsx` | A "?" explaining the text beside it | hover, keyboard focus or tap; Esc or a tap elsewhere closes it |
 | `HelpDialog` | `Tooltip.tsx` | Help too long for a bubble (tables, examples) | same "?" (optionally with a `label`), opens a `Dialog`; e.g. the editor's Formatting help |

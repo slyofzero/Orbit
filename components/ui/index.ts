@@ -7,7 +7,7 @@ export { Heading } from "@/components/ui/Heading";
 export { Button, IconButton, Spinner, type ButtonVariant, type ButtonSize } from "@/components/ui/Button";
 export { TextField, TextArea } from "@/components/ui/Field";
 export { CodeEditor, CODE_LANGS } from "@/components/ui/CodeEditor";
-export { Checkbox, RadioGroup, type RadioOption } from "@/components/ui/Choice";
+export { Checkbox, Radio, RadioGroup, type RadioOption } from "@/components/ui/Choice";
 export { Switch } from "@/components/ui/Switch";
 export { Segmented, type Segment } from "@/components/ui/Segmented";
 export { ThemeToggle } from "@/components/ui/ThemeToggle";

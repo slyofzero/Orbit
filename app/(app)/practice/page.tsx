@@ -1,12 +1,11 @@
 "use client";
 // /practice: v1's Practice. Three sections kept in the address (?tab=topics | programming | mocks): Topics
 // (subjects and topics to practise), Programming (code questions) and Mocks (full-length and quick tests).
-// A section with nothing loaded shows how to load some instead (PracticeOnboarding). The "Manage" button
-// isn't built yet (useSoon, TODO.md).
+// A section with nothing loaded shows how to load some instead (PracticeOnboarding). "Manage pack" / "Manage
+// mocks" open /practice/manage (components/manage/ManagePack.tsx).
 
 import { Suspense, useState } from "react";
 import { Page } from "@/components/app/Page";
-import { useSoon } from "@/components/dashboard/kit";
 import { ImportCelebration, type Celebration } from "@/components/practice/ImportCelebration";
 import { MocksTab } from "@/components/practice/MocksTab";
 import { PracticeOnboarding } from "@/components/practice/PracticeOnboarding";
@@ -27,7 +26,6 @@ export default function PracticePage() {
 }
 
 function Practice() {
-  const soon = useSoon();
   const [tab, setTab] = useTab(PRACTICE_TABS, "topics");
   const { data: counts } = useQuery("practice.counts");
   const [loaded, setLoaded] = useState<Celebration | null>(null); // what was just imported: plays the transition
@@ -57,7 +55,7 @@ function Practice() {
           <Button
             variant="secondary"
             className="ml-auto"
-            onClick={soon(tab === "mocks" ? "Managing mocks" : "Managing the pack")}
+            href={tab === "mocks" ? "/practice/manage?tab=mock-tests" : "/practice/manage"}
           >
             {tab === "mocks" ? "Manage mocks" : "Manage pack"}
           </Button>

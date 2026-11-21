@@ -88,6 +88,34 @@ export function Checkbox({
   );
 }
 
+/** One round radio button on its own, for a row you lay out yourself (e.g. "this option is right" beside each
+ *  option of a question being edited). Radios sharing a `name` form a group; `label` is read aloud only. */
+export function Radio({
+  name,
+  checked,
+  onChange,
+  label,
+  disabled,
+}: {
+  name: string;
+  checked: boolean;
+  onChange: () => void;
+  label: string;
+  disabled?: boolean;
+}) {
+  return (
+    <input
+      type="radio"
+      className={cx(RADIO, "mt-0", disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer")}
+      name={name}
+      checked={checked}
+      disabled={disabled}
+      aria-label={label}
+      onChange={onChange}
+    />
+  );
+}
+
 export type RadioOption<V extends string> = { value: V; label: ReactNode; description?: ReactNode; disabled?: boolean };
 
 export function RadioGroup<V extends string>({
