@@ -7,5 +7,6 @@ export { NatQuestion } from "@/components/question/NatQuestion";
 export { StrQuestion } from "@/components/question/StrQuestion";
 export { CodeQuestion } from "@/components/question/CodeQuestion";
 export { AnyQuestion } from "@/components/question/AnyQuestion";
+export { ExamQuestion } from "@/components/question/ExamQuestion";
 export { QuestionPalette } from "@/components/question/QuestionPalette";
 export { TYPE_LABEL, DIFFICULTY_LABEL, DIFFICULTY_TONE, fmtMarks, letter } from "@/components/question/format";

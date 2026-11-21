@@ -96,7 +96,7 @@ export const devQueries = {
     return id;
   }),
 
-  /** Adds one sample mock: 30 minutes, one section, three mock-only MCQs (shows in the Mocks tab). */
+  /** Adds one sample mock: 30 minutes, full screen, one section, three mock-only MCQs (shows in the Mocks tab). */
   "dev.addSampleMock": write(
     ["subjects", "topics", "questions", "question_mcq", "mocks", "mock_sections", "mock_items"],
     (sql) => {
@@ -108,7 +108,7 @@ export const devQueries = {
       const mockId = `mk_dev${crypto.randomUUID().replace(/-/g, "").slice(0, 10)}`;
       sql.run(
         `INSERT INTO mocks (id, name, instructions, minutes, full_screen, position, created_at, updated_at)
-         VALUES (?, ?, ?, 30, 0, ?, ?, ?)`,
+         VALUES (?, ?, ?, 30, 1, ?, ?, ?)`,
         [mockId, `Sample mock ${n}`, "A short sample paper: **3 questions**, 30 minutes.", n, now, now],
       );
       const section = sql.get<{ id: number }>(

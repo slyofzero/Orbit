@@ -20,6 +20,7 @@ import "@/scripts/checks/dashboard";
 import "@/scripts/checks/planner";
 import "@/scripts/checks/practice";
 import "@/scripts/checks/session";
+import "@/scripts/checks/exam";
 
 if (results.failed) {
   console.log(`\n${results.failed} FAILED`);

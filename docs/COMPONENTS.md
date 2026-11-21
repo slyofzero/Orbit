@@ -143,6 +143,7 @@ All fields take `label`, `hint`, `error` and **`help`** (a "?" tip beside the la
 | `EmptyState` | `EmptyState.tsx` | A list or page with nothing yet | `title`, text, `action`; say why it is empty and offer the next step |
 | `Disclosure` | `Disclosure.tsx` | Show / hide extra content in place; the body grows and fades in when opened, shrinks and fades out when shut, in every browser (`disclosure-motion`, styles/animations/disclosure.css) | `title`, `defaultOpen`; `open` + `onOpenChange` = controlled by the page (e.g. forced open while searching); `bodyClassName` replaces the body's padding and layout (default: indented under the title) |
 | `ProgressRing` | `ProgressRing.tsx` | A round meter (tasks done today) | `value`, `max`, `label`; `tone` hi · accent · green; size via `className` (default 52px); track takes the text colour, so it works on the hero |
+| `ExamTimer` | `ExamTimer.tsx` | A mock's countdown ("Time left 01:59:07") | `endsAt` (Unix ms; wall clock, so a refresh never pauses it), `onTimeUp` (fires once at zero), `label`; amber in the last 10 minutes, red and pulsing in the last 2 (`styles/animations/exam-timer.css`; rules `clockText` / `clockTone` in `lib/exam.ts`) |
 
 ### App frame and dashboard pieces (from v1)
 | Component | File | Use it for | Main options |
@@ -164,7 +165,7 @@ All fields take `label`, `hint`, `error` and **`help`** (a "?" tip beside the la
 ### Overlays and feedback
 | Component | File | Use it for | Main options |
 |---|---|---|---|
-| `Dialog` | `Dialog.tsx` | A focused task or confirmation | `open`, `onClose`, `title`, `footer`, `special` (with `glow` low · medium · high); closes on Esc, ×, or a click outside; fades in and out over a frosted backdrop |
+| `Dialog` | `Dialog.tsx` | A focused task or confirmation | `open`, `onClose`, `title`, `footer`, `special` (with `glow` low · medium · high); `shake` = shakes a little as it opens (a warning, e.g. leaving a mock's full screen; `dialog-shake` in `styles/animations/dialog.css`); closes on Esc, ×, or a click outside; fades in and out over a frosted backdrop |
 | `Tooltip` | `Tooltip.tsx` | A short label for a button or link | `content`, `placement` top/bottom/left/right, `className` (replaces the inline wrapper layout, e.g. a chart column) |
 | `HelpTip` | `Tooltip.tsx` | A "?" explaining the text beside it | hover, keyboard focus or tap; Esc or a tap elsewhere closes it |
 | `HelpDialog` | `Tooltip.tsx` | Help too long for a bubble (tables, examples) | same "?" (optionally with a `label`), opens a `Dialog`; e.g. the editor's Formatting help |
@@ -186,11 +187,11 @@ Each takes `question` (a `questions` row), `detail` (the matching type row from 
 | `MsqQuestion` | lettered options, pick several | all-or-nothing: the picked set must equal `correct` |
 | `NatQuestion` | number field | right if within `± tolerance` of `value` |
 | `StrQuestion` | text field | `exact` / `list` (in order) / `set` (any order); case rule from the question; any accepted answer counts |
-| `CodeQuestion` | `CodeEditor` with the starter code | no automatic check: the learner marks it right or wrong |
+| `CodeQuestion` | `CodeEditor` with the starter code (`rows`, `onCodeChange`; `split` = statement beside the editor on wide screens) | no automatic check: the learner marks it right or wrong |
 
-Also here: **`AnyQuestion`** (shows a question with the component of its `type`, for lists of mixed questions) and **`QuestionPalette`** (the grid of numbered buttons beside a sitting: `states` one per question (`new` · `seen` · `right` · `wrong`, rules in `lib/session.ts`), `current`, `onJump`; the legend lists only the states present). The topic practice screen (`components/practice/PracticeSession.tsx`, `/practice/session?topic=`) is built from these; its clock is `components/utils/useSittingClock.ts` (`lib/activeClock.ts`).
+Also here: **`AnyQuestion`** (shows a question with the component of its `type`, for lists of mixed questions), **`ExamQuestion`** (one question of a mock, any type: exam mode = controlled `response` + `onChange`, no Check, no verdict; `review` = locked, with the correct answer, explanation and marks earned; shapes and grading in `lib/exam.ts`) and **`QuestionPalette`** (the grid of numbered buttons beside a sitting: `states` one per question: practice `new` · `seen` · `right` · `wrong` (`lib/session.ts`) or a mock's `not_visited` · `not_answered` · `answered` · `marked` · `answered_marked` (`lib/exam.ts`); `current` (-1 = none), `onJump`, `start` (the first number, for a section), `counts` (numbers in the legend); the legend lists only the states present). The topic practice screen (`components/practice/PracticeSession.tsx`, `/practice/session?topic=`) is built from these; its clock is `components/utils/useSittingClock.ts` (`lib/activeClock.ts`).
 
-They all share **`QuestionFrame`**: type, difficulty and marks (+marks, −negative marks or "No negative marking"), the stem, the answer area, **Check answer** → the explanation, directly under the answer area → the verdict bar with marks gained or lost and **Try again** at its right end. `OptionList` is the A/B/C/D list shared by MCQ and MSQ.
+They all share **`QuestionFrame`**: type, difficulty and marks (+marks, −negative marks or "No negative marking"), the stem, the answer area, **Check answer** → the explanation, directly under the answer area → the verdict bar with marks gained or lost and **Try again** at its right end (left out when `onReset` is not given: a locked review). `split` puts the stem beside the answer area; `exam` drops checking (a mock in progress). `OptionList` is the A/B/C/D list shared by MCQ and MSQ.
 
 ---
 

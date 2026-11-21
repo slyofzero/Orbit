@@ -272,6 +272,7 @@ export interface MockCard {
   name: string;
   instructions: string | null;
   minutes: number;
+  full_screen: number; // 1 = runs in full screen (raw 0 / 1 from SQL)
   questions: number;
   marks: number;
   attempts: number; // submitted ones

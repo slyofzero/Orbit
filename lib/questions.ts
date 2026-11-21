@@ -19,7 +19,17 @@ export interface LoadedQuestion {
   latest: "correct" | "incorrect" | null; // latest counted answer (skips ignored); null = never tried
 }
 
-/** `question.topic`: the practice questions of one topic, in a fixed order (it never changes while you answer). */
+/** `question.code`: one code question for the Programming screen, with its place in the Programming list. */
+export interface CodeQuestionData {
+  item: LoadedQuestion | null; // null = no such code question (or retired)
+  topic: { id: string; name: string; subject_name: string } | null;
+  index: number; // 0-based place in the Programming list
+  total: number; // code questions in the list
+  prev: string | null; // id of the one before it
+  next: string | null; // id of the one after it
+}
+
+/** `question.topic`:the practice questions of one topic, in a fixed order (it never changes while you answer). */
 export interface TopicQuestions {
   topic: { id: string; name: string; subject_name: string } | null; // null = no such topic
   items: LoadedQuestion[];

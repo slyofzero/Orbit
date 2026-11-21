@@ -12,6 +12,7 @@ import { NavRail, ThemeToggle } from "@/components/ui";
 import { useQuery } from "@/lib/db/client";
 
 const ONBOARDING = "/onboarding";
+const EXAM = "/exam";
 
 const NAV = [
   { href: "/dashboard", label: "Today", icon: <IconHome /> },
@@ -33,6 +34,9 @@ export function AppFrame({ children }: { children: ReactNode }) {
   }, [goTo, router]);
 
   if (!data || goTo) return null;
+
+  // A mock test fills the screen: no rail, no theme switch (components/exam/).
+  if (hasPlan && (path === EXAM || path.startsWith(`${EXAM}/`))) return <main className="w-full">{children}</main>;
 
   if (!hasPlan)
     return (

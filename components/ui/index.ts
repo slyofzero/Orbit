@@ -45,3 +45,4 @@ export { ActionRow } from "@/components/ui/ActionRow";
 export { DateTile } from "@/components/ui/DateTile";
 export { DayRow, type DayRowTone } from "@/components/ui/DayRow";
 export { DayStrip, type DayStripSegment, type DayStripState } from "@/components/ui/DayStrip";
+export { ExamTimer } from "@/components/ui/ExamTimer";

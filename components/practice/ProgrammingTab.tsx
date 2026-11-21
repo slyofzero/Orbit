@@ -1,10 +1,9 @@
 "use client";
 // The Programming tab (v1's): every code question as a row with where you are with it (solved, tried, new),
 // a search box, To do / Solved tabs and the Filter pop-up. Rules: lib/practice.ts; data: the
-// `practice.programming` query. Opening a question (the editor screen) isn't built yet (useSoon).
+// `practice.programming` query. A row opens the question beside the editor (/practice/code?id=).
 
 import { useMemo, useState } from "react";
-import { useSoon } from "@/components/dashboard/kit";
 import {
   ActionRow,
   EmptyState,
@@ -43,7 +42,6 @@ const DIFFICULTY: Record<Difficulty, { label: string; tone: PillTone }> = {
 };
 
 export function ProgrammingTab() {
-  const soon = useSoon();
   const { data } = useQuery("practice.programming");
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<CodeStatusFilter>("all");
@@ -114,7 +112,7 @@ export function ProgrammingTab() {
                 title={firstLine(q.stem)}
                 sub={`${q.marks} mark${q.marks === 1 ? "" : "s"} · ${q.subject_name}: ${q.topic_name}`}
                 end={<Pill tone={DIFFICULTY[q.difficulty].tone}>{DIFFICULTY[q.difficulty].label}</Pill>}
-                onClick={soon("Opening the code editor")}
+                href={`/practice/code?id=${encodeURIComponent(q.id)}`}
               />
             </div>
           ))}

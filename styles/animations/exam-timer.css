@@ -1,0 +1,10 @@
+/* The mock countdown's last two minutes (components/ui/ExamTimer.tsx): a slow pulse. Imported by styles/site.css. */
+@theme inline {
+  --animate-timer-pulse: timer-pulse 1s ease-in-out infinite;
+
+  @keyframes timer-pulse {
+    50% {
+      opacity: 0.6;
+    }
+  }
+}

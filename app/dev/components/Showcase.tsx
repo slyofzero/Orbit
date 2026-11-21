@@ -20,6 +20,7 @@ import {
   Dialog,
   Dropdown,
   EmptyState,
+  ExamTimer,
   Heading,
   IconButton,
   Kbd,
@@ -99,6 +100,7 @@ import { hashImage, imageRef } from "@/lib/images";
 import {
   AnyQuestion,
   CodeQuestion,
+  ExamQuestion,
   McqQuestion,
   MsqQuestion,
   NatQuestion,
@@ -106,6 +108,7 @@ import {
   StrQuestion,
 } from "@/components/question";
 import type { PaletteState } from "@/lib/session";
+import type { ExamResponse, ExamStatus } from "@/lib/exam";
 
 // ---------------------------------------------------------------------------
 // sample data
@@ -1625,6 +1628,7 @@ function TableDemo() {
 function DialogDemo() {
   const [open, setOpen] = useState(false);
   const [party, setParty] = useState(false);
+  const [warn, setWarn] = useState(false);
   return (
     <Section
       id="dialog"
@@ -1640,7 +1644,25 @@ function DialogDemo() {
           <Button variant="special" icon={<IconSparkle />} onClick={() => setParty(true)}>
             {"Special dialog $\\star$"}
           </Button>
+          <Button variant="soft" onClick={() => setWarn(true)}>
+            {"Warning that shakes (shake) $\\triangle$"}
+          </Button>
         </div>
+        <Dialog
+          shake
+          open={warn}
+          onClose={() => setWarn(false)}
+          title="You left full screen"
+          footer={
+            <Button variant="primary" onClick={() => setWarn(false)}>
+              Return to full screen
+            </Button>
+          }
+        >
+          {
+            "🔴 **CAUTION:** this is warning $1$ of $1$. **If you leave full screen again, the test ends and is marked failed.**"
+          }
+        </Dialog>
         <Dialog
           special
           open={party}
@@ -1977,6 +1999,63 @@ function RichDemo() {
   );
 }
 
+const EXAM_PALETTE: ExamStatus[] = [
+  "answered",
+  "answered",
+  "not_answered",
+  "marked",
+  "answered_marked",
+  "not_visited",
+  "not_visited",
+  "not_visited",
+];
+
+/** A mock: the timer, the exam palette, and ExamQuestion in exam mode (no Check) and review mode (locked). */
+function ExamDemo() {
+  const [current, setCurrent] = useState(4);
+  const [resp, setResp] = useState<ExamResponse>({ choice: null, typed: null });
+  const [ends] = useState(() => Date.now() + 9 * 60_000 + 30_000);
+  const mcq = { question_id: Q_MCQ.id, options: ["$0$", "$1$", "$3$", "$-1$"], correct: 1 };
+  return (
+    <div className="grid gap-4">
+      <Text variant="caption" as="span">
+        {"ExamTimer · components/ui/ExamTimer.tsx: amber under $10$ min, red under $2$"}
+      </Text>
+      <div className="flex flex-wrap gap-3">
+        <ExamTimer endsAt={ends} />
+        <ExamTimer endsAt={ends + 3_600_000} label="Time left $t$" />
+      </div>
+      <Text variant="caption" as="span">
+        {"Exam palette: the five states, numbered from $5$ (a second section), with counts"}
+      </Text>
+      <div className="max-w-[320px]">
+        <QuestionPalette states={EXAM_PALETTE} current={current} onJump={setCurrent} start={5} counts />
+      </div>
+      <Text variant="caption" as="span">
+        ExamQuestion, exam mode: pick freely, nothing is checked
+      </Text>
+      <ExamQuestion number={5} question={Q_MCQ} detail={mcq} response={resp} onChange={setResp} />
+      <Text variant="caption" as="span">
+        ExamQuestion, review mode: locked, with the answer and marks
+      </Text>
+      <ExamQuestion
+        number={5}
+        question={{ ...Q_MCQ, id: "q_mcq_review" }}
+        detail={{ ...mcq, question_id: "q_mcq_review" }}
+        response={{ choice: [2], typed: null }}
+        review={{ verdict: "incorrect", marks: -Q_MCQ.negative_marks }}
+      />
+      <ExamQuestion
+        number={6}
+        question={{ ...Q_NAT, id: "q_nat_review" }}
+        detail={{ question_id: "q_nat_review", value: 1.72, tolerance: 0.01 }}
+        response={{ choice: null, typed: "1.72" }}
+        review={{ verdict: "correct", marks: Q_NAT.marks }}
+      />
+    </div>
+  );
+}
+
 const PALETTE: PaletteState[] = [
   "right",
   "wrong",
@@ -2045,6 +2124,18 @@ function Questions() {
         detail={{ question_id: Q_CODE.id, starter: "def is_palindrome(s):\n  # your code here\n  pass\n" }}
       />
       <Text variant="caption" as="span">
+        {
+          "Code question, split: the statement beside the editor on wide screens (the Programming screen) $\\leftrightarrow$"
+        }
+      </Text>
+      <CodeQuestion
+        split
+        rows={14}
+        number={5}
+        question={{ ...Q_CODE, id: "q_code_split" }}
+        detail={{ question_id: "q_code_split", starter: "def is_palindrome(s):\n  # your code here\n  pass\n" }}
+      />
+      <Text variant="caption" as="span">
         {"Special question (e.g. question of the day $\\star$)"}
       </Text>
       <McqQuestion
@@ -2054,6 +2145,7 @@ function Questions() {
         detail={{ question_id: "q_mcq2", options: ["$0$", "$1$", "$3$", "$-1$"], correct: 1 }}
       />
       <PaletteDemo />
+      <ExamDemo />
     </Section>
   );
 }

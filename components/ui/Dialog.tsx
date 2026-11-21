@@ -17,7 +17,8 @@ const CLOSING = "[&[open][data-closing]]:backdrop:animate-fade-out";
 /** Modal dialog on the native <dialog>: traps focus, closes on Esc and on a click outside.
  *  Opens with a fade + rise over a frosted backdrop, and closes with the reverse.
  *  `special` = animated gradient border, gradient title and a sparkle badge (celebrations);
- *  `glow` = how strongly it glows (low · medium · high, default medium). */
+ *  `glow` = how strongly it glows (low · medium · high, default medium);
+ *  `shake` = shakes a little as it opens (a warning that needs attention, e.g. leaving a mock's full screen). */
 export function Dialog({
   open,
   onClose,
@@ -26,6 +27,7 @@ export function Dialog({
   footer,
   special = false,
   glow = "medium",
+  shake = false,
 }: {
   open: boolean;
   onClose: () => void;
@@ -34,6 +36,7 @@ export function Dialog({
   footer?: ReactNode;
   special?: boolean;
   glow?: Glow;
+  shake?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -70,7 +73,12 @@ export function Dialog({
               "special-border border-2 [&[open]:not([data-closing])]:animate-dialog-in-flow [&[open][data-closing]]:animate-dialog-out-flow",
               GLOW[glow],
             )
-          : "border border-line bg-sheet [&[open]:not([data-closing])]:animate-dialog-in [&[open][data-closing]]:animate-dialog-out",
+          : cx(
+              "border border-line bg-sheet [&[open][data-closing]]:animate-dialog-out",
+              shake
+                ? "[&[open]:not([data-closing])]:animate-dialog-shake"
+                : "[&[open]:not([data-closing])]:animate-dialog-in",
+            ),
       )}
       aria-labelledby={titleId}
       onCancel={(e) => {

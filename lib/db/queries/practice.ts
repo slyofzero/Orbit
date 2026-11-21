@@ -22,6 +22,11 @@ import {
 const PRACTICE_Q = "q.type <> 'code' AND q.pool = 'practice' AND q.retired_at IS NULL";
 /** Subjects then topics in the order the owner gave them. */
 const TOPIC_ORDER = "ORDER BY s.position, s.name, t.position, t.name";
+/** The Programming list's order (and the Programming screen's Previous / Next): by subject and topic, then the
+ *  file's order (a file's questions share one time; rowid is the order they were saved in). Needs `q`, `t`, `s`. */
+export const CODE_ORDER = "ORDER BY s.position, s.name, t.position, t.name, q.created_at, q.rowid";
+/** The questions the Programming tab lists. */
+export const CODE_Q = "q.type = 'code' AND q.pool = 'practice' AND q.retired_at IS NULL";
 const tagIds = (csv: string) => (csv ? csv.split(",").map(Number) : []);
 
 export const practiceQueries = {
@@ -115,8 +120,8 @@ export const practiceQueries = {
                   (SELECT outcome FROM question_answers WHERE question_id = q.id AND outcome <> 'skipped'
                    ORDER BY recorded_at DESC, id DESC LIMIT 1) AS latest
            FROM questions q JOIN topics t ON t.id = q.topic_id JOIN subjects s ON s.id = t.subject_id
-           WHERE q.type = 'code' AND q.pool = 'practice' AND q.retired_at IS NULL
-           ORDER BY s.position, s.name, t.position, t.name, q.created_at, q.id LIMIT 2000`,
+           WHERE ${CODE_Q}
+           ${CODE_ORDER} LIMIT 2000`,
         )
         .map(({ tags, latest, ...q }) => ({ ...q, tags: tagIds(tags), state: codeState(latest) }));
       const tags = sql.all<{ id: number; name: string }>("SELECT id, name FROM tags ORDER BY name LIMIT 5000");
@@ -140,7 +145,7 @@ export const practiceQueries = {
     ],
     (sql): PracticeMocksData => ({
       mocks: sql.all<MockCard>(
-        `SELECT m.id, m.name, m.instructions, m.minutes,
+        `SELECT m.id, m.name, m.instructions, m.minutes, m.full_screen,
                 (SELECT count(*) FROM mock_items i JOIN mock_sections s ON s.id = i.section_id
                  WHERE s.mock_id = m.id) AS questions,
                 (SELECT coalesce(sum(q.marks), 0) FROM mock_items i JOIN mock_sections s ON s.id = i.section_id

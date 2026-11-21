@@ -134,4 +134,5 @@ All from `question_answers` (+ `questions` for topic and difficulty) unless note
 
 ## 5. Open points
 - Mock answers only count once a mock is **submitted**: submitting writes one row per visited question, with `attempt_id` set. Abandoned or failed attempts write nothing. Unvisited questions write nothing either; visited but unanswered ones are `skipped`. During the test, responses and clocks live in `mock_attempt_items` (`types/tables/mocks/`).
+- Code questions in a mock are not marked automatically: they earn nothing, are left out of the maximum score, and a visited one is written as `skipped` (its time still counts). Built in `mock.submit` (`lib/db/queries/mock.ts`, rules in `lib/exam.ts`).
 - The user's own rating of a topic (know / shaky / no idea, `topic_ratings`) can be shown next to the computed strength to spot over- or under-confidence.

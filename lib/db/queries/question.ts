@@ -4,10 +4,12 @@
 import { read, write } from "@/lib/db/queries/core";
 import { decode } from "@/lib/db/codec";
 import type { Sql } from "@/lib/db/sql";
-import type { LoadedQuestion, QuestionDetail, TopicQuestions } from "@/lib/questions";
+import { CODE_ORDER, CODE_Q } from "@/lib/db/queries/practice";
+import type { CodeQuestionData, LoadedQuestion, QuestionDetail, TopicQuestions } from "@/lib/questions";
 import type { AnswerOutcome, QuestionRow, QuestionType } from "@/types/tables";
 
-const DETAIL_TABLE = {
+/** The table that holds each question type's own fields. */
+export const DETAIL_TABLE = {
   mcq: "question_mcq",
   msq: "question_msq",
   nat: "question_nat",
@@ -77,6 +79,45 @@ export const questionQueries = {
         if (detail) items.push({ question, detail, latest });
       }
       return { topic, items };
+    },
+  ),
+
+  /** One code question for the Programming screen: the question, its starter code, your latest counted answer,
+   *  and its neighbours in the Programming list (same order as `practice.programming`). */
+  "question.code": read(
+    ["questions", "question_code", "topics", "subjects", "question_answers"],
+    (sql, p: { id: string }): CodeQuestionData => {
+      const order = sql.all<{ id: string }>(
+        `SELECT q.id FROM questions q JOIN topics t ON t.id = q.topic_id JOIN subjects s ON s.id = t.subject_id
+         WHERE ${CODE_Q} ${CODE_ORDER} LIMIT 2000`,
+      );
+      const index = order.findIndex((r) => r.id === p.id);
+      const empty = { item: null, topic: null, index: -1, total: order.length, prev: null, next: null };
+      if (index < 0) return empty;
+      const row = sql.get(
+        `SELECT q.*, (SELECT outcome FROM question_answers WHERE question_id = q.id AND outcome <> 'skipped'
+                      ORDER BY recorded_at DESC, id DESC LIMIT 1) AS latest
+         FROM questions q WHERE q.id = ?`,
+        [p.id],
+      );
+      const d = sql.get("SELECT * FROM question_code WHERE question_id = ?", [p.id]);
+      if (!row || !d) return empty;
+      const { latest, ...q } = row as Record<string, unknown> & { latest: LoadedQuestion["latest"] };
+      const question = q as unknown as QuestionRow;
+      const topic =
+        sql.get<{ id: string; name: string; subject_name: string }>(
+          `SELECT t.id, t.name, s.name AS subject_name FROM topics t JOIN subjects s ON s.id = t.subject_id
+           WHERE t.id = ?`,
+          [question.topic_id],
+        ) ?? null;
+      return {
+        item: { question, detail: decode<QuestionDetail>("question_code", d), latest },
+        topic,
+        index,
+        total: order.length,
+        prev: order[index - 1]?.id ?? null,
+        next: order[index + 1]?.id ?? null,
+      };
     },
   ),
 
