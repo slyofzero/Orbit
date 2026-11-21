@@ -1,10 +1,11 @@
 "use client";
 // Manage pack (v1's PackManager): the title row (Export pack, Delete pack, Back to practice), what is in the bank, and the
 // sections as underlined tabs kept in the address. Each section is its own panel in components/manage/.
-// Mock tests is the next step (TODO.md). The plan is edited from the Planner, not here.
+// The plan is edited from the Planner, not here.
 
 import { useState } from "react";
 import { ConfirmPhraseDialog } from "@/components/manage/ConfirmPhraseDialog";
+import { MocksPanel } from "@/components/manage/MocksPanel";
 import { QuestionsPanel } from "@/components/manage/QuestionsPanel";
 import { TopicsPanel } from "@/components/manage/TopicsPanel";
 import { UploadPanel } from "@/components/manage/UploadPanel";
@@ -120,9 +121,7 @@ export function ManagePack() {
         ) : tab === "upload" ? (
           <UploadPanel onLoaded={setLoaded} />
         ) : (
-          <EmptyState icon="🛠️" title={`${TAB_LABEL[tab]}: coming in the next step`}>
-            Editing mock tests (details, sections, question order) is the next step of Manage pack.
-          </EmptyState>
+          <MocksPanel overview={data} />
         )}
       </div>
 

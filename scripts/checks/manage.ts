@@ -5,7 +5,11 @@ import { join } from "node:path";
 import {
   changeType,
   checkForm,
+  checkMock,
+  checkSectionName,
+  DELETE_MOCKS_PHRASE,
   dropOption,
+  moveIn,
   emptyForm,
   exportFile,
   fileNameOf,
@@ -528,4 +532,145 @@ console.log("manage pack: the three banks and emptying one (manage.emptyBank)");
       ids("practice").length === 10,
     "empty: the same file imports again",
   );
+}
+
+// ---------------------------------------------------------------------------
+console.log("manage pack: mock tests (manage.mocks, manage.mock, sections, question order)");
+{
+  const good = checkMock({ name: " Mock 3 ", minutes: "180", instructions: "  " });
+  ok(good.ok && good.name === "Mock 3" && good.minutes === 180 && good.instructions === null, "mock: details cleaned");
+  ok(
+    !checkMock({ name: "", minutes: "60", instructions: "" }).ok &&
+      !checkMock({ name: "M", minutes: "0", instructions: "" }).ok &&
+      !checkMock({ name: "M", minutes: "1.5", instructions: "" }).ok &&
+      !checkMock({ name: "M", minutes: "601", instructions: "" }).ok &&
+      !checkMock({ name: "M", minutes: "", instructions: "" }).ok,
+    "mock: a name and whole minutes from 1 to 600",
+  );
+  ok(!checkSectionName("  ").ok && checkSectionName(" A ").ok, "section: needs a name");
+  ok(
+    isPhrase(" Delete All Mocks ", DELETE_MOCKS_PHRASE) && !isPhrase("delete", DELETE_MOCKS_PHRASE),
+    'phrase: "delete all mocks" confirms deleting every mock test',
+  );
+  ok(
+    moveIn([1, 2, 3], 0, 1).join() === "2,1,3" &&
+      moveIn([1, 2, 3], 0, -1).join() === "1,2,3" &&
+      moveIn([1, 2, 3], 2, 1).join() === "1,2,3" &&
+      moveIn([1, 2, 3], -1, 1).join() === "1,2,3",
+    "moveIn: swaps with a neighbour, never past the ends",
+  );
+
+  const d = freshDb();
+  const s = bunSql(d);
+  const q = <N extends keyof typeof QUERIES>(name: N, params?: unknown) =>
+    transaction(s, () => (QUERIES[name] as unknown as QueryDef<unknown, ResultOf<N>>).run(s, params));
+  q("pack.import", { text: sample, fileName: "sample.json", fileHash: "h1" });
+  const topicId = q("manage.overview").topics[0].id;
+
+  const bad = q("manage.addMock", { name: "Mock", minutes: "abc" });
+  ok(!bad.ok, "add: bad minutes refused");
+  const a = q("manage.addMock", { name: "Mock A", minutes: "90" });
+  const b = q("manage.addMock", { name: "Mock B", minutes: "60" });
+  ok(a.ok && b.ok, "add: two mocks");
+  if (!a.ok || !b.ok) throw new Error("setup failed");
+  ok(
+    q("manage.mocks")
+      .map((m) => m.name)
+      .join() === "Mock A,Mock B",
+    "list: in the order they were added",
+  );
+
+  const saved = q("manage.saveMock", {
+    id: a.id,
+    name: "Mock A+",
+    minutes: "120",
+    instructions: "Read **all** of it.",
+    fullScreen: true,
+  });
+  const card = q("manage.mocks")[0];
+  ok(
+    saved.ok && card.name === "Mock A+" && card.minutes === 120 && card.full_screen && card.instructions !== null,
+    "save: name, minutes, instructions, full screen",
+  );
+
+  const s1 = q("manage.addSection", { mockId: a.id, name: "Part 1" });
+  const s2 = q("manage.addSection", { mockId: a.id, name: "Part 2" });
+  ok(s1.ok && s2.ok && !q("manage.addSection", { mockId: a.id, name: "part 1" }).ok, "sections: unique names");
+  if (!s1.ok || !s2.ok) throw new Error("setup failed");
+  const addQ = (text: string, sectionId: number) => {
+    const r = q("manage.saveQuestion", {
+      id: null,
+      form: mcqForm({ topicId, text }),
+      target: { mockId: a.id, sectionId, newSection: "" },
+    });
+    if (!r.ok) throw new Error(r.errors.join("; "));
+    return r.id;
+  };
+  const x = addQ("First?", s1.id);
+  const y = addQ("Second?", s1.id);
+  const z = addQ("Third?", s2.id);
+  const practiceId = q("manage.questions", {
+    search: "",
+    bank: "practice",
+    mockId: null,
+    topicId: null,
+    limit: 1,
+    offset: 0,
+  }).rows[0].id;
+  run(d, `INSERT INTO mock_items(section_id, question_id, position) VALUES (${s2.id}, '${practiceId}', 99)`);
+
+  const order = () =>
+    q("manage.mock", { id: a.id })!
+      .sections.map((sec) => `${sec.name}:${sec.questions.map((i) => i.id).join("+")}`)
+      .join(" | ");
+  ok(order() === `Part 1:${x}+${y} | Part 2:${z}+${practiceId}`, "detail: sections and questions in order");
+  q("manage.moveItem", { sectionId: s1.id, questionId: y, dir: -1 });
+  q("manage.moveSection", { id: s2.id, dir: -1 });
+  ok(order() === `Part 2:${z}+${practiceId} | Part 1:${y}+${x}`, "move: question up, section up");
+  q("manage.moveSection", { id: s2.id, dir: -1 });
+  ok(order().startsWith("Part 2"), "move: the first section can't go higher");
+
+  ok(q("manage.renameSection", { id: s1.id, name: "Part One" }).ok, "rename: section renamed");
+  ok(!q("manage.renameSection", { id: s1.id, name: "PART 2" }).ok, "rename: refused when the name is taken");
+
+  // start an attempt: the exam runs the order on screen
+  const attemptId = q("mock.start", { mockId: a.id });
+  const ran = (
+    d.query(`SELECT question_id FROM mock_attempt_items WHERE attempt_id = ? ORDER BY position`).all(attemptId) as {
+      question_id: string;
+    }[]
+  ).map((r) => r.question_id);
+  ok(ran.join() === [z, practiceId, y, x].join(), "exam: runs the questions in the order shown");
+  run(d, `UPDATE mock_attempts SET status = 'abandoned', ended_at = 1`);
+
+  const r1 = q("manage.removeItem", { sectionId: s2.id, questionId: practiceId });
+  ok(
+    !r1.deleted &&
+      count(d, `SELECT count(*) AS n FROM questions WHERE id = '${practiceId}' AND retired_at IS NULL`) === 1,
+    "remove: a practice question only leaves the mock",
+  );
+  const r2 = q("manage.removeItem", { sectionId: s1.id, questionId: x });
+  ok(
+    r2.deleted &&
+      r2.retired &&
+      count(d, `SELECT count(*) AS n FROM questions WHERE id = '${x}' AND retired_at IS NULL`) === 0,
+    "remove: a mock-only question is deleted (retired: an attempt used it)",
+  );
+  const r3 = q("manage.removeSection", { id: s2.id });
+  ok(r3.questions === 1 && order() === `Part One:${y}`, "section: deleted with its mock-only question");
+
+  ok(
+    !q("manage.saveMock", { id: a.id, name: "M", minutes: "0", instructions: "", fullScreen: false }).ok,
+    "save: checked",
+  );
+  q("manage.removeMock", { id: a.id });
+  ok(
+    q("manage.mock", { id: a.id }) === null &&
+      q("manage.mocks").length === 1 &&
+      count(d, `SELECT count(*) AS n FROM mocks WHERE id = '${a.id}'`) === 1 &&
+      count(d, `SELECT count(*) AS n FROM questions WHERE id = '${y}' AND retired_at IS NULL`) === 0,
+    "delete mock: retired (it has an attempt), its questions go",
+  );
+  q("manage.removeMock", { id: b.id });
+  ok(count(d, `SELECT count(*) AS n FROM mocks WHERE id = '${b.id}'`) === 0, "delete mock: never taken = deleted");
 }

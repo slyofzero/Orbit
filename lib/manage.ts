@@ -30,6 +30,8 @@ export const BANK_LABEL: Record<QuestionBank, string> = {
 
 /** What you must type to delete the whole question bank (Manage pack → Delete pack). */
 export const DELETE_PHRASE = "delete pack";
+/** What you must type to delete every mock test (Manage pack → Mock tests → Delete all mock tests). */
+export const DELETE_MOCKS_PHRASE = "delete all mocks";
 /** What you must type to empty one bank of the Questions tab: "empty practice", "empty programming", "empty mock". */
 export const emptyPhrase = (bank: QuestionBank) => `empty ${bank}`;
 /** True when the typed text is the phrase (spaces around it and capitals don't matter). */
@@ -54,6 +56,53 @@ export function pageOf(total: number, page: number, size = MANAGE_PAGE) {
 }
 
 export const letter = (i: number) => String.fromCharCode(65 + i);
+
+// ---------------------------------------------------------------------------------------------------------------
+// Mock tests (Manage pack → Mock tests): the same limits as the importer (lib/questionFile.ts).
+
+/** The details on a mock test's card, as typed. */
+export interface MockForm {
+  name: string;
+  minutes: string;
+  instructions: string;
+}
+export type MockCheck =
+  | { ok: true; name: string; minutes: number; instructions: string | null }
+  | { ok: false; error: string };
+
+/** Checks a mock's details like an import would: a name, whole minutes from 1 to LIMITS.minutes, instructions
+ *  that fit. Blank instructions = none. */
+export function checkMock(f: MockForm): MockCheck {
+  const name = f.name.trim();
+  if (!name) return { ok: false, error: "Give the mock test a name." };
+  if (name.length > LIMITS.mockName) return { ok: false, error: `A name is at most ${LIMITS.mockName} characters.` };
+  const raw = f.minutes.trim();
+  const minutes = Number(raw);
+  if (!raw || !Number.isInteger(minutes) || minutes < 1 || minutes > LIMITS.minutes)
+    return { ok: false, error: `Minutes must be a whole number from 1 to ${LIMITS.minutes}.` };
+  const instructions = f.instructions.trim();
+  if (instructions.length > LIMITS.instructions)
+    return { ok: false, error: `The instructions are longer than ${LIMITS.instructions} characters.` };
+  return { ok: true, name, minutes, instructions: instructions || null };
+}
+
+/** A section's name, trimmed; an error text when it is empty or too long. */
+export function checkSectionName(name: string): { ok: true; name: string } | { ok: false; error: string } {
+  const n = name.trim();
+  if (!n) return { ok: false, error: "A section needs a name." };
+  if (n.length > LIMITS.mockName)
+    return { ok: false, error: `A section name is at most ${LIMITS.mockName} characters.` };
+  return { ok: true, name: n };
+}
+
+/** The list with item `i` moved one place up (-1) or down (1); unchanged when it can't move. */
+export function moveIn<T>(list: readonly T[], i: number, dir: -1 | 1): T[] {
+  const j = i + dir;
+  if (i < 0 || i >= list.length || j < 0 || j >= list.length) return [...list];
+  const out = [...list];
+  [out[i], out[j]] = [out[j], out[i]];
+  return out;
+}
 
 /** Everything the question editor's boxes hold, as typed (numbers stay text until saved). */
 export interface QuestionForm {

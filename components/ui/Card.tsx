@@ -5,7 +5,9 @@ import { txt } from "@/components/utils/txt";
 import { Heading } from "@/components/ui/Heading";
 
 /** A white sheet. `hero` = the dark navy panel (at most one per screen).
- *  `special` = animated gradient border and a sparkle badge; `glow` = how strongly it glows (low · medium · high). */
+ *  `special` = animated gradient border and a sparkle badge; `glow` = how strongly it glows (low · medium · high).
+ *  `onClick` = the whole card is one button (v1's pk-card): it lifts and its border turns accent on hover, and
+ *  Tab / Enter / Space work. Don't put other buttons inside a clickable card. */
 export function Card({
   title,
   subtitle,
@@ -14,6 +16,8 @@ export function Card({
   special = false,
   glow = "medium",
   className,
+  onClick,
+  label,
   children,
 }: {
   title?: ReactNode;
@@ -24,10 +28,27 @@ export function Card({
   /** special only: how strongly it glows (default medium) */
   glow?: Glow;
   className?: string;
+  /** makes the whole card one button */
+  onClick?: () => void;
+  /** clickable cards: what the click does, read out by screen readers (e.g. "Open Mock 1") */
+  label?: string;
   children?: ReactNode;
 }) {
   return (
     <section
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      aria-label={onClick ? label : undefined}
+      onClick={onClick}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.target !== e.currentTarget || (e.key !== "Enter" && e.key !== " ")) return;
+              e.preventDefault();
+              onClick();
+            }
+          : undefined
+      }
       className={cx(
         "rounded-lg px-[22px] py-5",
         special
@@ -35,6 +56,8 @@ export function Card({
           : hero
             ? "border border-hero bg-hero text-on-hero"
             : "border border-line bg-sheet",
+        onClick &&
+          "cursor-pointer transition-[transform,border-color,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-accent hover:shadow-[0_8px_22px_rgba(0,0,0,0.12)] focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
         className,
       )}
     >

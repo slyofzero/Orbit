@@ -1349,6 +1349,7 @@ function SearchDemo() {
 }
 
 function Cards() {
+  const toast = useToast();
   return (
     <Section
       id="cards"
@@ -1379,6 +1380,14 @@ function Cards() {
         </Card>
         <Card special title="Milestone reached $\star$" subtitle="$500$ questions answered">
           {"Special cards get a flowing gradient border and a sparkle. $\\infty$ effort."}
+        </Card>
+        <Card
+          title="Clickable card"
+          subtitle="`onClick`: the whole card is one button"
+          label="Open the clickable card demo"
+          onClick={() => toast("Card clicked.")}
+        >
+          {"Hover: it lifts and the border turns accent. Tab to it, then Enter or Space."}
         </Card>
       </div>
       <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-6 py-4">

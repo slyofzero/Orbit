@@ -1,0 +1,27 @@
+/* Manage pack → Mock tests (components/manage/MocksPanel.tsx): opening a mock slides its page in from the right;
+   going back slides the list of mocks in from the left. Imported by styles/site.css. */
+@theme inline {
+  --animate-mock-open: mock-open 0.38s cubic-bezier(0.2, 0.8, 0.2, 1);
+  --animate-mock-back: mock-back 0.38s cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  @keyframes mock-open {
+    from {
+      opacity: 0;
+      transform: translateX(48px) scale(0.985);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes mock-back {
+    from {
+      opacity: 0;
+      transform: translateX(-48px) scale(0.985);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}

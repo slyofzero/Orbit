@@ -128,7 +128,7 @@ All fields take `label`, `hint`, `error` and **`help`** (a "?" tip beside the la
 ### Showing information
 | Component | File | Use it for | Main options |
 |---|---|---|---|
-| `Card` | `Card.tsx` | A sheet holding one idea | `title` (h2, v1's card-title size), `subtitle`, `actions` (wrap under the title on narrow screens); `hero` (the one dark panel per screen); `special`, with `glow` low · medium (default) · high |
+| `Card` | `Card.tsx` | A sheet holding one idea | `title` (h2, v1's card-title size), `subtitle`, `actions` (wrap under the title on narrow screens); `hero` (the one dark panel per screen); `special`, with `glow` low · medium (default) · high; `onClick` (+ `label`) makes the whole card one button (hover lift, accent border; Tab / Enter / Space; no other buttons inside) |
 | `Pill` | `Pill.tsx` | Status, difficulty, counts, tags | `tone`: neutral · accent · green · red · amber · blue · ink · hi · red-solid · accent-solid · special (day kinds: study blue, light green, short day amber, mock accent-solid, exam red-solid, taper hi, buffer neutral) |
 | `Kbd` | `Pill.tsx` | A keyboard key | text shown literally |
 | `Tabs` | `Tabs.tsx` | Switching between views | `tabs` (`label`, `count`); arrow keys; `special`: `true` or a list of values; `shape`: `pills` (default) · `bar` (one rounded bar, the open tab filled: v1's Practice sections; no `special`) · `underline` (plain words on a line, the open one underlined in the accent colour: v1's Manage pack sections; no `special`) |

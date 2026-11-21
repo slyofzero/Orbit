@@ -11,7 +11,11 @@ import { DETAIL_TABLE } from "@/lib/db/queries/question";
 import {
   QUESTION_BANKS,
   checkForm,
+  checkMock,
+  checkSectionName,
   exportFile,
+  moveIn,
+  type MockForm,
   type ExportMock,
   type ExportQuestion,
   type QuestionBank,
@@ -117,6 +121,24 @@ export function removeMock(sql: Sql, id: string, now: number): void {
     )
       removeQuestion(sql, q, now);
 }
+
+/** True when a question is in some mock that isn't retired. */
+const inLiveMock = (sql: Sql, id: string) =>
+  !!sql.get(
+    `SELECT 1 FROM mock_items i JOIN mock_sections ms ON ms.id = i.section_id JOIN mocks m ON m.id = ms.mock_id
+     WHERE i.question_id = ? AND m.retired_at IS NULL LIMIT 1`,
+    [id],
+  );
+
+/** A mock that isn't retired, or null. */
+const liveMock = (sql: Sql, id: string) =>
+  sql.get<{ id: string }>("SELECT id FROM mocks WHERE id = ? AND retired_at IS NULL", [id]) ?? null;
+
+/** Marks a mock as changed (its card and the Practice tab show it). */
+const touchMock = (sql: Sql, id: string) => sql.run("UPDATE mocks SET updated_at = ? WHERE id = ?", [Date.now(), id]);
+
+/** The most mock tests the Mock tests tab holds (its lists show up to 200). */
+const MAX_MOCKS = 200;
 
 /** Which questions each of the Questions tab's banks holds (lib/manage.ts QUESTION_BANKS). Every question is in
  *  exactly one: mock-only questions in Mock, code questions in Programming, the rest in Practice. */
@@ -450,6 +472,276 @@ export const manageQueries = {
     retired: removeQuestion(sql, p.id, Date.now()),
   })),
 
+  // ---- Mock tests tab (v1's MocksPanel and MockDetail) -----------------------------------------------------
+
+  /** The Mock tests tab's cards: every mock (not retired) in the Mocks tab's order, its details, how many
+   *  questions it holds (`own` = its mock-only ones, which go with it when it is deleted), their marks, how often
+   *  it was taken (submitted) with the best score, and its sections. */
+  "manage.mocks": read(["mocks", "mock_sections", "mock_items", "questions", "mock_attempts"], (sql) => {
+    const mocks = sql.all<{
+      id: string;
+      name: string;
+      instructions: string | null;
+      minutes: number;
+      full_screen: number;
+      updated_at: number;
+      questions: number;
+      own: number;
+      marks: number;
+      attempts: number;
+      best: number | null;
+    }>(
+      `SELECT m.id, m.name, m.instructions, m.minutes, m.full_screen, m.updated_at,
+              (SELECT count(*) FROM mock_items i JOIN mock_sections ms ON ms.id = i.section_id
+               WHERE ms.mock_id = m.id) AS questions,
+              (SELECT count(DISTINCT q.id) FROM mock_items i JOIN mock_sections ms ON ms.id = i.section_id
+               JOIN questions q ON q.id = i.question_id WHERE ms.mock_id = m.id AND q.pool = 'mock') AS own,
+              (SELECT coalesce(sum(q.marks), 0) FROM mock_items i JOIN mock_sections ms ON ms.id = i.section_id
+               JOIN questions q ON q.id = i.question_id WHERE ms.mock_id = m.id) AS marks,
+              (SELECT count(*) FROM mock_attempts a WHERE a.mock_id = m.id AND a.status = 'submitted') AS attempts,
+              (SELECT max(a.score) FROM mock_attempts a WHERE a.mock_id = m.id AND a.status = 'submitted') AS best
+       FROM mocks m WHERE m.retired_at IS NULL ORDER BY m.position, m.created_at, m.id LIMIT ${MAX_MOCKS}`,
+    );
+    const sections = sql.all<{ mock_id: string; name: string; questions: number }>(
+      `SELECT ms.mock_id, ms.name, (SELECT count(*) FROM mock_items i WHERE i.section_id = ms.id) AS questions
+       FROM mock_sections ms JOIN mocks m ON m.id = ms.mock_id WHERE m.retired_at IS NULL
+       ORDER BY ms.position, ms.id LIMIT ${MAX_ROWS}`,
+    );
+    return mocks.map((m) => ({
+      ...m,
+      full_screen: m.full_screen === 1,
+      sections: sections.filter((s) => s.mock_id === m.id).map((s) => ({ name: s.name, questions: s.questions })),
+    }));
+  }),
+
+  /** One mock as the exam runs it: its details (for its Details form) and its sections in order, each with its questions in order.
+   *  null when it is gone (deleted or retired). */
+  "manage.mock": read(["mocks", "mock_sections", "mock_items", "questions", "topics"], (sql, p: { id: string }) => {
+    const row = sql.get<{
+      id: string;
+      name: string;
+      minutes: number;
+      instructions: string | null;
+      full_screen: number;
+      updated_at: number;
+    }>(
+      "SELECT id, name, minutes, instructions, full_screen, updated_at FROM mocks WHERE id = ? AND retired_at IS NULL",
+      [p.id],
+    );
+    if (!row) return null;
+    const mock = { ...row, full_screen: row.full_screen === 1 };
+    const sections = sql.all<{ id: number; name: string }>(
+      "SELECT id, name FROM mock_sections WHERE mock_id = ? ORDER BY position, id LIMIT 100",
+      [p.id],
+    );
+    const items = sql.all<{
+      section_id: number;
+      id: string;
+      type: QuestionType;
+      marks: number;
+      pool: QuestionRow["pool"];
+      stem: string;
+      topic_name: string;
+    }>(
+      `SELECT i.section_id, q.id, q.type, q.marks, q.pool, substr(q.stem, 1, 400) AS stem, t.name AS topic_name
+       FROM mock_items i JOIN mock_sections ms ON ms.id = i.section_id
+       JOIN questions q ON q.id = i.question_id JOIN topics t ON t.id = q.topic_id
+       WHERE ms.mock_id = ? AND q.retired_at IS NULL ORDER BY i.position, i.question_id LIMIT ${MAX_ROWS}`,
+      [p.id],
+    );
+    const withQs = sections.map((s) => ({ ...s, questions: items.filter((q) => q.section_id === s.id) }));
+    return {
+      mock,
+      sections: withQs,
+      questions: items.length,
+      marks: Math.round(items.reduce((n, q) => n + q.marks, 0) * 100) / 100,
+    };
+  }),
+
+  /** Adds an empty mock test (v1's "Add a mock test"); its id is the system's. Add sections to it next. */
+  "manage.addMock": write(["mocks"], (sql, p: { name: string; minutes: string }): { ok: true; id: string } | Fail => {
+    const r = checkMock({ name: p.name, minutes: p.minutes, instructions: "" });
+    if (!r.ok) return r;
+    if (sql.get<{ n: number }>("SELECT count(*) AS n FROM mocks WHERE retired_at IS NULL")!.n >= MAX_MOCKS)
+      return fail(`You can have at most ${MAX_MOCKS} mock tests.`);
+    const id = rid("mk");
+    const now = Date.now();
+    const pos = sql.get<{ n: number }>("SELECT coalesce(max(position), 0) + 1 AS n FROM mocks")!.n;
+    insert(sql, "mocks", {
+      id,
+      pack_id: null,
+      name: r.name,
+      instructions: null,
+      minutes: r.minutes,
+      full_screen: false,
+      position: pos,
+      legacy_id: null,
+      created_at: now,
+      updated_at: now,
+      retired_at: null,
+    });
+    return { ok: true, id };
+  }),
+
+  /** Saves a mock's card (v1's "Save details"): name, minutes, instructions, full screen. Past attempts keep
+   *  the minutes they started with (mock_attempts copies them). */
+  "manage.saveMock": write(["mocks"], (sql, p: MockForm & { id: string; fullScreen: boolean }): { ok: true } | Fail => {
+    if (!liveMock(sql, p.id)) return fail("That mock test is gone.");
+    const r = checkMock(p);
+    if (!r.ok) return r;
+    const longest = sql.get<{ n: number | null }>("SELECT max(minutes) AS n FROM mock_sections WHERE mock_id = ?", [
+      p.id,
+    ])!.n;
+    if (longest !== null && longest > r.minutes)
+      return fail(`A section of this mock has its own ${longest} minutes: the whole test can't be shorter.`);
+    sql.run("UPDATE mocks SET name = ?, minutes = ?, instructions = ?, full_screen = ?, updated_at = ? WHERE id = ?", [
+      r.name,
+      r.minutes,
+      r.instructions,
+      p.fullScreen ? 1 : 0,
+      Date.now(),
+      p.id,
+    ]);
+    return { ok: true };
+  }),
+
+  /** Deletes a mock test and its mock-only questions (v1's "Delete mock test"; see removeMock: retired when it
+   *  has attempts, so your results stay). Practice questions it used stay in Practice. */
+  "manage.removeMock": write(
+    ["mocks", "mock_sections", "mock_items", "questions", "plan_day_questions"],
+    (sql, p: { id: string }) => {
+      if (!liveMock(sql, p.id)) return { ok: false as const, error: "That mock test is gone." };
+      removeMock(sql, p.id, Date.now());
+      return { ok: true as const };
+    },
+  ),
+
+  /** Adds a section at the end of a mock (v1's "Add a section"). Names are unique inside a mock (without case). */
+  "manage.addSection": write(
+    ["mock_sections", "mocks"],
+    (sql, p: { mockId: string; name: string }): { ok: true; id: number } | Fail => {
+      if (!liveMock(sql, p.mockId)) return fail("That mock test is gone.");
+      const r = checkSectionName(p.name);
+      if (!r.ok) return r;
+      if (sql.get("SELECT 1 FROM mock_sections WHERE mock_id = ? AND lower(name) = lower(?)", [p.mockId, r.name]))
+        return fail(`This mock already has a section called "${r.name}".`);
+      const n = sql.get<{ n: number; pos: number }>(
+        "SELECT count(*) AS n, coalesce(max(position), 0) + 1 AS pos FROM mock_sections WHERE mock_id = ?",
+        [p.mockId],
+      )!;
+      if (n.n >= LIMITS.sections) return fail(`A mock can have at most ${LIMITS.sections} sections.`);
+      const id = sql.get<{ id: number }>(
+        "INSERT INTO mock_sections (mock_id, name, position) VALUES (?, ?, ?) RETURNING id",
+        [p.mockId, r.name, n.pos],
+      )!.id;
+      touchMock(sql, p.mockId);
+      return { ok: true, id };
+    },
+  ),
+
+  /** Renames a section. */
+  "manage.renameSection": write(["mock_sections", "mocks"], (sql, p: { id: number; name: string }) => {
+    const sec = sql.get<{ mock_id: string }>("SELECT mock_id FROM mock_sections WHERE id = ?", [p.id]);
+    if (!sec) return fail("That section is gone.");
+    const r = checkSectionName(p.name);
+    if (!r.ok) return r;
+    if (
+      sql.get("SELECT 1 FROM mock_sections WHERE mock_id = ? AND lower(name) = lower(?) AND id <> ?", [
+        sec.mock_id,
+        r.name,
+        p.id,
+      ])
+    )
+      return fail(`This mock already has a section called "${r.name}".`);
+    sql.run("UPDATE mock_sections SET name = ? WHERE id = ?", [r.name, p.id]);
+    touchMock(sql, sec.mock_id);
+    return { ok: true as const };
+  }),
+
+  /** Moves a section one place up (-1) or down (1) in its mock. */
+  "manage.moveSection": write(["mock_sections", "mocks"], (sql, p: { id: number; dir: -1 | 1 }) => {
+    if (p.dir !== -1 && p.dir !== 1) throw new Error("manage.moveSection: dir is -1 or 1");
+    const sec = sql.get<{ mock_id: string }>("SELECT mock_id FROM mock_sections WHERE id = ?", [p.id]);
+    if (!sec) return { moved: false };
+    const ids = sql
+      .all<{
+        id: number;
+      }>("SELECT id FROM mock_sections WHERE mock_id = ? ORDER BY position, id LIMIT 100", [sec.mock_id])
+      .map((s) => s.id);
+    moveIn(ids, ids.indexOf(p.id), p.dir).forEach((id, k) =>
+      sql.run("UPDATE mock_sections SET position = ? WHERE id = ?", [k + 1, id]),
+    );
+    touchMock(sql, sec.mock_id);
+    return { moved: true };
+  }),
+
+  /** Deletes a section (v1's "Delete section") with its mock-only questions that no other mock uses (deleted,
+   *  or retired when history needs them). Practice questions in it stay in Practice. */
+  "manage.removeSection": write(
+    ["mock_sections", "mock_items", "mocks", "questions", "plan_day_questions"],
+    (sql, p: { id: number }) => {
+      const sec = sql.get<{ mock_id: string }>("SELECT mock_id FROM mock_sections WHERE id = ?", [p.id]);
+      if (!sec) return { questions: 0 };
+      const own = sql
+        .all<{ id: string }>(
+          `SELECT q.id FROM mock_items i JOIN questions q ON q.id = i.question_id
+           WHERE i.section_id = ? AND q.pool = 'mock' LIMIT ${MAX_ROWS}`,
+          [p.id],
+        )
+        .map((q) => q.id);
+      sql.run("DELETE FROM mock_sections WHERE id = ?", [p.id]); // its mock_items go with it
+      const now = Date.now();
+      let gone = 0;
+      for (const q of own)
+        if (!inLiveMock(sql, q)) {
+          removeQuestion(sql, q, now);
+          gone++;
+        }
+      touchMock(sql, sec.mock_id);
+      return { questions: gone };
+    },
+  ),
+
+  /** Moves a question one place up (-1) or down (1) inside its section. */
+  "manage.moveItem": write(
+    ["mock_items", "mocks"],
+    (sql, p: { sectionId: number; questionId: string; dir: -1 | 1 }) => {
+      if (p.dir !== -1 && p.dir !== 1) throw new Error("manage.moveItem: dir is -1 or 1");
+      const sec = sql.get<{ mock_id: string }>("SELECT mock_id FROM mock_sections WHERE id = ?", [p.sectionId]);
+      if (!sec) return { moved: false };
+      const ids = sql
+        .all<{
+          question_id: string;
+        }>(`SELECT question_id FROM mock_items WHERE section_id = ? ORDER BY position, question_id LIMIT ${MAX_ROWS}`, [
+          p.sectionId,
+        ])
+        .map((i) => i.question_id);
+      moveIn(ids, ids.indexOf(p.questionId), p.dir).forEach((id, k) =>
+        sql.run("UPDATE mock_items SET position = ? WHERE section_id = ? AND question_id = ?", [
+          k + 1,
+          p.sectionId,
+          id,
+        ]),
+      );
+      touchMock(sql, sec.mock_id);
+      return { moved: true };
+    },
+  ),
+
+  /** Takes a question out of a section. A mock-only question that no other mock uses is deleted (v1's Delete;
+   *  retired when history needs it); a practice question just leaves this mock and stays in Practice. */
+  "manage.removeItem": write(
+    ["mock_items", "mocks", "questions", "plan_day_questions"],
+    (sql, p: { sectionId: number; questionId: string }) => {
+      const sec = sql.get<{ mock_id: string }>("SELECT mock_id FROM mock_sections WHERE id = ?", [p.sectionId]);
+      const q = sql.get<{ pool: string }>("SELECT pool FROM questions WHERE id = ?", [p.questionId]);
+      sql.run("DELETE FROM mock_items WHERE section_id = ? AND question_id = ?", [p.sectionId, p.questionId]);
+      if (sec) touchMock(sql, sec.mock_id);
+      if (q?.pool !== "mock" || inLiveMock(sql, p.questionId)) return { deleted: false, retired: false };
+      return { deleted: true, retired: removeQuestion(sql, p.questionId, Date.now()) };
+    },
+  ),
+
   /** Renames a subject. Names are unique (without case). */
   "manage.renameSubject": write(["subjects"], (sql, p: { id: string; name: string }): { ok: true } | Fail => {
     const name = p.name.trim();
@@ -642,12 +934,13 @@ export const manageQueries = {
       const mocks = sql.all<{ id: string }>("SELECT id FROM mocks WHERE pack_id = ? AND retired_at IS NULL LIMIT 200", [
         p.id,
       ]);
-      for (const m of mocks) removeMock(sql, m.id, now);
+      // listed first, so the count includes the questions removing its mocks already takes with them
       const qs = sql.all<{ id: string }>(
         `SELECT id FROM questions WHERE pack_id = ? AND retired_at IS NULL LIMIT ${LIMITS.questions * 10}`,
         [p.id],
       );
-      for (const q of qs) removeQuestion(sql, q.id, now);
+      for (const m of mocks) removeMock(sql, m.id, now);
+      for (const q of qs) removeQuestion(sql, q.id, now); // a no-op for one already gone
       sql.run("DELETE FROM packs WHERE id = ?", [p.id]);
       return { questions: qs.length, mocks: mocks.length };
     },
