@@ -44,6 +44,7 @@ export interface PlanFileDay {
   note: string | null;
   tasks: string[];
   questions: string[]; // question ids from the user's packs
+  hasQuestions?: boolean; // the entry had a "questions" list (Edit plan's JSON update keeps old links when not)
 }
 export interface PlanFileMilestone {
   name: string;
@@ -221,7 +222,16 @@ export function parsePlanFile(input: unknown): PlanParse {
       if (prev?.single && !single) continue; // a single date always beats a range
       built.set(date, {
         single,
-        day: { date, title, kind, hours, note, tasks: [...tasks], questions: [...questions] },
+        day: {
+          date,
+          title,
+          kind,
+          hours,
+          note,
+          tasks: [...tasks],
+          questions: [...questions],
+          hasQuestions: raw.questions !== undefined,
+        },
       });
     }
   });

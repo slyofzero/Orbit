@@ -8,6 +8,7 @@
 import { useEffect, useState } from "react";
 import { KIND_LABEL, KIND_PILL } from "@/components/dashboard/kit";
 import { IconChevronLeft, IconPlus, IconTrash, IconX } from "@/components/icons";
+import { cx } from "@/components/utils/cx";
 import { pageNav, type Clock } from "@/components/planner/PlanActions";
 import {
   Button,
@@ -20,11 +21,13 @@ import {
   Divider,
   Dropdown,
   EmptyState,
+  FileInput,
   Heading,
   IconButton,
   Pill,
   Rich,
   Spinner,
+  Tabs,
   Text,
   TextArea,
   TextField,
@@ -37,6 +40,7 @@ import { formatDate, istHour, todayIST, type IsoDate } from "@/lib/dates";
 import { previewText } from "@/lib/manage";
 import { checkDay, idsFromText, type DayForm } from "@/lib/planEdit";
 import { DAY_KINDS, LIMITS } from "@/lib/planFile";
+import { patchPrompt } from "@/lib/prompts/patchPrompt";
 
 type Day = NonNullable<ResultOf<"plan.editDays">>["days"][number];
 type Hit = { stem: string | null; topic: string | null };
@@ -69,6 +73,7 @@ function Editor({ clock }: { clock: Clock }) {
   const [newDate, setNewDate] = useState<IsoDate | null>(null);
   const [addError, setAddError] = useState("");
   const [pastShown, setPastShown] = useState(PAST_FIRST);
+  const [tool, setTool] = useState<"add" | "upload">("upload");
 
   const header = (
     <div className="mb-[18px] flex flex-wrap items-center gap-3">
@@ -122,26 +127,45 @@ function Editor({ clock }: { clock: Clock }) {
         {`Open a day to change its title, type, hours, tasks or linked questions. A tick stays with its task when you edit, reorder or add tasks. Past days, and today after ${LOCK_HOUR} AM, are locked.`}
       </Text>
 
-      <div className="mt-4 mb-6 grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] items-start gap-4">
+      <div className="mt-4 mb-6 grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-4">
         <PlanDetails name={plan.name} description={plan.description} />
-        <Card title="Add a day">
-          <div className="grid gap-3">
-            <Text variant="small">{`Any free date from ${formatDate(plan.starts_on)} to ${formatDate(plan.ends_on)}.`}</Text>
-            <DatePicker
-              label="Date"
-              value={newDate}
-              onChange={(v) => {
-                setNewDate(v);
-                setAddError("");
-              }}
-              min={plan.starts_on}
-              max={plan.ends_on}
-              error={addError || undefined}
+        <Card className="flex flex-col">
+          <div className="flex flex-1 flex-col gap-4">
+            <Tabs
+              label="Change the plan"
+              shape="underline"
+              value={tool}
+              onChange={setTool}
+              tabs={[
+                { value: "upload", label: "Change days with JSON" },
+                { value: "add", label: "Add a day" },
+              ]}
             />
-            <div>
-              <Button variant="soft" icon={<IconPlus />} loading={addDay.pending} onClick={add}>
-                Add a day
-              </Button>
+            {/* both panels share one grid cell and the hidden one keeps its size, so the card is as tall for
+                either tab and doesn't jump when you switch */}
+            <div className="grid flex-1 [&>*]:col-start-1 [&>*]:row-start-1">
+              <div className={cx("flex flex-col gap-3", tool !== "add" && "invisible")}>
+                <Text variant="small">{`Any free date from ${formatDate(plan.starts_on)} to ${formatDate(plan.ends_on)}.`}</Text>
+                <DatePicker
+                  label="Date"
+                  value={newDate}
+                  onChange={(v) => {
+                    setNewDate(v);
+                    setAddError("");
+                  }}
+                  min={plan.starts_on}
+                  max={plan.ends_on}
+                  error={addError || undefined}
+                />
+                <div>
+                  <Button variant="soft" icon={<IconPlus />} loading={addDay.pending} onClick={add}>
+                    Add a day
+                  </Button>
+                </div>
+              </div>
+              <div className={cx("flex flex-col", tool !== "upload" && "invisible")}>
+                <PatchTool clock={clock} />
+              </div>
             </div>
           </div>
         </Card>
@@ -168,6 +192,128 @@ function Editor({ clock }: { clock: Clock }) {
   );
 }
 
+type PatchCheck = ResultOf<"plan.checkPatch">;
+
+/** Change days with JSON (second tab of the Add a day card): upload or paste a plan file; only the dates in it
+ *  change, everything else stays. */
+function PatchTool({ clock }: { clock: Clock }) {
+  const toast = useToast();
+  const apply = useMutation("plan.applyPatch");
+  const { data: input } = useQuery("plan.patchInput", clock);
+  const [files, setFiles] = useState<File[]>([]);
+  const [pasted, setPasted] = useState("");
+  const [text, setText] = useState("");
+  const [check, setCheck] = useState<PatchCheck>(null);
+
+  // read the file (or the pasted text) and check it against the plan as soon as it lands
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      const t = files[0] ? await files[0].text() : pasted;
+      if (!live) return;
+      setText(t);
+      if (!t.trim()) return setCheck(null);
+      const r = await dbCall("plan.checkPatch", { ...clock, text: t });
+      if (live) setCheck(r);
+    })();
+    return () => {
+      live = false;
+    };
+  }, [files, pasted, clock]);
+
+  const reset = () => {
+    setFiles([]);
+    setPasted("");
+    setCheck(null);
+  };
+  const go = async () => {
+    const r = await apply.run({ ...clock, text });
+    if (!r) return;
+    if (!r.ok) return setCheck({ errors: r.errors, warnings: [], updated: 0, added: 0 });
+    toast(
+      `Updated **${plural(r.updated, "day")}**${r.added ? ` and added ${plural(r.added, "day")}` : ""} (${plural(r.tasks, "task")}). Every other day is unchanged.`,
+      "success",
+    );
+    reset();
+  };
+  const ready = !!check && check.errors.length === 0;
+  return (
+    <>
+      <div className="flex flex-1 flex-col gap-3">
+        <Text variant="small">
+          Only the **dates in the file** change. Every other day, the plan's name and its milestones stay. Locked days
+          are skipped.
+        </Text>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <CopyButton
+            size="sm"
+            text={() => (input ? patchPrompt(clock.today, input) : "")}
+            label="Copy the AI prompt"
+            copiedLabel="Copied. Paste it into your AI chat"
+          />
+          <Text as="span" variant="small">
+            Paste it into an AI chat, say what to change, bring the reply back here.
+          </Text>
+        </div>
+        <FileInput
+          accept=".json,application/json"
+          files={files}
+          onChange={setFiles}
+          title="Drop a .json file here"
+          description="Checked the moment it lands"
+          buttonLabel="Choose the file"
+        />
+        {!files.length && (
+          <TextArea
+            aria-label="Or paste the JSON here"
+            spellCheck={false}
+            rows={3}
+            className="font-mono text-xs"
+            value={pasted}
+            onChange={(e) => setPasted(e.target.value)}
+            placeholder='…or paste it: { "days": [ { "date": "2026-12-01", "title": "…", "tasks": ["…"] } ] }'
+          />
+        )}
+        {check && check.errors.length > 0 && (
+          <Callout tone="caution" title="Fix this first">
+            <ul className="m-0 grid gap-1 pl-5">
+              {check.errors.map((e) => (
+                <li key={e}>
+                  <Text as="span">{e}</Text>
+                </li>
+              ))}
+            </ul>
+          </Callout>
+        )}
+        {check && check.warnings.length > 0 && (
+          <ul className="m-0 grid gap-1 pl-5">
+            {check.warnings.map((w) => (
+              <li key={w}>
+                <Text as="span" variant="small">
+                  {w}
+                </Text>
+              </li>
+            ))}
+          </ul>
+        )}
+        {ready && (
+          <Text>{`This will update **${plural(check.updated, "day")}**${check.added ? ` and add **${plural(check.added, "day")}**` : ""}.`}</Text>
+        )}
+        <div className="mt-auto flex flex-wrap gap-2">
+          <Button variant="primary" disabled={!ready} loading={apply.pending} onClick={go}>
+            Apply to these days
+          </Button>
+          {(files.length > 0 || pasted) && (
+            <Button variant="ghost" onClick={reset}>
+              Clear
+            </Button>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
 function PlanDetails({ name, description }: { name: string; description: string | null }) {
   const toast = useToast();
   const save = useMutation("plan.saveDetails");
@@ -176,9 +322,10 @@ function PlanDetails({ name, description }: { name: string; description: string 
   const [error, setError] = useState("");
   const changed = n !== name || d !== (description ?? "");
   return (
-    <Card title="The plan">
+    <Card title="The plan" className="flex flex-col">
+      {/* the description grows to fill the card, so Save details lines up with the button in the card beside it */}
       <form
-        className="grid gap-3"
+        className="grid flex-1 grid-rows-[auto_1fr_auto] gap-3"
         onSubmit={async (e) => {
           e.preventDefault();
           const r = await save.run({ name: n, description: d });
@@ -200,6 +347,7 @@ function PlanDetails({ name, description }: { name: string; description: string 
           hint="What the plan is for, in your own words. **Link questions** hands it to the AI."
           value={d}
           rows={3}
+          className="grid-rows-[auto_1fr_auto] [&_textarea]:h-full"
           maxLength={LIMITS.description}
           onChange={(e) => setD(e.target.value)}
         />

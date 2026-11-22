@@ -1,4 +1,6 @@
 // check.ts section: planFile. Run: bun run check
+import { parseDayPatch } from "@/lib/planEdit";
+import { examplePatch, patchPrompt } from "@/lib/prompts/patchPrompt";
 import { parsePlanFile, planSummary } from "@/lib/planFile";
 import { examplePlan, planPrompt } from "@/lib/prompts/planPrompt";
 import { QUERIES, type QueryDef } from "@/lib/db/queries";
@@ -149,4 +151,87 @@ console.log("plan file (lib/planFile.ts) and its AI prompt");
     "plan.import: the new plan is the only active one",
   );
   ok(d.query("PRAGMA foreign_key_check").all().length === 0, "plan.import: no foreign key violations");
+}
+
+console.log("plan.applyPatch (Edit plan: update days from JSON)");
+{
+  const d = freshDb();
+  const s = bunSql(d);
+  const q = (name: string, p: unknown) =>
+    transaction(s, () => (QUERIES[name as "plan.import"] as unknown as QueryDef<unknown, unknown>).run(s, p)) as {
+      ok?: boolean;
+      errors?: string[];
+      warnings?: string[];
+      updated?: number;
+      added?: number;
+    };
+  const base = { format: "orbit-plan", name: "Keep me", milestones: [{ name: "Exam", date: "2026-12-30" }] };
+  q("plan.import", {
+    text: JSON.stringify({
+      ...base,
+      starts_on: "2026-11-20",
+      ends_on: "2026-12-31",
+      days: [
+        { date: "2026-12-01", title: "One", tasks: ["a", "b"] },
+        { date: "2026-12-02", title: "Two", tasks: ["c"] },
+        { date: "2026-12-03", title: "Three", tasks: ["d"] },
+      ],
+    }),
+  });
+  d.exec("INSERT INTO plan_task_ticks (task_id, done_at) SELECT id, 1 FROM plan_tasks WHERE body = 'a'");
+  const clock = { today: "2026-11-25", hour: 10 };
+  const patch = JSON.stringify({
+    name: "Ignored",
+    days: [
+      { date: "2026-12-01", title: "One v2", tasks: ["a", "new"] },
+      { date: "2026-12-05", title: "Added", tasks: ["x"] },
+      { date: "2026-11-20", title: "Locked", tasks: ["z"] },
+      { date: "2027-02-01", title: "Outside", tasks: ["z"] },
+    ],
+  });
+  const r = q("plan.applyPatch", { ...clock, text: patch });
+  const body = (date: string) =>
+    (
+      d
+        .query(
+          "SELECT t.body FROM plan_tasks t JOIN plan_days p ON p.id = t.day_id WHERE p.on_date = ? ORDER BY t.position",
+        )
+        .all(date) as { body: string }[]
+    ).map((x) => x.body);
+  ok(r.ok && r.updated === 1 && r.added === 1, "only the listed open dates change (1 updated, 1 added)");
+  ok(
+    r.warnings?.some((w) => w.includes("outside")) && r.warnings?.some((w) => w.includes("locked")),
+    "dates outside the plan and locked dates are skipped with warnings",
+  );
+  ok(body("2026-12-01").join() === "a,new", "the updated day has the file's tasks");
+  ok(body("2026-12-02").join() === "c" && body("2026-12-03").join() === "d", "days not in the file are untouched");
+  ok(
+    (d.query("SELECT count(*) AS n FROM plan_task_ticks").get() as { n: number }).n === 1,
+    "a task whose text stays keeps its tick",
+  );
+  ok(
+    (d.query("SELECT name FROM plans").get() as { name: string }).name === "Keep me" &&
+      (d.query("SELECT count(*) AS n FROM milestones").get() as { n: number }).n === 1,
+    "the plan's name and milestones are untouched",
+  );
+  const bad = q("plan.applyPatch", { ...clock, text: '{"days":[{"date":"2026-12-01"}]}' });
+  ok(bad.ok === false && !!bad.errors?.length, "a bad patch is refused and writes nothing");
+}
+
+console.log("patch prompt (lib/prompts/patchPrompt.ts)");
+{
+  const today = "2026-11-20";
+  const ex = parseDayPatch(JSON.stringify(examplePatch(today)));
+  ok(ex.plan !== null && ex.errors.length === 0 && ex.warnings.length === 0, "the patch prompt's example passes");
+  const p = patchPrompt(today, {
+    plan: { name: "My plan", description: null, starts_on: "2026-11-01", ends_on: "2027-02-01" },
+    days: [{ date: "2026-11-22", title: "Day", kind: "study", hours: 2, note: null, tasks: ["Do a thing"] }],
+  });
+  ok(
+    p.includes(JSON.stringify(examplePatch(today), null, 2)) && p.includes("Do a thing") && p.includes("My plan"),
+    "the patch prompt has the example, the open days and the plan name",
+  );
+  ok(!/\b(GATE|JEE|NEET|UPSC|SAT|GRE)\b/.test(p), "the patch prompt names no particular exam");
+  const bare = parseDayPatch('{"days":[{"date":"2026-12-01","title":"x"}]}');
+  ok(bare.plan !== null && !bare.warnings.length, 'a patch needs no "name", milestones or "format" noise');
 }

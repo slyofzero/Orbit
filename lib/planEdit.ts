@@ -2,7 +2,8 @@
 // (components/planner/EditPlan.tsx) and the plan.saveDay query, which checks again in the worker (AGENTS.md rule 5).
 // The limits are the plan file's (lib/planFile.ts LIMITS), so an edited plan always exports and imports again.
 
-import { DAY_KINDS, LIMITS } from "@/lib/planFile";
+import type { IsoDate } from "@/lib/dates";
+import { DAY_KINDS, LIMITS, parsePlanFile, type PlanFileDay, type PlanParse } from "@/lib/planFile";
 import type { PlanDayKind } from "@/types/tables";
 
 /** One task row in the editor: `id` is the saved task's id (null = new), so its tick follows it. */
@@ -51,6 +52,53 @@ export function checkDay(f: DayForm): { day: CheckedDay | null; errors: string[]
     errors.push(`A day links at most ${LIMITS.questions} questions (this one has ${questions.length}).`);
   if (errors.length) return { day: null, errors };
   return { day: { title, kind: f.kind, hours, note: note || null, tasks, questions }, errors };
+}
+
+/** Edit plan's "Update days from JSON": reads an orbit-plan file (or just `{ "days": [...] }`) as a patch. Only the
+ *  dates it lists are meant to change; the name, description, plan dates and milestones in it are ignored. */
+export function parseDayPatch(input: string): PlanParse {
+  const text = input
+    .trim()
+    .replace(/^```(?:json)?\s*\n?/i, "")
+    .replace(/\n?```\s*$/, "");
+  let data: unknown;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    return parsePlanFile(input); // same plain-English "not valid JSON" refusal as the plan import
+  }
+  if (typeof data !== "object" || data === null || Array.isArray(data)) return parsePlanFile(data);
+  const {
+    name: _n,
+    description: _d,
+    starts_on: _s,
+    ends_on: _e,
+    milestones: _m,
+    ...rest
+  } = data as Record<string, unknown>;
+  const r = parsePlanFile({ ...rest, name: "patch" });
+  // a patch has no milestones and needs no "format": neither is worth a warning here
+  return { ...r, warnings: r.warnings.filter((w) => !w.startsWith("No milestones") && !w.startsWith('"format"')) };
+}
+
+/** Which of a patch's days can be applied: inside the plan's dates and not locked. The rest are named in warnings. */
+export function splitPatch(
+  days: PlanFileDay[],
+  plan: { starts_on: IsoDate; ends_on: IsoDate },
+  isLocked: (d: IsoDate) => boolean,
+): { apply: PlanFileDay[]; warnings: string[] } {
+  const outside = days.filter((d) => d.date < plan.starts_on || d.date > plan.ends_on).map((d) => d.date);
+  const locked = days
+    .filter((d) => d.date >= plan.starts_on && d.date <= plan.ends_on && isLocked(d.date))
+    .map((d) => d.date);
+  const warnings: string[] = [];
+  const list = (a: string[]) => `${a.slice(0, 4).join(", ")}${a.length > 4 ? ` and ${a.length - 4} more` : ""}`;
+  if (outside.length)
+    warnings.push(`${outside.length} day(s) are outside the plan's dates and were skipped: ${list(outside)}.`);
+  if (locked.length)
+    warnings.push(`${locked.length} locked day(s) can't be changed and were skipped: ${list(locked)}.`);
+  const skip = new Set([...outside, ...locked]);
+  return { apply: days.filter((d) => !skip.has(d.date)), warnings };
 }
 
 /** Question ids pasted from anywhere (one per line, or separated by commas / spaces), each once. */

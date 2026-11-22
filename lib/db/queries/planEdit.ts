@@ -7,8 +7,9 @@ import { read, write } from "@/lib/db/queries/core";
 import type { Sql } from "@/lib/db/sql";
 import { dayLock } from "@/lib/dashboard";
 import type { IsoDate } from "@/lib/dates";
-import { checkDay, type DayForm } from "@/lib/planEdit";
-import { LIMITS, planToFile, type PlanFile } from "@/lib/planFile";
+import { checkDay, parseDayPatch, splitPatch, type DayForm } from "@/lib/planEdit";
+import { LIMITS, planToFile, type PlanFile, type PlanFileDay } from "@/lib/planFile";
+import type { PatchInput } from "@/lib/prompts/patchPrompt";
 import { parseLinks, readAnswer, type LinkInput, type LinkRules } from "@/lib/planLinks";
 import type { PlanDayKind, QuestionType, TopicRating } from "@/types/tables";
 
@@ -55,7 +56,148 @@ function linkRules(sql: Sql, plan: Plan, c: Clock): LinkRules {
   };
 }
 
+/** Edit plan, JSON update: reads and checks a patch against the active plan. Only the dates in it can change. */
+function readPatch(sql: Sql, plan: Plan, c: Clock, text: string) {
+  const parsed = parseDayPatch(text);
+  if (!parsed.plan) return { errors: parsed.errors, warnings: parsed.warnings, apply: [] as PlanFileDay[] };
+  const s = splitPatch(parsed.plan.days, plan, (d) => isLocked(d, c));
+  const warnings = [...parsed.warnings, ...s.warnings];
+  if (!s.apply.length)
+    return { errors: ["None of the days in this file can be changed (see the notes above)."], warnings, apply: [] };
+  return { errors: [] as string[], warnings, apply: s.apply };
+}
+
 export const planEditQueries = {
+  /** Edit plan, JSON update: the plan and its open (not locked) days with their tasks, for the AI prompt
+   *  (lib/prompts/patchPrompt.ts). null = no plan. */
+  "plan.patchInput": read(["plans", "plan_days", "plan_tasks"], (sql, c: Clock): PatchInput | null => {
+    const plan = activePlan(sql);
+    if (!plan) return null;
+    const rows = sql
+      .all<{
+        id: number;
+        on_date: IsoDate;
+        title: string | null;
+        kind: PlanDayKind;
+        hours: number | null;
+        note: string | null;
+      }>("SELECT id, on_date, title, kind, hours, note FROM plan_days WHERE plan_id = ? ORDER BY on_date LIMIT 2000", [
+        plan.id,
+      ])
+      .filter((d) => !isLocked(d.on_date, c));
+    const tasks = new Map<number, string[]>();
+    for (const t of sql.all<{ day_id: number; body: string }>(
+      `SELECT t.day_id, t.body FROM plan_tasks t JOIN plan_days d ON d.id = t.day_id
+       WHERE d.plan_id = ? ORDER BY t.position, t.id LIMIT 50000`,
+      [plan.id],
+    ))
+      tasks.set(t.day_id, [...(tasks.get(t.day_id) ?? []), t.body]);
+    return {
+      plan,
+      days: rows.map((d) => ({
+        date: d.on_date,
+        title: d.title ?? "Day",
+        kind: d.kind,
+        hours: d.hours,
+        note: d.note,
+        tasks: tasks.get(d.id) ?? [],
+      })),
+    };
+  }),
+
+  /** Edit plan, JSON update, step 1: what a pasted / uploaded patch would do, without saving anything. */
+  "plan.checkPatch": read(["plans", "plan_days"], (sql, p: Clock & { text: string }) => {
+    const plan = activePlan(sql);
+    if (!plan) return null;
+    const r = readPatch(sql, plan, p, p.text);
+    const have = new Set(
+      sql
+        .all<{ d: IsoDate }>("SELECT on_date AS d FROM plan_days WHERE plan_id = ? LIMIT 2000", [plan.id])
+        .map((x) => x.d),
+    );
+    const updated = r.apply.filter((d) => have.has(d.date)).length;
+    return { errors: r.errors, warnings: r.warnings, updated, added: r.apply.length - updated };
+  }),
+
+  /** Edit plan, JSON update, step 2: checks again and writes the listed dates only. A day in the file gets its
+   *  title, type, hours, note and tasks from the file (a task with the same text keeps its tick) and its links if
+   *  the file has "questions". Every other day, the plan's name and its milestones stay as they are. One transaction. */
+  "plan.applyPatch": write(
+    ["plans", "plan_days", "plan_tasks", "plan_day_questions"],
+    (sql, p: Clock & { text: string }) => {
+      const plan = activePlan(sql);
+      if (!plan) return { ok: false as const, errors: ["There is no plan to update."] };
+      const r = readPatch(sql, plan, p, p.text);
+      if (r.errors.length) return { ok: false as const, errors: r.errors };
+      let updated = 0;
+      let added = 0;
+      let tasks = 0;
+      let dropped = 0;
+      for (const d of r.apply) {
+        const at = sql.get<{ id: number }>("SELECT id FROM plan_days WHERE plan_id = ? AND on_date = ?", [
+          plan.id,
+          d.date,
+        ]);
+        let dayId: number;
+        if (at) {
+          dayId = at.id;
+          sql.run("UPDATE plan_days SET title = ?, kind = ?, hours = ?, note = ? WHERE id = ?", [
+            d.title,
+            d.kind,
+            d.hours,
+            d.note,
+            dayId,
+          ]);
+          updated++;
+        } else {
+          dayId = sql.get<{ id: number }>(
+            "INSERT INTO plan_days (plan_id, on_date, title, kind, hours, note) VALUES (?, ?, ?, ?, ?, ?) RETURNING id",
+            [plan.id, d.date, d.title, d.kind, d.hours, d.note],
+          )!.id;
+          added++;
+        }
+        // tasks: reuse a saved task with the same text (its tick stays), delete the rest, add the new ones
+        const old = sql.all<{ id: number; body: string }>(
+          "SELECT id, body FROM plan_tasks WHERE day_id = ? ORDER BY position, id LIMIT 100",
+          [dayId],
+        );
+        const ids: (number | null)[] = d.tasks.map((body) => {
+          const i = old.findIndex((t) => t.body === body);
+          return i < 0 ? null : old.splice(i, 1)[0].id;
+        });
+        for (const t of old) sql.run("DELETE FROM plan_tasks WHERE id = ?", [t.id]);
+        d.tasks.forEach((body, k) => {
+          const id = ids[k];
+          if (id === null)
+            sql.run("INSERT INTO plan_tasks (day_id, position, body) VALUES (?, ?, ?)", [dayId, k + 1, body]);
+          else sql.run("UPDATE plan_tasks SET position = ? WHERE id = ?", [k + 1, id]);
+        });
+        tasks += d.tasks.length;
+        if (d.hasQuestions) {
+          const linked = new Set(
+            sql
+              .all<{
+                q: string;
+              }>("SELECT question_id AS q FROM plan_day_questions WHERE day_id = ? LIMIT 1000", [dayId])
+              .map((x) => x.q),
+          );
+          const keep = d.questions.filter(
+            (q) =>
+              linked.has(q) ||
+              !!sql.get("SELECT 1 FROM questions WHERE id = ? AND pool = 'practice' AND retired_at IS NULL", [q]),
+          );
+          dropped += d.questions.length - keep.length;
+          setDayLinks(sql, dayId, keep);
+        }
+      }
+      sql.run("UPDATE plans SET updated_at = ? WHERE id = ?", [Date.now(), plan.id]);
+      const warnings = dropped
+        ? [...r.warnings, `${dropped} linked question(s) left out: not in your practice bank.`]
+        : r.warnings;
+      return { ok: true as const, updated, added, tasks, warnings };
+    },
+  ),
+
   /** Export plan: the active plan as an orbit-plan file (lib/planFile.ts planToFile). null = no plan. */
   "plan.export": read(["plans", "plan_days", "plan_tasks", "plan_day_questions", "milestones"], (sql) => {
     const plan = activePlan(sql);
