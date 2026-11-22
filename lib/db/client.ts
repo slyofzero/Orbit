@@ -10,6 +10,12 @@
 //   * When the leader tab closes, the browser frees the lock; the next tab in line gets it,
 //     opens the database, announces itself, and every tab re-sends the calls still waiting.
 //     A re-sent call that already ran gets the remembered answer, so nothing runs twice.
+//   * A tab opened before an app update leads with the OLD list of queries. When a follower's call comes back
+//     "Unknown query" (its own build has that name, so it is newer), it keeps the call waiting and tells the
+//     leader it is outdated. The leader finishes what is running, closes its worker, frees the lock and queues
+//     for it again as a follower; the next tab in line (normally the newer one) takes over, and the waiting
+//     call is re-sent to it. Nothing reloads (a mock may be running in the old tab). A follower asks each leader
+//     at most once per query name, so a name no build knows still ends in the error.
 // Screens don't know or care which tab leads.
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
@@ -36,6 +42,8 @@ interface Pending {
 
 /** How long a leader remembers answers, so a re-sent call after a hand-over doesn't run twice. */
 const REMEMBER_MS = 60_000;
+/** The start of the worker's error for a name it doesn't have (lib/db/worker.ts). */
+const UNKNOWN = "Unknown query";
 
 class Connection {
   status: DbStatus;
@@ -49,6 +57,10 @@ class Connection {
   private nextWid = 1;
   private workerWaiting = new Map<number, (r: Reply) => void>();
   private served = new Map<string, Promise<Reply>>();
+  private release: (() => void) | null = null; // frees the lock (hands the database over)
+  private steppingDown = false;
+  // follower only: "<leader tab>:<query name>" already reported as outdated
+  private reported = new Set<string>();
 
   constructor(profile: string) {
     const tabId = crypto.randomUUID().slice(0, 8);
@@ -132,13 +144,45 @@ class Connection {
             this.tell({ type: "result", to: msg.from, id: msg.id, reply }),
           );
         break;
-      case "result":
-        if (msg.to === me.tabId) this.settle(msg.id, msg.reply);
+      case "result": {
+        if (msg.to !== me.tabId) break;
+        const p = this.pending.get(msg.id);
+        const key = `${me.leaderTab}:${p?.name}`;
+        if (p && !msg.reply.ok && msg.reply.error.startsWith(UNKNOWN) && me.leaderTab && !this.reported.has(key)) {
+          // the leader is an older build: keep the call waiting, it is re-sent to the next leader
+          this.reported.add(key);
+          this.tell({ type: "outdated", from: me.tabId, leader: me.leaderTab, name: p.name });
+          break;
+        }
+        this.settle(msg.id, msg.reply);
         break;
+      }
       case "changed":
         this.changed(msg.tables);
         break;
+      case "outdated":
+        if (me.role === "leader" && msg.leader === me.tabId) void this.stepDown();
+        break;
     }
+  }
+
+  /** Hands the database to the next tab in line: stop taking calls, let the running ones finish, close the
+   *  worker, free the lock, and queue for it again. This tab's own calls go to the new leader meanwhile. */
+  private async stepDown() {
+    if (this.steppingDown || !this.release) return;
+    this.steppingDown = true;
+    this.setStatus({ role: "connecting", leaderTab: null });
+    while (this.workerWaiting.size) await new Promise((r) => setTimeout(r, 20));
+    this.worker?.terminate();
+    this.worker = null;
+    this.served.clear();
+    const release = this.release;
+    this.release = null;
+    release();
+    this.steppingDown = false;
+    navigator.locks.request(`orbit-db:${this.status.profile}`, () => this.lead());
+    this.tell({ type: "who-leads", from: this.status.tabId });
+    this.resendAll(); // nobody may answer yet: re-sent again when the new leader announces itself
   }
 
   // ------------------------------------------------------------------ leader
@@ -172,7 +216,8 @@ class Connection {
     this.setStatus({ role: "leader", leaderTab: this.status.tabId, info, error: null });
     this.tell({ type: "leader", tabId: this.status.tabId, info });
     this.resendAll();
-    await new Promise<never>(() => {}); // hold the lock for the life of the tab
+    // hold the lock for the life of the tab, unless a newer tab asks for the database (stepDown)
+    await new Promise<void>((resolve) => (this.release = resolve));
   }
 
   /** Runs one call in the worker, at most once per (tab, id). */

@@ -29,4 +29,6 @@ export type TabMessage =
   | { type: "leader"; tabId: string; info: OpenInfo } // "I hold it" (sent when taking over, and to answer who-leads)
   | { type: "call"; from: string; id: number; name: string; params: unknown } // follower → leader
   | { type: "result"; to: string; id: number; reply: Reply } // leader → follower
-  | { type: "changed"; tables: string[] }; // leader → everyone, after a write
+  | { type: "changed"; tables: string[] } // leader → everyone, after a write
+  // follower → leader: "your build doesn't know this query, mine does": the leader hands over (client.ts)
+  | { type: "outdated"; from: string; leader: string; name: string };

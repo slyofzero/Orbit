@@ -54,6 +54,7 @@ Why not IndexedDB (via Dexie)? It would also stay off the main thread for storag
 2. Other tabs are **followers**. They send their calls to the leader and get results back over the channel (well under 1 ms more per call).
 3. After a write, the leader tells every tab which tables changed, so all tabs stay live.
 4. When the leader tab closes, the browser frees the lock and the next tab takes over. It retries opening for a few seconds while the old tab's file handles are released. Then every tab re-sends the calls still waiting. The leader remembers answers for a minute, so a re-sent call that already ran is never run twice.
+5. A tab opened before an app update leads with the old list of queries. When a follower's call comes back `Unknown query` (its newer build has that name), it keeps the call waiting and tells the leader. The leader finishes its running calls, closes its worker, frees the lock and queues for it again as a follower; the next tab takes over and the call is re-sent. No tab reloads. A follower asks each leader once per name, so a name no build knows still ends in the error. (Not yet checked in a real browser.)
 
 Checked in real Chrome (two and three tabs, a closed leader, a reload): every step works with no console errors.
 
