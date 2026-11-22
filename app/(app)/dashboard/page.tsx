@@ -73,10 +73,10 @@ function Body({ landed, today, hour }: { landed: boolean; today: IsoDate; hour: 
           </Rise>
         </div>
         <div className={SIDE}>
-          <Rise on={landed} i={8}>
+          <Rise on={landed} i={8} className="*:h-full">
             <MilestonesCard today={today} />
           </Rise>
-          <Rise on={landed} i={9}>
+          <Rise on={landed} i={9} className="*:h-full">
             <StandingCard today={today} />
           </Rise>
         </div>

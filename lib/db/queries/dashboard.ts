@@ -198,9 +198,12 @@ export const dashboardQueries = {
         `SELECT count(*) AS n, coalesce(sum(outcome = 'correct'), 0) AS correct
          FROM question_answers WHERE outcome <> 'skipped'`,
       )!;
-      const mocks = sql.get<{ n: number }>("SELECT count(*) AS n FROM mock_attempts WHERE status = 'submitted'")!.n;
-      const topics = sql.get<{ n: number; fresh: number; shaky: number }>(
-        `SELECT count(*) AS n, coalesce(sum(r.rating = 'no_idea'), 0) AS fresh, coalesce(sum(r.rating = 'shaky'), 0) AS shaky
+      const mocks = sql.get<{ n: number; best: number | null }>(
+        `SELECT count(*) AS n, max(100.0 * score / max_score) AS best
+         FROM mock_attempts WHERE status = 'submitted' AND max_score > 0`,
+      )!;
+      const topics = sql.get<{ n: number; known: number; fresh: number; shaky: number }>(
+        `SELECT count(*) AS n, coalesce(sum(r.rating = 'know'), 0) AS known, coalesce(sum(r.rating = 'no_idea'), 0) AS fresh, coalesce(sum(r.rating = 'shaky'), 0) AS shaky
          FROM topics t LEFT JOIN topic_ratings r ON r.topic_id = t.id WHERE t.retired_at IS NULL`,
       )!;
       return {
@@ -211,8 +214,10 @@ export const dashboardQueries = {
         openTasks: tasks.due - tasks.dueDone,
         answered: answers.n,
         correct: answers.correct,
-        mocks,
+        mocks: mocks.n,
+        bestMock: mocks.best === null ? null : Math.round(mocks.best),
         topics: topics.n,
+        known: topics.known,
         fresh: topics.fresh,
         shaky: topics.shaky,
       };
