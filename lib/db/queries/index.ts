@@ -31,6 +31,7 @@ import { statsQueries } from "@/lib/db/queries/stats";
 import { devQueries } from "@/lib/db/queries/dev";
 import { milestoneQueries } from "@/lib/db/queries/milestones";
 import { settingsQueries } from "@/lib/db/queries/settings";
+import { imageQueries } from "@/lib/db/queries/image";
 import type { QueryDef } from "@/lib/db/queries/core";
 
 export type { QueryDef };
@@ -52,6 +53,7 @@ export const QUERIES = {
   ...devQueries,
   ...milestoneQueries,
   ...settingsQueries,
+  ...imageQueries,
 };
 
 export type QueryName = keyof typeof QUERIES;

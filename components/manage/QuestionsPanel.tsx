@@ -283,7 +283,6 @@ export function QuestionsPanel({ overview }: { overview: Overview }) {
           startType={edit.id === null ? edit.type : undefined}
           onClose={() => setEdit(null)}
           onSaved={(id) => {
-            setEdit(null);
             toast(`Saved ${id}.`, "success");
           }}
         />

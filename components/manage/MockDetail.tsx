@@ -394,7 +394,6 @@ export function MockDetail({ overview, mockId, onBack }: { overview: Overview; m
           preset={edit.id === null ? { mockId, sectionId: edit.sectionId } : undefined}
           onClose={() => setEdit(null)}
           onSaved={(id) => {
-            setEdit(null);
             setMsg("");
             toast(`Saved ${id}.`, "success");
           }}

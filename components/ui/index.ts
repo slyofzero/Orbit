@@ -1,5 +1,6 @@
 // Shared UI components. Every one is shown at /dev/components (dev mode only).
 export { Rich } from "@/components/ui/Rich";
+export { PicturePreview } from "@/components/ui/PicturePreview";
 export { RichEditor } from "@/components/ui/RichEditor";
 export { SparkleBadge, isSpecial, Warm, GLOW, type Glow } from "@/components/ui/Special";
 export { Divider, type DividerVariant } from "@/components/ui/Divider";
@@ -8,6 +9,7 @@ export { Button, IconButton, Spinner, type ButtonVariant, type ButtonSize } from
 export { TextField, TextArea } from "@/components/ui/Field";
 export { CodeEditor, CODE_LANGS } from "@/components/ui/CodeEditor";
 export { Checkbox, Radio, RadioGroup, type RadioOption } from "@/components/ui/Choice";
+export { Slider } from "@/components/ui/Slider";
 export { Switch } from "@/components/ui/Switch";
 export { Segmented, type Segment } from "@/components/ui/Segmented";
 export { ThemeToggle } from "@/components/ui/ThemeToggle";

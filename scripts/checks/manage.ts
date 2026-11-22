@@ -25,6 +25,7 @@ import {
 } from "@/lib/manage";
 import { editBoxes, editPrompt } from "@/lib/prompts/editPrompt";
 import { parseQuestionFile } from "@/lib/questionFile";
+import { hashImage } from "@/lib/images";
 import { sampleFile, sampleFileName } from "@/lib/samplePacks";
 import { QUERIES, type QueryDef, type ResultOf } from "@/lib/db/queries";
 import { transaction } from "@/lib/db/sql";
@@ -193,6 +194,41 @@ console.log("manage pack queries (lib/db/queries/manage.ts)");
   ok(same.ok, "save: an unchanged question saves");
   const after = q("manage.question", { id: first.id })!;
   ok(after.question.content_hash === one.question.content_hash, "save: nothing changed, same hash");
+
+  // pictures: saved once by name, linked to the question that uses them when it is saved
+  const png = new Uint8Array([137, 80, 78, 71, 1, 2, 3]);
+  const pic = await hashImage(png);
+  const put = q("image.add", { hash: pic, bytes: png, mime: "image/png", width: 3, height: 2 });
+  ok(put.ok && put.hash === pic, "image.add: stores a picture and returns its name");
+  q("image.add", { hash: pic, bytes: png, mime: "image/png" });
+  ok(
+    s.get<{ n: number }>("SELECT count(*) AS n FROM images")!.n === 1 &&
+      q("image.get", { hash: pic })?.bytes.byteLength === png.length &&
+      q("image.get", { hash: "hnone" }) === null,
+    "image.get: the same picture is stored once; an unknown name = null",
+  );
+  ok(
+    !q("image.add", { hash: pic, bytes: png, mime: "text/plain" }).ok &&
+      !q("image.add", { hash: "bad", bytes: png, mime: "image/png" }).ok,
+    "image.add: refuses a non-picture and a bad name",
+  );
+  q("manage.saveQuestion", {
+    id: first.id,
+    form: { ...form, text: `${form.text} ![fig](img:${pic}) ![gone](img:hmissing)` },
+    target: null,
+  });
+  ok(
+    s
+      .all<{ hash: string }>("SELECT hash FROM question_images WHERE question_id = ?", [first.id])
+      .map((r) => r.hash)
+      .join() === pic,
+    "save: links the question to the stored pictures it uses (a missing one is left out)",
+  );
+  q("manage.saveQuestion", { id: first.id, form, target: null });
+  ok(
+    s.get<{ n: number }>("SELECT count(*) AS n FROM question_images WHERE question_id = ?", [first.id])!.n === 0,
+    "save: a picture taken out of the text is unlinked",
+  );
   ok(
     q("manage.saveQuestion", {
       id: first.id,

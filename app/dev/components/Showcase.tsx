@@ -34,6 +34,7 @@ import {
   Segmented,
   Spinner,
   Stat,
+  Slider,
   Switch,
   Table,
   Tabs,
@@ -1125,20 +1126,31 @@ function NavDemo() {
 
 function Switches() {
   const [on, setOn] = useState(true);
+  const [size, setSize] = useState(75);
   const [view, setView] = useState<"day" | "week" | "month">("week");
   const [mode, setMode] = useState<"normal" | "timed" | "boss">("normal");
   return (
     <Section
       id="switches"
       title="Switch & segmented"
-      path="components/ui/Switch.tsx · Segmented.tsx · ThemeToggle.tsx"
-      note="Switch applies at once. Segmented picks one of a few options. The theme toggle saves to orbit.theme."
+      path="components/ui/Switch.tsx · Slider.tsx · Segmented.tsx · ThemeToggle.tsx"
+      note="Switch and Slider apply at once. Segmented picks one of a few options. The theme toggle saves to orbit.theme."
     >
       <Demo>
         <div className="flex flex-wrap items-center gap-3">
           <Switch checked={on} onChange={setOn} label="Sound effects $\sim$" />
           <Switch checked={false} onChange={() => {}} label="Disabled $\bot$" disabled />
         </div>
+        <Slider
+          label="Picture size"
+          value={size}
+          onChange={setSize}
+          min={10}
+          max={100}
+          step={5}
+          unit="%"
+          className="max-w-[320px]"
+        />
         <div className="flex flex-wrap items-center gap-3">
           <Segmented
             label="Calendar view"

@@ -159,6 +159,7 @@ function inlines(nodes: Inline[], r: ImageResolver, blk: boolean): ReactNode[] {
               key={i}
               className="inline-flex rounded-sm border-[1.5px] border-dashed border-line px-2.5 py-1 text-[0.85rem] text-gray"
               role="img"
+              data-picture
               aria-label={`Missing picture: ${n.alt}`}
             >
               🖼 Picture not found{n.alt ? `: ${n.alt}` : ""}
@@ -171,6 +172,8 @@ function inlines(nodes: Inline[], r: ImageResolver, blk: boolean): ReactNode[] {
             className={cx(IMG, blk ? "block" : "inline-block align-middle")}
             src={url}
             alt={n.alt}
+            data-picture
+            style={n.width ? { width: `${n.width}%` } : undefined}
             loading="lazy"
             decoding="async"
           />

@@ -22,3 +22,27 @@ export function imageProblem(file: { type: string; size: number }): string | nul
   if (file.size > MAX_IMAGE_BYTES) return "That picture is larger than 5 MB. Make it smaller and try again.";
   return null;
 }
+
+/** The picture names (`img:<hash>`) used in these texts, each once, in order of appearance. */
+export function imageHashes(texts: readonly (string | null | undefined)[]): string[] {
+  const out = new Set<string>();
+  for (const t of texts)
+    for (const m of (t ?? "").matchAll(/\]\(img:([A-Za-z0-9_-]+)(?:\s+\d{1,3}%)?\)/g)) out.add(m[1]);
+  return [...out];
+}
+
+/** A markdown picture `![alt](img:<hash> or https://…)` with its optional size (`50%`), as the parser reads it. */
+const PICTURE = /!\[((?:\\.|[^\]\\])*)\]\(\s*(img:[A-Za-z0-9_-]+|https?:\/\/[^\s)]+)(?:\s+(\d{1,3})%)?\s*\)/g;
+
+/** The size (percent of the line) of each picture in the text, in order; null = full width. */
+export function pictureSizes(text: string): (number | null)[] {
+  return [...text.matchAll(PICTURE)].map((m) => (m[3] ? Number(m[3]) : null));
+}
+
+/** The text with the `index`-th picture set to `percent` (100 or more = full width, which needs no tag). */
+export function setPictureSize(text: string, index: number, percent: number): string {
+  let i = -1;
+  return text.replace(PICTURE, (all, alt: string, src: string) =>
+    ++i === index ? `![${alt}](${src}${percent < 100 ? ` ${Math.max(10, Math.round(percent))}%` : ""})` : all,
+  );
+}

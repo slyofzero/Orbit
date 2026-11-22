@@ -21,6 +21,7 @@ import {
   type QuestionBank,
   type QuestionForm,
 } from "@/lib/manage";
+import { imageHashes } from "@/lib/images";
 import { LIMITS, QUESTION_TYPES, questionHash, type FileQuestion } from "@/lib/questionFile";
 import type { QuestionDetail } from "@/lib/questions";
 import type { QuestionRow, QuestionType, TopicRating } from "@/types/tables";
@@ -55,6 +56,14 @@ function writeDetailAndTags(sql: Sql, id: string, q: FileQuestion) {
       accepted: q.accepted,
     });
   else insert(sql, "question_code", { question_id: id, starter: q.starter });
+  // the pictures it uses (only ones that are stored: img:<hash> of a missing picture just shows as missing)
+  sql.run("DELETE FROM question_images WHERE question_id = ?", [id]);
+  const texts = [q.stem, q.explanation, ...(q.type === "mcq" || q.type === "msq" ? q.options : [])];
+  for (const hash of imageHashes(texts))
+    sql.run("INSERT OR IGNORE INTO question_images (question_id, hash) SELECT ?, hash FROM images WHERE hash = ?", [
+      id,
+      hash,
+    ]);
   sql.run("DELETE FROM question_tags WHERE question_id = ?", [id]);
   for (const name of q.tags) {
     const tag =
@@ -332,7 +341,7 @@ export const manageQueries = {
    *  name) makes it a mock question there; null = Practice. Moving out of the mock it was shown in takes it out
    *  of that mock; a practice question that is also in a mock stays there when saved as Practice. */
   "manage.saveQuestion": write(
-    ["questions", ...DETAIL_TABLES, "question_tags", "tags", "mocks", "mock_sections", "mock_items"],
+    ["questions", ...DETAIL_TABLES, "question_tags", "question_images", "tags", "mocks", "mock_sections", "mock_items"],
     (
       sql,
       p: {

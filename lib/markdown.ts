@@ -4,6 +4,7 @@
 // Inline:  **bold**  *italic* or _italic_  ++underline++  ~~strike~~  `code`
 //          $inline maths$  $$display maths$$  [text](https://â¦)  ![alt](img:<hash> or https://â¦)
 //          \x escapes a special character (e.g. \$ for a dollar sign, \* for an asterisk)
+//          a picture's size goes after its address: ![alt](img:<hash> 50%), from 10% to 100% of the line
 //          a single line break inside a paragraph is kept as a line break
 // Blocks:  # / ## / ### headings Â· - or * bullet lists Â· 1. numbered lists Â· > quotes
 //          ``` fenced code ``` Â· $$ display maths $$ (may span lines) Â· --- divider
@@ -16,7 +17,7 @@ export type Inline =
   | { t: "code"; v: string }
   | { t: "math"; v: string; display: boolean }
   | { t: "link"; href: string; c: Inline[] }
-  | { t: "img"; src: string; alt: string };
+  | { t: "img"; src: string; alt: string; width?: number }; // width = percent of the line, 10 to 100
 
 export type Block =
   | { t: "p"; c: Inline[] }
@@ -164,9 +165,11 @@ export function parseInline(src: string): Inline[] {
 
     if (c === "!" && src[i + 1] === "[") {
       const m = matchBracketLink(src, i + 1);
-      const s = m && safeImageSrc(m.url);
-      if (m && s) {
-        push({ t: "img", src: s, alt: m.text });
+      const p = m?.url.trim().match(/^(\S+)(?:\s+(\d{1,3})%)?$/); // the address, then an optional size
+      const s = p && safeImageSrc(p[1]);
+      const width = p?.[2] ? Number(p[2]) : undefined;
+      if (m && s && (width === undefined || (width >= 10 && width <= 100))) {
+        push({ t: "img", src: s, alt: m.text, ...(width ? { width } : {}) });
         i = m.end;
         continue;
       }

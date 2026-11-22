@@ -23,6 +23,8 @@ import { FieldLabel, TextArea, TextField } from "@/components/ui/Field";
 import { FileInput } from "@/components/ui/FileInput";
 import { Rich } from "@/components/ui/Rich";
 import { Segmented } from "@/components/ui/Segmented";
+import { Tabs } from "@/components/ui/Tabs";
+import { PicturePreview } from "@/components/ui/PicturePreview";
 import { applyToTextarea } from "@/components/utils/textareaEdit";
 import { Table } from "@/components/ui/Table";
 import { Code, Text } from "@/components/ui/Text";
@@ -171,8 +173,8 @@ export function RichEditor({
     try {
       const src = await onAddImage(file);
       apply(replaceSelection(at.start, at.end, `![pasted picture](${src})`));
-    } catch {
-      setPasteError("Could not save that picture. Try again.");
+    } catch (e) {
+      setPasteError(`Could not save that picture. ${e instanceof Error ? e.message : "Try again."}`);
     }
   };
 
@@ -244,7 +246,11 @@ export function RichEditor({
                 view === "split" && "border-l border-line-2 max-[720px]:border-t max-[720px]:border-l-0",
               )}
             >
-              {value.trim() ? <Rich text={value} block /> : <Text variant="hint">Nothing to preview yet.</Text>}
+              {value.trim() ? (
+                <PicturePreview text={value} onChange={onChange} />
+              ) : (
+                <Text variant="hint">Nothing to preview yet.</Text>
+              )}
             </div>
           )}
         </div>
@@ -415,19 +421,21 @@ function ImageForm({
   const [file, setFile] = useState<File | null>(null);
   const [url, setUrl] = useState("");
   const [alt, setAlt] = useState("");
+  const [size, setSize] = useState<"50" | "75" | "100">("100");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const submit = async () => {
     setError(null);
     const desc = escText(alt.trim() || "picture");
+    const sizeTag = size === "100" ? "" : ` ${size}%`; // full width needs no tag
     if (mode === "web") {
       const src = safeImageSrc(url);
       if (!src) {
         setError("Use a full picture address starting with https://");
         return;
       }
-      onInsert(`![${desc}](${src})`);
+      onInsert(`![${desc}](${src}${sizeTag})`);
       return;
     }
     if (!file || !onAddImage) {
@@ -441,9 +449,9 @@ function ImageForm({
     }
     setBusy(true);
     try {
-      onInsert(`![${desc}](${await onAddImage(file)})`);
-    } catch {
-      setError("Could not save that picture. Try again.");
+      onInsert(`![${desc}](${await onAddImage(file)}${sizeTag})`);
+    } catch (e) {
+      setError(`Could not save that picture. ${e instanceof Error ? e.message : "Try again."}`);
     } finally {
       setBusy(false);
     }
@@ -466,13 +474,17 @@ function ImageForm({
       }
     >
       {onAddImage && (
-        <Segmented
+        <Tabs
           label="Picture source"
+          shape="underline"
           value={mode}
-          onChange={setMode}
-          segments={[
-            { value: "upload", label: "From this device" },
-            { value: "web", label: "From a web address" },
+          onChange={(m) => {
+            setMode(m);
+            setError(null);
+          }}
+          tabs={[
+            { value: "upload", label: "Upload" },
+            { value: "web", label: "From a link" },
           ]}
         />
       )}
@@ -497,6 +509,16 @@ function ImageForm({
           placeholder="https://…/graph.png"
         />
       )}
+      <Segmented
+        label="Size on the page"
+        value={size}
+        onChange={setSize}
+        segments={[
+          { value: "50", label: "50%" },
+          { value: "75", label: "75%" },
+          { value: "100", label: "100%" },
+        ]}
+      />
       <TextField
         label="Short description"
         value={alt}

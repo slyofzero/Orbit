@@ -1,5 +1,5 @@
 // check.ts section: images. Run: bun run check
-import { hashImage, imageProblem, imageRef, refToHash } from "@/lib/images";
+import { hashImage, imageHashes, imageProblem, imageRef, pictureSizes, refToHash, setPictureSize } from "@/lib/images";
 import { ok } from "@/scripts/checks/helpers";
 
 console.log("images");
@@ -14,5 +14,19 @@ console.log("images");
       imageProblem({ type: "image/png", size: 6e6 }) !== null &&
       imageProblem({ type: "image/png", size: 1000 }) === null,
     "file checks: type and 5 MB limit",
+  );
+  ok(
+    imageHashes(["a ![x](img:h1 50%) b ![y](img:h2)", null, "![x](img:h1) ![z](https://e.com/a.png)"]).join() ===
+      "h1,h2",
+    "imageHashes: each picture once, web pictures ignored",
+  );
+  const t = "a ![x](img:h1) b ![y](https://e.com/p.png 75%) c ![w](img:h3)";
+  ok(pictureSizes(t).join() === ",75,", "pictureSizes: in order, null = full width");
+  ok(
+    setPictureSize(t, 0, 50) === "a ![x](img:h1 50%) b ![y](https://e.com/p.png 75%) c ![w](img:h3)" &&
+      setPictureSize(t, 1, 100).includes("![y](https://e.com/p.png) c") &&
+      setPictureSize(t, 2, 75).endsWith("![w](img:h3 75%)") &&
+      setPictureSize(t, 9, 50) === t,
+    "setPictureSize: changes only the chosen picture; 100% drops the tag",
   );
 }

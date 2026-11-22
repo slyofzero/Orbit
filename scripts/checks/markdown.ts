@@ -59,6 +59,14 @@ console.log("markdown: inline");
     "unsafe link stays text",
   );
   ok(j("![g](img:h12ab)") === J([{ t: "img", src: "img:h12ab", alt: "g" }]), "image reference");
+  ok(
+    j("![g](img:h12ab 50%)") === J([{ t: "img", src: "img:h12ab", alt: "g", width: 50 }]),
+    "image size: a percentage after the address",
+  );
+  ok(
+    !j("![g](img:h12ab 500%)").includes('"img"') && !j("![g](img:h12ab big)").includes('"img"'),
+    "image size: only 10-100%",
+  );
   ok(!j("![x](data:image/png;base64,AAA)").includes('"img"'), "base64 image refused");
   ok(j("<b>hi</b>") === J([{ t: "text", v: "<b>hi</b>" }]), "raw HTML stays text");
   ok(j("a\nb") === J([{ t: "text", v: "a" }, { t: "br" }, { t: "text", v: "b" }]), "line break");

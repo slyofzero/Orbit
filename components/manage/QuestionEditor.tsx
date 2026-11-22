@@ -3,7 +3,7 @@
 // (lib/manage.ts checkForm, again in the manage.saveQuestion query), so a broken question can't be saved.
 // The id is the system's: a new question gets one when saved, a saved one keeps its own. A saved question keeps
 // its type (db/schema.sql). "Copy prompt" hands any AI the question and the rules to fix how it is written
-// (lib/prompts/editPrompt.ts). Pictures can't be added here yet (TODO.md).
+// (lib/prompts/editPrompt.ts). Pictures are added from the editor's picture button (components/app/ImageStore.tsx).
 
 import { useEffect, useState } from "react";
 import { IconPlus, IconX } from "@/components/icons";
@@ -24,6 +24,8 @@ import {
   TextArea,
   TextField,
 } from "@/components/ui";
+import { PicturePreview } from "@/components/ui/PicturePreview";
+import { useAddImage } from "@/components/app/ImageStore";
 import type { Overview } from "@/components/manage/QuestionsPanel";
 import { useMutation, useQuery } from "@/lib/db/client";
 import {
@@ -46,11 +48,11 @@ const CLOSE_MS = 200; // Dialog's fade-out
 const NEW_SECTION = "__new__";
 
 /** A preview of rich text under its box (v1's pk-prev). */
-function Preview({ text }: { text: string }) {
+function Preview({ text, onChange }: { text: string; onChange: (text: string) => void }) {
   if (!text.trim()) return null;
   return (
     <div className="rounded-md bg-sheet-2 px-3.5 py-2.5">
-      <Rich block text={text} />
+      <PicturePreview text={text} onChange={onChange} />
     </div>
   );
 }
@@ -71,11 +73,13 @@ export function QuestionEditor({
   /** a new question starts as this type (Programming: code) */
   startType?: QuestionType;
   onClose: () => void;
+  /** right after a successful save (the dialog is still fading out; `onClose` follows) */
   onSaved: (id: string) => void;
 }) {
   const [open, setOpen] = useState(true);
   const { data: loaded } = useQuery("manage.question", { id: id ?? "" });
   const save = useMutation("manage.saveQuestion");
+  const addImage = useAddImage();
   const [form, setForm] = useState<QuestionForm>(() =>
     changeType(emptyForm(overview.topics[0]?.id ?? ""), startType ?? "mcq"),
   );
@@ -119,7 +123,8 @@ export function QuestionEditor({
     if (!r.ok) return setErrors(r.errors);
     setErrors([]);
     setOpen(false);
-    setTimeout(() => onSaved(r.id), CLOSE_MS);
+    onSaved(r.id); // at once, so its toast shows now; the dialog then fades out and closes
+    setTimeout(onClose, CLOSE_MS);
   };
 
   return (
@@ -162,16 +167,6 @@ export function QuestionEditor({
         <Text variant="muted">Loading…</Text>
       ) : (
         <div className="grid gap-3">
-          <TextField
-            label={id ? "Id (fixed)" : "Id (assigned by the system)"}
-            value={id ?? "Given when you add it"}
-            disabled
-            hint={
-              id
-                ? "Saving changes overrides this question. Its id stays the same."
-                : "Every question gets its own unique id automatically."
-            }
-          />
           <Dropdown
             label="Topic"
             searchable
@@ -217,7 +212,7 @@ export function QuestionEditor({
             </div>
           )}
 
-          <div className="grid grid-cols-[2fr_1fr_1fr] gap-2.5 max-[640px]:grid-cols-1">
+          <div className="grid grid-cols-[2fr_1fr_1fr] items-start gap-2.5 max-[640px]:grid-cols-1">
             <Dropdown
               label="Type"
               value={form.type}
@@ -246,12 +241,13 @@ export function QuestionEditor({
 
           <RichEditor
             label="Question"
+            onAddImage={addImage}
             hint="LaTeX between $…$"
             rows={5}
             value={form.text}
             onChange={(v) => set({ text: v })}
           />
-          <Preview text={form.text} />
+          <Preview text={form.text} onChange={(v) => set({ text: v })} />
 
           {form.type === "code" ? (
             <CodeEditor
@@ -365,12 +361,13 @@ export function QuestionEditor({
           )}
 
           <RichEditor
+            onAddImage={addImage}
             label={form.type === "code" ? "Explanation (the model solution)" : "Explanation"}
             rows={3}
             value={form.explanation}
             onChange={(v) => set({ explanation: v })}
           />
-          <Preview text={form.explanation} />
+          <Preview text={form.explanation} onChange={(v) => set({ explanation: v })} />
           <Dropdown
             label="Difficulty"
             placeholder="Pick one…"
