@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { ActiveClock, IDLE_CUTOFF_MS } from "@/lib/activeClock";
 import { parseQuestionFile, questionSummary } from "@/lib/questionFile";
-import { outcomeOf, paletteState, pendingSkips, startIndex, summarize } from "@/lib/session";
+import { autoNext, outcomeOf, paletteState, pendingSkips, startIndex, summarize } from "@/lib/session";
 import { QUERIES } from "@/lib/db/queries";
 import { transaction } from "@/lib/db/sql";
 import type { TopicQuestions } from "@/lib/questions";
@@ -67,6 +67,18 @@ console.log("practice sitting rules (lib/session.ts)");
   ok(
     pendingSkips(["a", "b", "c"], new Set(["b"])).join() === "a,c",
     "skips: opened questions not yet written, in order",
+  );
+  ok(
+    pendingSkips(["a", "b"], new Set(["a", "b"])).length === 0 &&
+      pendingSkips(["a", "b"], new Set(["b"])).join() === "a",
+    "skips: Try again takes a question out of `written`, so leaving it unanswered stores one more skipped row",
+  );
+  ok(
+    autoNext("correct", 0, 3) === 1 &&
+      autoNext("correct", 2, 3) === null &&
+      autoNext("incorrect", 0, 3) === null &&
+      autoNext("skipped", 0, 3) === null,
+    "auto-next: only after a right answer, never past the last question",
   );
   const s = summarize({ a: "correct", b: "correct", c: "incorrect" }, 5);
   ok(

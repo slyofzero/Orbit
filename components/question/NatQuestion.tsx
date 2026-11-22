@@ -10,12 +10,14 @@ export function NatQuestion({
   detail,
   number,
   onAnswer,
+  onRetry,
   special,
 }: {
   question: QuestionRow;
   detail: QuestionNatRow;
   number?: number;
   onAnswer?: (v: Verdict) => void;
+  onRetry?: () => void; // Try again was pressed (a new attempt)
   special?: boolean;
 }) {
   const [input, setInput] = useState("");
@@ -49,6 +51,7 @@ export function NatQuestion({
       canCheck={input.trim() !== "" && !notNumber}
       onCheck={check}
       onReset={() => {
+        onRetry?.();
         setInput("");
         setResult(null);
       }}

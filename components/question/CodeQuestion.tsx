@@ -13,6 +13,7 @@ export function CodeQuestion({
   detail,
   number,
   onAnswer,
+  onRetry,
   onCodeChange,
   special,
   split,
@@ -22,6 +23,7 @@ export function CodeQuestion({
   detail: QuestionCodeRow;
   number?: number;
   onAnswer?: (v: Verdict) => void;
+  onRetry?: () => void; // Try again was pressed (a new attempt)
   onCodeChange?: (code: string) => void; // every edit, e.g. to keep a draft
   special?: boolean;
   split?: boolean;
@@ -43,7 +45,10 @@ export function CodeQuestion({
       result={result}
       canCheck={false}
       onCheck={() => {}}
-      onReset={() => setResult(null)}
+      onReset={() => {
+        setResult(null);
+        onRetry?.();
+      }}
       actions={
         <>
           <Button variant="soft" icon={<IconX />} onClick={() => mark("incorrect")}>

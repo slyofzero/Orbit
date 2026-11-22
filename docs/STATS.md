@@ -53,6 +53,8 @@ Rules:
 4. **One sitting only.** Returning to the question in a later sitting starts a new row with a fresh clock.
 5. **Mocks follow the same rules**: each question's clock runs only while it is the one on screen.
 6. When a sitting ends, every question that was shown and not answered is written as `skipped` with the time spent on it.
+7. **Answering stops the clock.** Reading the explanation afterwards doesn't count.
+8. **Try again is a new attempt** (practice and Programming): one more row for that question. Its clock starts from 0 and stops at the next answer; leaving it unanswered writes it as `skipped`.
 
 ---
 

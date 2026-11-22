@@ -2,9 +2,11 @@
 // The practice screens: /practice/session?topic=<id>, or ?q=<question id> for a sitting of just that one question
 // (Manage pack's Questions table opens a row this way), and /practice/day?date=<YYYY-MM-DD> for a plan day's linked
 // questions, then the bonus ones carried into it, set apart in amber (the main event's "Practise these questions"). One question at a time with Previous / Next, a
-// palette to jump around, and a progress bar. Each answer is stored when you check it (`question.record`);
-// questions you opened and never answered are stored as skipped when you finish or leave, so their time counts
-// (docs/STATS.md). Only the first check of a question counts in a sitting; "Try again" is just for practice.
+// palette to jump around, and a progress bar. Each answer is stored when you check it (`question.record`), and the
+// question's clock stops right then; a right answer moves on to the next question by itself (a wrong one stays, so
+// you can read the explanation). Questions you opened and never answered are stored as skipped when you finish or
+// leave, so their time counts (docs/STATS.md). "Try again" is a new attempt: one more showing of the question, its
+// clock starts from 0, and it is stored again when you answer (or as skipped if you leave it unanswered).
 // Rules: lib/session.ts; the clock: components/utils/useSittingClock.ts.
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -18,7 +20,7 @@ import { useMutation, useQuery } from "@/lib/db/client";
 import { formatShort, isIsoDate, todayIST, type IsoDate } from "@/lib/dates";
 import type { Verdict } from "@/lib/grade";
 import type { TopicQuestions } from "@/lib/questions";
-import { outcomeOf, paletteState, pendingSkips, startIndex, summarize } from "@/lib/session";
+import { AUTO_NEXT_MS, autoNext, outcomeOf, paletteState, pendingSkips, startIndex, summarize } from "@/lib/session";
 import type { AnswerOutcome } from "@/types/tables";
 
 type Back = { href: string; label: string };
@@ -119,10 +121,12 @@ function Sitting({
   const items = data?.items ?? [];
   const index = Math.min(at ?? startIndex(items), Math.max(0, items.length - 1));
   const currentId = items[index]?.question.id ?? null;
-  const timeOf = useSittingClock(finished ? null : currentId);
+  const { timeOf, freeze, restart } = useSittingClock(finished ? null : currentId);
+  const indexRef = useRef(index);
+  indexRef.current = index;
 
   // What the end-of-sitting write needs, kept in refs so it always sees the latest values.
-  const written = useRef(new Set<string>()); // questions already stored this sitting
+  const written = useRef(new Set<string>()); // questions whose current attempt is stored
   const opened = useRef<string[]>([]);
   const timeRef = useRef(timeOf);
   timeRef.current = timeOf;
@@ -159,12 +163,25 @@ function Sitting({
     };
   }, [flush]);
 
-  const answer = (id: string) => (verdict: Verdict) => {
-    if (written.current.has(id)) return; // only the first check of a question counts
+  const answer = (id: string, i: number) => (verdict: Verdict) => {
+    if (written.current.has(id)) return; // one stored answer per attempt
     written.current.add(id);
+    freeze(id); // the time stops once it is answered
     const outcome = outcomeOf(verdict);
     setOutcomes((o) => ({ ...o, [id]: outcome }));
     void record.run({ answers: [{ questionId: id, outcome, timeMs: timeOf(id) }] });
+    const next = autoNext(outcome, i, items.length);
+    if (next !== null)
+      setTimeout(() => {
+        if (alive.current && indexRef.current === i) setAt(next); // only if you are still on it
+      }, AUTO_NEXT_MS);
+  };
+
+  /** Try again: a new attempt, stored again when answered (or as skipped when left), with a fresh clock. */
+  const retry = (id: string) => () => {
+    written.current.delete(id);
+    restart(id);
+    setOutcomes(({ [id]: _, ...rest }) => rest);
   };
 
   if (!data) return null;
@@ -280,7 +297,8 @@ function Sitting({
                     question={x.question}
                     detail={x.detail}
                     number={i + 1}
-                    onAnswer={answer(x.question.id)}
+                    onAnswer={answer(x.question.id, i)}
+                    onRetry={retry(x.question.id)}
                   />
                 </div>
               ) : null,

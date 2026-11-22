@@ -22,15 +22,17 @@ export function AnyQuestion({
   detail,
   number,
   onAnswer,
+  onRetry,
   special,
 }: {
   question: QuestionRow;
   detail: QuestionDetail; // the row of the type table that matches question.type
   number?: number;
   onAnswer?: (v: Verdict) => void;
+  onRetry?: () => void; // Try again was pressed
   special?: boolean;
 }) {
-  const common = { question, number, onAnswer, special };
+  const common = { question, number, onAnswer, onRetry, special };
   switch (question.type) {
     case "mcq":
       return <McqQuestion {...common} detail={detail as QuestionMcqRow} />;

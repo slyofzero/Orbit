@@ -110,7 +110,7 @@ function Running({ data }: { data: Loaded }) {
   const ending = useRef(false);
 
   // Clocks: what was saved before this page load, plus this load's active time.
-  const timeOf = useSittingClock(away ? null : curId);
+  const { timeOf } = useSittingClock(away ? null : curId);
   const base = useRef<Map<string, number> | null>(null);
   if (!base.current) base.current = new Map(items.map((x) => [x.question.id, x.item.time_ms]));
   const timeMs = useCallback((qid: string) => (base.current!.get(qid) ?? 0) + timeOf(qid), [timeOf]);

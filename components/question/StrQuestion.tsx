@@ -16,12 +16,14 @@ export function StrQuestion({
   detail,
   number,
   onAnswer,
+  onRetry,
   special,
 }: {
   question: QuestionRow;
   detail: QuestionStrRow;
   number?: number;
   onAnswer?: (v: Verdict) => void;
+  onRetry?: () => void; // Try again was pressed (a new attempt)
   special?: boolean;
 }) {
   const [input, setInput] = useState("");
@@ -57,6 +59,7 @@ export function StrQuestion({
       canCheck={input.trim() !== ""}
       onCheck={check}
       onReset={() => {
+        onRetry?.();
         setInput("");
         setResult(null);
       }}

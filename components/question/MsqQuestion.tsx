@@ -10,12 +10,14 @@ export function MsqQuestion({
   detail,
   number,
   onAnswer,
+  onRetry,
   special,
 }: {
   question: QuestionRow;
   detail: QuestionMsqRow;
   number?: number;
   onAnswer?: (v: Verdict) => void;
+  onRetry?: () => void; // Try again was pressed (a new attempt)
   special?: boolean;
 }) {
   const [picks, setPicks] = useState<number[]>([]);
@@ -36,6 +38,7 @@ export function MsqQuestion({
       canCheck={picks.length > 0}
       onCheck={check}
       onReset={() => {
+        onRetry?.();
         setPicks([]);
         setResult(null);
       }}

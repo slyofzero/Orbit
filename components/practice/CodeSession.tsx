@@ -2,8 +2,9 @@
 // The Programming screen: /practice/code?id=<question id>. One code question on a page of its own (v1): the
 // statement beside the editor on wide screens, "I got it right / wrong" to mark it yourself, and Previous / Next
 // through the Programming list. Marking stores one answer (`question.record`) with the question's active time
-// (docs/STATS.md); leaving without marking stores it as skipped, so the time still counts. Only the first mark per
-// visit counts; "Try again" is for practice. Each question is its own sitting (the page remounts per question).
+// (docs/STATS.md) and stops its clock; leaving without marking stores it as skipped, so the time still counts. "Try
+// again" is a new attempt: the clock starts from 0 and the next mark (or leaving) is stored again. Each question is
+// its own sitting (the page remounts per question).
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -37,7 +38,7 @@ function CodeSitting({ id }: { id: string }) {
   const record = useMutation("question.record");
   const [verdict, setVerdict] = useState<Verdict | undefined>(undefined);
   const ready = !!data?.item;
-  const timeOf = useSittingClock(ready ? id : null);
+  const { timeOf, freeze, restart } = useSittingClock(ready ? id : null);
 
   // What the end-of-visit write needs, in refs so it sees the latest values.
   const written = useRef(false);
@@ -69,8 +70,9 @@ function CodeSitting({ id }: { id: string }) {
 
   const answer = (v: Verdict) => {
     setVerdict(v);
-    if (written.current) return; // only the first mark of a visit counts
+    if (written.current) return; // one stored mark per attempt
     written.current = true;
+    freeze(id); // the time stops once it is marked
     void record.run({ answers: [{ questionId: id, outcome: outcomeOf(v), timeMs: timeOf(id) }] });
   };
 
@@ -113,7 +115,17 @@ function CodeSitting({ id }: { id: string }) {
             </Button>
           </div>
         </div>
-        <CodeQuestion question={question} detail={detail as QuestionCodeRow} onAnswer={answer} split rows={18} />
+        <CodeQuestion
+          question={question}
+          detail={detail as QuestionCodeRow}
+          onAnswer={answer}
+          onRetry={() => {
+            written.current = false;
+            restart(id);
+          }}
+          split
+          rows={18}
+        />
       </div>
     </EditQuestionHost>
   );

@@ -29,6 +29,15 @@ export function pendingSkips(visited: Iterable<string>, written: ReadonlySet<str
   return [...visited].filter((id) => !written.has(id));
 }
 
+/** How long a right answer stays on screen before the sitting moves on by itself. */
+export const AUTO_NEXT_MS = 1000;
+
+/** Where a sitting moves by itself after an answer: the next question when it was right (and there is one), else
+ *  nowhere (null): a wrong answer stays on screen so you can read the explanation or Try again. */
+export function autoNext(outcome: AnswerOutcome, index: number, total: number): number | null {
+  return outcome === "correct" && index + 1 < total ? index + 1 : null;
+}
+
 export interface SessionSummary {
   total: number; // questions in the sitting
   answered: number; // right + wrong
