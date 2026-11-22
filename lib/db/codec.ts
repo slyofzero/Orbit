@@ -11,6 +11,7 @@ export const JSON_COLUMNS: Partial<Record<TableName, readonly string[]>> = {
   question_str: ["accepted"],
   mock_attempts: ["sections"],
   mock_attempt_items: ["choice"],
+  plans: ["original_milestones"],
 };
 
 /** Columns holding a boolean as 0 / 1. */

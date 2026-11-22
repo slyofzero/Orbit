@@ -29,6 +29,7 @@ export const BACKUP_ORDER = [
   "tags",
   "packs",
   "images",
+  "settings",
   "questions",
   "question_mcq",
   "question_msq",

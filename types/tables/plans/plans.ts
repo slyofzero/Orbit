@@ -14,4 +14,6 @@ export interface PlanRow {
   is_active: boolean; // the plan the planner shows; only one at a time
   created_at: number;
   updated_at: number;
+  // the plan file's own milestones, kept so "Reset milestones" can put them back; null = none kept
+  original_milestones: { name: string; short: string | null; date: IsoDate; note: string | null }[] | null;
 }

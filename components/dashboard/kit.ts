@@ -1,8 +1,7 @@
 "use client";
-// Shared bits of the dashboard's sections: v1's panel look, the day-kind colours and labels, and the
-// temporary "coming next" toast for buttons whose action isn't built yet.
+// Shared bits of the dashboard's sections: v1's panel look and the day-kind colours and labels.
 
-import { useToast, type CalendarTone, type PillTone } from "@/components/ui";
+import type { CalendarTone, PillTone } from "@/components/ui";
 import type { PlanDayKind } from "@/types/tables";
 
 /** v1's dashboard panel: a Card with rounder corners and a shadow that lifts a little on hover. */
@@ -43,10 +42,3 @@ export const KIND_LEGEND: { tone: CalendarTone; label: string }[] = [
   { tone: "accent", label: "mock" },
   { tone: "red", label: "exam" },
 ];
-
-// TODO(functionality pass): every useSoon() call is a button whose action isn't built yet. Grep for it.
-/** A click handler that says the action is coming in the next step. */
-export function useSoon() {
-  const toast = useToast();
-  return (what: string) => () => toast(`${what}: coming in the next step.`);
-}

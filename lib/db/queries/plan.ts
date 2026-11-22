@@ -19,9 +19,10 @@ export const planQueries = {
       const id = `pl_${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}`;
       sql.run("UPDATE plans SET is_active = 0 WHERE is_active = 1");
       sql.run(
-        `INSERT INTO plans (id, name, description, starts_on, ends_on, is_active, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
-        [id, plan.name, plan.description, plan.starts_on, plan.ends_on, now, now],
+        `INSERT INTO plans (id, name, description, starts_on, ends_on, is_active, created_at, updated_at,
+           original_milestones)
+         VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?)`,
+        [id, plan.name, plan.description, plan.starts_on, plan.ends_on, now, now, JSON.stringify(plan.milestones)],
       );
       let tasks = 0;
       let links = 0;

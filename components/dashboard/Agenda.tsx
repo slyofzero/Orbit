@@ -1,11 +1,12 @@
 "use client";
-// v1's agenda: the selected day's tasks, its linked questions (the "main event"), work carried over from
-// earlier days (bonus), the practice target and the next few days. Ticking a task saves it (plan.tickTask); bonus work isn't wired yet (useSoon). The
-// copy button hands an AI chat a prompt for the day (lib/dashboard.ts dayHelpPrompt).
+// v1's agenda: the selected day's tasks, its linked questions (the "main event"),
+// the practice target and the next few days. Ticking a task saves it (plan.tickTask). Work carried over from
+// earlier days (bonus, docs/PLANS.md §5) isn't built yet, so the bonus block isn't shown. The copy button hands an
+// AI chat a prompt for the day (lib/dashboard.ts dayHelpPrompt).
 
 import { ActionRow, Button, Card, Checkbox, CopyButton, Heading, Pill, ProgressBar, Text } from "@/components/ui";
-import { KIND_LABEL, KIND_PILL, PANEL, useSoon } from "@/components/dashboard/kit";
-import { BonusBlock, DayLock, MainEvent, type BonusItem } from "@/components/plan/DayParts";
+import { KIND_LABEL, KIND_PILL, PANEL } from "@/components/dashboard/kit";
+import { DayLock, MainEvent } from "@/components/plan/DayParts";
 import { cx } from "@/components/utils/cx";
 import { useMutation, useQuery } from "@/lib/db/client";
 import { WEEKDAYS_SHORT, addDays, formatDate, formatLong, parseIso, weekday, type IsoDate } from "@/lib/dates";
@@ -25,14 +26,11 @@ export function Agenda({
   auto: boolean;
   pick: (date: IsoDate) => void;
 }) {
-  const soon = useSoon();
   const { data } = useQuery("dashboard.day", { date: selected, today });
   const { run: tickTask } = useMutation("plan.tickTask");
   if (!data) return <Card className={cx(PANEL, "px-6 py-[22px] min-[981px]:absolute min-[981px]:inset-0")} />;
   const { day, tasks, questions, answeredOn, topics, next, upcoming } = data;
   const tomorrow = addDays(today, 1);
-  // Carry-over isn't built yet (docs/PLANS.md §5): no bonus items until it is.
-  const bonus: BonusItem[] = [];
 
   return (
     <Card className={cx(PANEL, "px-6 py-[22px] min-[981px]:absolute min-[981px]:inset-0 min-[981px]:overflow-y-auto")}>
@@ -115,7 +113,6 @@ export function Agenda({
                 bonus={[]}
               />
             )}
-            <BonusBlock items={bonus} onTick={soon("Ticking bonus work")} onUnlink={soon("Unlinking bonus work")} />
             {questions.total > 0 && (
               <div className="mt-3.5">
                 <ProgressBar

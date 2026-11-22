@@ -26,6 +26,7 @@ export const TABLES = [
   "tags",
   "packs",
   "images",
+  "settings",
   "questions",
   "question_mcq",
   "question_msq",

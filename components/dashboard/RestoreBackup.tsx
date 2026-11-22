@@ -3,14 +3,16 @@
 // (lib/backup.ts) and everything comes back: plan, questions, answers, mocks, ticks. The file is checked as
 // soon as it lands and previewed; restoring REPLACES whatever is in this browser (`backup.import`). Once a
 // plan is back, the app frame moves on to /dashboard by itself.
+// `bare` = only the drop zone, preview and Restore button, for the dashboard's Import progress dialog;
+// `onDone` runs after a successful restore.
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Button, Callout, FileInput, Heading, ImportProblems, Pill, Stat, Text, useToast } from "@/components/ui";
 import { useMutation } from "@/lib/db/client";
 import { formatLong, todayIST } from "@/lib/dates";
 import { parseBackup, type BackupParse } from "@/lib/backup";
 
-export function RestoreBackup() {
+export function RestoreBackup({ bare = false, onDone }: { bare?: boolean; onDone?: () => void } = {}) {
   const toast = useToast();
   const [files, setFiles] = useState<File[]>([]);
   const [text, setText] = useState("");
@@ -48,25 +50,12 @@ export function RestoreBackup() {
         : `Restored ${r.questions} questions and ${r.answers} answers. The backup had no plan, so add one above.`,
       "special",
     );
+    onDone?.();
     // with a plan back, the app frame moves on to /dashboard by itself
   };
 
-  return (
-    <section
-      className="grid animate-card-in gap-3 rounded-[22px] border border-dashed border-line bg-sheet/70 p-5 backdrop-blur-sm"
-      style={{ animationDelay: "480ms", animationFillMode: "both" }}
-    >
-      <div className="flex flex-wrap items-center gap-2.5">
-        <span className="text-2xl" aria-hidden="true">
-          🛟
-        </span>
-        <Heading level={3}>Already use Orbit? Restore your progress</Heading>
-        <Pill tone="neutral">or</Pill>
-      </div>
-      <Text variant="muted" block>
-        Drop the backup file you saved with **Export progress**. Your plan, questions, answers, mocks and ticks come
-        back exactly as they were, so you can skip the steps above.
-      </Text>
+  const body: ReactNode = (
+    <>
       <FileInput
         accept=".json,application/json"
         files={files}
@@ -103,6 +92,27 @@ export function RestoreBackup() {
           </div>
         </div>
       )}
+    </>
+  );
+
+  if (bare) return <div className="grid gap-3">{body}</div>;
+  return (
+    <section
+      className="grid animate-card-in gap-3 rounded-[22px] border border-dashed border-line bg-sheet/70 p-5 backdrop-blur-sm"
+      style={{ animationDelay: "480ms", animationFillMode: "both" }}
+    >
+      <div className="flex flex-wrap items-center gap-2.5">
+        <span className="text-2xl" aria-hidden="true">
+          🛟
+        </span>
+        <Heading level={3}>Already use Orbit? Restore your progress</Heading>
+        <Pill tone="neutral">or</Pill>
+      </div>
+      <Text variant="muted" block>
+        Drop the backup file you saved with **Export progress**. Your plan, questions, answers, mocks and ticks come
+        back exactly as they were, so you can skip the steps above.
+      </Text>
+      {body}
     </section>
   );
 }

@@ -104,9 +104,17 @@ Plans arrive as one JSON file, usually written by an AI chat from the prompt on 
 - **Locked days** (`lib/dashboard.ts` `dayLock`: past days, and today after 9 AM IST) are never changed by Link, Unlink or Edit plan.
 - v1 also linked a **mock test** and a short **note** per day; there is no column for either yet (§6), so the reply doesn't carry them.
 
+## 5d. Milestones and Unlink this day (dashboard, planner)
+
+- **Milestones** (`milestones`, the dates the plan counts down to) are added, edited and removed on the dashboard (`milestone.*`, `lib/db/queries/milestones.ts`; checks in `lib/milestones.ts`, using the plan file's limits so they export and import back). Editing keeps the short calendar label while the name stays the same and drops it when the name changes.
+- **Undo.** Every milestone write returns what it replaced; the toast's Undo hands it back (`milestone.undo`, `milestone.restoreAll`), same ids. Rows put back are checked again first.
+- **Reset milestones.** `plan.import` keeps the file's own milestones in `plans.original_milestones` (JSON); `milestone.reset` replaces the plan's milestones with them (with Undo). A plan loaded before this column existed has none kept, and Reset says so.
+- **Unlink this day** (planner, open days only): `plan.unlinkDay` removes one day's links and returns them with their ticks; Undo (`plan.relinkDay`) puts both back, skipping questions or answers deleted since. Locked days are refused by both.
+- **Your name** for the greeting is the `name` setting (`settings` table, `lib/settings.ts`).
+
 ## 6. Not in this design yet (add with a migration when needed)
 
-- **Phases and milestones** (the v1 coloured stretches and exam dates).
+- **Phases** (the v1 coloured stretches). Milestones exist now (§5d).
 - **Day kinds** (study / light / mock…) and a mock test linked to a day.
 - **Topics per day.** These can be derived from the linked questions' `topic_id`.
 - **Dismissing a carried item** ("don't show this again"). That needs a small state table, e.g. `plan_carry_dismissals (task_id | day_id + question_id)`.

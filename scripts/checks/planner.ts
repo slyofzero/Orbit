@@ -27,7 +27,7 @@ import {
 } from "@/lib/planLinks";
 import { examplePlan } from "@/lib/prompts/planPrompt";
 import { transaction } from "@/lib/db/sql";
-import { ok, freshDb, bunSql, seed } from "@/scripts/checks/helpers";
+import { ok, freshDb, bunSql, seed, at } from "@/scripts/checks/helpers";
 
 console.log("planner rules (lib/planner.ts)");
 
@@ -411,6 +411,55 @@ console.log("plan actions (lib/planLinks.ts, lib/planEdit.ts, lib/db/queries/pla
     n("SELECT questions_total AS n FROM plan_day_progress WHERE day_id = ?", [future[1].id]) === 1,
     "plan.applyLinks: the day's progress counts follow",
   );
+
+  // Unlink this day, and its Undo
+  {
+    type Unlinked = {
+      ok: boolean;
+      error?: string;
+      dayId: number;
+      links: { question_id: string; position: number }[];
+      ticks: { question_id: string; answer_id: number; done_at: number }[];
+    };
+    const todayId = days.find((x) => x.on_date === today)!.id;
+    d.query("INSERT INTO plan_day_questions (day_id, question_id, position) VALUES (?, 'q_1', 1), (?, 'q_2', 2)").run(
+      todayId,
+      todayId,
+    );
+    d.query("INSERT INTO question_answers (question_id, recorded_at, outcome) VALUES ('q_1', ?, 'correct')").run(
+      at(today, 7),
+    );
+    ok(n("SELECT count(*) AS n FROM plan_question_ticks WHERE day_id = ?", [todayId]) === 1, "setup: today ticked");
+    const u = run<Unlinked>("plan.unlinkDay", { ...clock, dayId: todayId });
+    ok(
+      u.ok &&
+        u.links.length === 2 &&
+        u.ticks.length === 1 &&
+        n("SELECT count(*) AS n FROM plan_day_questions WHERE day_id = ?", [todayId]) === 0 &&
+        n("SELECT questions_total AS n FROM plan_day_progress WHERE day_id = ?", [todayId]) === 0,
+      "plan.unlinkDay: removes the day's links and their ticks; progress follows",
+    );
+    const back = run<{ ok: boolean; links: number }>("plan.relinkDay", { ...clock, ...u });
+    ok(
+      back.ok &&
+        back.links === 2 &&
+        n("SELECT count(*) AS n FROM plan_question_ticks WHERE day_id = ?", [todayId]) === 1 &&
+        n("SELECT questions_done AS n FROM plan_day_progress WHERE day_id = ?", [todayId]) === 1,
+      "plan.relinkDay: Undo puts the links and the tick back",
+    );
+    const lockedTry = run<Unlinked>("plan.unlinkDay", { today, hour: 10, dayId: todayId });
+    ok(
+      !lockedTry.ok && n("SELECT count(*) AS n FROM plan_day_questions WHERE day_id = ?", [todayId]) === 2,
+      "plan.unlinkDay: a locked day (today after the lock hour) is refused",
+    );
+    ok(
+      !run<Unlinked>("plan.unlinkDay", { ...clock, dayId: past.id }).ok &&
+        !run<{ ok: boolean }>("plan.relinkDay", { ...clock, dayId: past.id, links: [], ticks: [] }).ok,
+      "plan.unlinkDay / relinkDay: past days are refused",
+    );
+    d.exec(`DELETE FROM plan_day_questions WHERE day_id = ${todayId}; DELETE FROM question_answers;`);
+  }
+
   const un = run<{ days: number; kept: number }>("plan.unlinkAll", clock);
   ok(
     un.days === 1 && un.kept === 1 && n("SELECT count(*) AS n FROM plan_day_questions") === 1,

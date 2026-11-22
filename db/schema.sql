@@ -89,6 +89,14 @@ CREATE TABLE images (
   bytes     BLOB NOT NULL CHECK (length(bytes) > 0)
 ) STRICT;
 
+-- STATE: the user's own settings, one row per key (e.g. 'name' for the dashboard greeting).
+-- No row = the default. Keys and their values are checked by lib/settings.ts.
+CREATE TABLE settings (
+  key         TEXT PRIMARY KEY,
+  value       TEXT NOT NULL,
+  updated_at  INTEGER NOT NULL
+) STRICT;
+
 -- =============================================================================
 -- QUESTIONS (types/tables/questions/)
 -- =============================================================================
@@ -382,6 +390,9 @@ CREATE TABLE plans (
   is_active    INTEGER NOT NULL DEFAULT 0 CHECK (is_active IN (0, 1)),
   created_at   INTEGER NOT NULL,
   updated_at   INTEGER NOT NULL,
+  -- the plan file's own milestones, kept so "Reset milestones" can put them back; NULL = none kept
+  original_milestones  TEXT CHECK (original_milestones IS NULL OR (json_valid(original_milestones)
+                                   AND json_type(original_milestones) = 'array')),
   CHECK (ends_on >= starts_on)
 ) STRICT;
 CREATE UNIQUE INDEX plans_one_active ON plans(is_active) WHERE is_active = 1;

@@ -123,16 +123,18 @@ export const devQueries = {
           if (done) sql.run("INSERT INTO plan_task_ticks (task_id, done_at) VALUES (?, ?)", [task, now]);
         }
       }
-      for (const [name, offset] of [
-        ["Quiz 1", -5],
-        ["Quiz 2", 15],
-        ["End Term", 51],
-        ["Final", 79],
-      ] as const)
-        sql.run("INSERT INTO milestones (plan_id, name, on_date) VALUES ('pl_sample', ?, ?)", [
-          name,
-          addDays(p.today, offset),
-        ]);
+      const milestones = (
+        [
+          ["Quiz 1", -5],
+          ["Quiz 2", 15],
+          ["End Term", 51],
+          ["Final", 79],
+        ] as const
+      ).map(([name, offset]) => ({ name, short: null, date: addDays(p.today, offset), note: null }));
+      for (const m of milestones)
+        sql.run("INSERT INTO milestones (plan_id, name, on_date) VALUES ('pl_sample', ?, ?)", [m.name, m.date]);
+      // kept like a plan file's own, so "Reset milestones" works on the sample plan too
+      sql.run("UPDATE plans SET original_milestones = ? WHERE id = 'pl_sample'", [JSON.stringify(milestones)]);
       return true;
     },
   ),
@@ -153,6 +155,7 @@ export const devQueries = {
       "tags",
       "packs",
       "images",
+      "settings",
     ])
       sql.run(`DELETE FROM ${t}`);
     return true;

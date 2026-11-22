@@ -29,6 +29,8 @@ import { mockQueries } from "@/lib/db/queries/mock";
 import { manageQueries } from "@/lib/db/queries/manage";
 import { statsQueries } from "@/lib/db/queries/stats";
 import { devQueries } from "@/lib/db/queries/dev";
+import { milestoneQueries } from "@/lib/db/queries/milestones";
+import { settingsQueries } from "@/lib/db/queries/settings";
 import type { QueryDef } from "@/lib/db/queries/core";
 
 export type { QueryDef };
@@ -48,6 +50,8 @@ export const QUERIES = {
   ...manageQueries,
   ...statsQueries,
   ...devQueries,
+  ...milestoneQueries,
+  ...settingsQueries,
 };
 
 export type QueryName = keyof typeof QUERIES;

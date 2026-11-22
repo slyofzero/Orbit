@@ -1,10 +1,10 @@
 "use client";
-// What a planner day holds (v1's DayBody): its tasks, the main event (linked questions), carried-over bonus
-// work, the practice target, topic shortcuts and "Tick all". Used by the day cards and the open day rows.
+// What a planner day holds (v1's DayBody): its tasks, the main event (linked questions, with "Unlink this day"
+// while the day isn't locked), the practice target, topic shortcuts and "Tick all". Used by the day cards and the
+// open day rows. Carried-over bonus work (docs/PLANS.md §5) isn't built yet, so the bonus block isn't shown.
 
-import { Button, Checkbox, ProgressBar } from "@/components/ui";
-import { useSoon } from "@/components/dashboard/kit";
-import { BonusBlock, MainEvent, type BonusItem } from "@/components/plan/DayParts";
+import { Button, Checkbox, ProgressBar, useToast } from "@/components/ui";
+import { MainEvent } from "@/components/plan/DayParts";
 import { useMutation, useQuery } from "@/lib/db/client";
 import type { ResultOf } from "@/lib/db/queries";
 import { dayLock } from "@/lib/dashboard";
@@ -13,15 +13,28 @@ import type { IsoDate } from "@/lib/dates";
 export type DayData = NonNullable<ResultOf<"dashboard.day">>;
 
 export function DayBody({ data, date, today, hour }: { data: DayData; date: IsoDate; today: IsoDate; hour: number }) {
-  const soon = useSoon();
+  const toast = useToast();
   const { run: tickTask } = useMutation("plan.tickTask");
   const { run: tickDay } = useMutation("plan.tickDay");
+  const { run: unlinkDay } = useMutation("plan.unlinkDay");
+  const { run: relinkDay } = useMutation("plan.relinkDay");
   const { day, tasks, questions, answeredOn, topics } = data;
   if (!day) return null;
   const allDone = tasks.length > 0 && tasks.every((t) => t.done);
   const locked = dayLock(date, today, hour) === "locked";
-  // Carry-over isn't built yet (docs/PLANS.md §5, TODO.md): no bonus items until it is.
-  const bonus: BonusItem[] = [];
+
+  const unlink = async () => {
+    const r = await unlinkDay({ dayId: day.id, today, hour });
+    if (!r) return; // the hook already showed the error
+    if (!r.ok) return toast(r.error, "error");
+    toast(`Unlinked **${r.links.length}** question${r.links.length === 1 ? "" : "s"} from this day.`, "neutral", {
+      label: "Undo",
+      onClick: async () => {
+        const u = await relinkDay({ dayId: r.dayId, links: r.links, ticks: r.ticks, today, hour });
+        if (u && !u.ok) toast(`Couldn't undo: ${u.error}`, "error");
+      },
+    });
+  };
 
   return (
     <>
@@ -42,11 +55,8 @@ export function DayBody({ data, date, today, hour }: { data: DayData; date: IsoD
           answered={questions.answered}
           correct={questions.correct}
           bonus={[]}
-          onUnlink={locked ? undefined : soon("Unlinking this day's questions")}
+          onUnlink={locked ? undefined : () => void unlink()}
         />
-      )}
-      {date >= today && (
-        <BonusBlock items={bonus} onTick={soon("Ticking bonus work")} onUnlink={soon("Unlinking bonus work")} />
       )}
       {questions.total > 0 && (
         <div className="mt-2.5 mb-1">

@@ -259,6 +259,69 @@ export const planEditQueries = {
     return { days: n, links, kept };
   }),
 
+  /** Unlink this day (planner): removes one open day's linked questions. A locked day is refused. Returns what it
+   *  removed (links and their ticks), so Undo (`plan.relinkDay`) can put the day back exactly. */
+  "plan.unlinkDay": write(["plan_day_questions"], (sql, p: Clock & { dayId: number }) => {
+    const plan = activePlan(sql);
+    const day = plan
+      ? sql.get<{ on_date: IsoDate }>("SELECT on_date FROM plan_days WHERE id = ? AND plan_id = ?", [p.dayId, plan.id])
+      : undefined;
+    if (!day) return { ok: false as const, error: "That day isn't in your plan any more." };
+    if (isLocked(day.on_date, p)) return { ok: false as const, error: "This day is locked, so its questions stay." };
+    const links = sql.all<{ question_id: string; position: number }>(
+      "SELECT question_id, position FROM plan_day_questions WHERE day_id = ? ORDER BY position LIMIT 1000",
+      [p.dayId],
+    );
+    const ticks = sql.all<{ question_id: string; answer_id: number; done_at: number }>(
+      "SELECT question_id, answer_id, done_at FROM plan_question_ticks WHERE day_id = ? LIMIT 1000",
+      [p.dayId],
+    );
+    sql.run("DELETE FROM plan_day_questions WHERE day_id = ?", [p.dayId]); // ticks go with them (cascade)
+    return { ok: true as const, dayId: p.dayId, links, ticks };
+  }),
+
+  /** Undo of Unlink this day: puts the links and their ticks back. Questions or answers deleted since are skipped. */
+  "plan.relinkDay": write(
+    ["plan_day_questions", "plan_question_ticks"],
+    (
+      sql,
+      p: Clock & {
+        dayId: number;
+        links: { question_id: string; position: number }[];
+        ticks: { question_id: string; answer_id: number; done_at: number }[];
+      },
+    ) => {
+      const plan = activePlan(sql);
+      const day = plan
+        ? sql.get<{ on_date: IsoDate }>("SELECT on_date FROM plan_days WHERE id = ? AND plan_id = ?", [
+            p.dayId,
+            plan.id,
+          ])
+        : undefined;
+      if (!day) return { ok: false as const, error: "That day isn't in your plan any more." };
+      if (isLocked(day.on_date, p)) return { ok: false as const, error: "This day is locked now, so it can't change." };
+      for (const l of p.links.slice(0, 1000))
+        sql.run(
+          `INSERT INTO plan_day_questions (day_id, question_id, position)
+           SELECT ?, id, ? FROM questions WHERE id = ?
+             AND NOT EXISTS (SELECT 1 FROM plan_day_questions WHERE day_id = ? AND question_id = ?)`,
+          [p.dayId, l.position, l.question_id, p.dayId, l.question_id],
+        );
+      for (const t of p.ticks.slice(0, 1000))
+        sql.run(
+          `INSERT INTO plan_question_ticks (day_id, question_id, answer_id, done_at)
+           SELECT ?, ?, a.id, ? FROM question_answers a
+           WHERE a.id = ? AND EXISTS (SELECT 1 FROM plan_day_questions WHERE day_id = ? AND question_id = ?)
+             AND NOT EXISTS (SELECT 1 FROM plan_question_ticks WHERE day_id = ? AND question_id = ?)`,
+          [p.dayId, t.question_id, t.done_at, t.answer_id, p.dayId, t.question_id, p.dayId, t.question_id],
+        );
+      const links = sql.get<{ n: number }>("SELECT count(*) AS n FROM plan_day_questions WHERE day_id = ?", [
+        p.dayId,
+      ])!.n;
+      return { ok: true as const, links };
+    },
+  ),
+
   /** Edit plan: the plan's details and every day with its task and question counts. null = no plan. */
   "plan.editDays": read(["plans", "plan_days", "plan_tasks", "plan_day_questions"], (sql) => {
     const plan = activePlan(sql);

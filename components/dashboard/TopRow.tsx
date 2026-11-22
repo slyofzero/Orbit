@@ -1,8 +1,10 @@
 "use client";
-// v1's dashboard top row: the greeting with today's date, and the quote banner beside it.
+// v1's dashboard top row: the greeting (with your name, if Settings has one) and today's date, and the quote
+// banner beside it.
 
 import { useEffect, useRef, useState } from "react";
 import { Heading, QuoteBanner, Text } from "@/components/ui";
+import { useQuery } from "@/lib/db/client";
 import { formatLong, istHour, todayIST } from "@/lib/dates";
 import { QUOTES, nextOrder, shuffledOrder } from "@/lib/quotes";
 
@@ -20,6 +22,7 @@ export function TopRow() {
   const [now, setNow] = useState<number | null>(null);
   const [quote, setQuote] = useState<{ order: number[]; pos: number } | null>(null);
   const shownAt = useRef(0);
+  const name = useQuery("settings.all").data?.name ?? "";
 
   const next = () => {
     shownAt.current = Date.now();
@@ -46,7 +49,7 @@ export function TopRow() {
         {now !== null && (
           <>
             <Heading level={2} className="text-[1.7rem]">
-              {greeting(istHour(now))}
+              {name ? `${greeting(istHour(now))}, ${name}` : greeting(istHour(now))}
             </Heading>
             <Text as="span" variant="muted" className="font-display text-[1.15rem] font-semibold">
               {formatLong(todayIST(now))}
