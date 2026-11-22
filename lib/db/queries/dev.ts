@@ -139,6 +139,48 @@ export const devQueries = {
     },
   ),
 
+  /** Links the bank's practice questions to the active plan's days so linking and carry-over can be tried: 3
+   *  questions on each of the next 10 planned days from tomorrow, and 4 on each of the 3 planned days up to
+   *  today (past days, which the app itself would refuse to link). Unanswered, so they carry over to the days
+   *  after them.
+   *  Replaces those days' links. Returns how many links it wrote (0 = no plan or no questions). */
+  "dev.linkSample": write(["plan_day_questions"], (sql, p: { today: IsoDate }): { days: number; links: number } => {
+    devOnly();
+    const plan = sql.get<{ id: string }>("SELECT id FROM plans WHERE is_active = 1");
+    const ids = sql
+      .all<{
+        id: string;
+      }>("SELECT id FROM questions WHERE pool = 'practice' AND retired_at IS NULL ORDER BY created_at, rowid LIMIT 500")
+      .map((q) => q.id);
+    if (!plan || !ids.length) return { days: 0, links: 0 };
+    const past = sql.all<{ id: number }>(
+      "SELECT id FROM plan_days WHERE plan_id = ? AND on_date <= ? ORDER BY on_date DESC LIMIT 3",
+      [plan.id, p.today],
+    );
+    const future = sql.all<{ id: number }>(
+      "SELECT id FROM plan_days WHERE plan_id = ? AND on_date > ? ORDER BY on_date LIMIT 10",
+      [plan.id, p.today],
+    );
+    let links = 0;
+    let at = 0;
+    const give = (days: { id: number }[], n: number) => {
+      for (const day of days) {
+        sql.run("DELETE FROM plan_day_questions WHERE day_id = ?", [day.id]);
+        for (const q of new Set(Array.from({ length: n }, () => ids[at++ % ids.length]))) {
+          sql.run("INSERT INTO plan_day_questions (day_id, question_id, position) VALUES (?, ?, ?)", [
+            day.id,
+            q,
+            links + 1,
+          ]);
+          links++;
+        }
+      }
+    };
+    give(future, 3);
+    give(past, 4);
+    return { days: past.length + future.length, links };
+  }),
+
   /** Deletes ALL data in this profile. Dev only. */
   "dev.clearAll": write(TABLES, (sql) => {
     devOnly();

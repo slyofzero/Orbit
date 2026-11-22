@@ -42,6 +42,7 @@ export default function DevDb() {
   const answer = useMutation("dev.answerRandom");
   const clear = useMutation("dev.clearAll");
   const samplePlan = useMutation("dev.samplePlan");
+  const linkSample = useMutation("dev.linkSample");
   const [confirmClear, setConfirmClear] = useState(false);
   const [lastAnswer, setLastAnswer] = useState<string | null>(null);
   const role = ROLE[status.role];
@@ -93,6 +94,19 @@ export default function DevDb() {
             </Button>
             <Button loading={samplePlan.pending} onClick={() => samplePlan.run({ today: todayIST() })}>
               Load a sample plan
+            </Button>
+            <Button
+              loading={linkSample.pending}
+              onClick={async () => {
+                const r = await linkSample.run({ today: todayIST() });
+                setLastAnswer(
+                  r?.links
+                    ? `Linked **${r.links}** questions to **${r.days}** days.`
+                    : "Nothing linked: load a sample plan and add sample questions first.",
+                );
+              }}
+            >
+              Link sample questions
             </Button>
             <Button variant="danger" onClick={() => setConfirmClear(true)}>
               Delete all data

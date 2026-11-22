@@ -152,6 +152,7 @@ function LinkBody({ clock, onDone }: { clock: Clock; onDone: () => void }) {
   const toast = useToast();
   const { data } = useQuery("plan.linkInput", clock);
   const apply = useMutation("plan.applyLinks");
+  const linkSample = useMutation("dev.linkSample");
   const [text, setText] = useState("");
   const [check, setCheck] = useState<Check | null>(null);
 
@@ -201,6 +202,16 @@ function LinkBody({ clock, onDone }: { clock: Clock; onDone: () => void }) {
     );
     onDone();
   };
+  // DEV only: links the bank's questions to the plan's days without an AI (dev.linkSample)
+  const linkSampleNow = async () => {
+    const r = await linkSample.run({ today: clock.today });
+    if (!r) return;
+    toast(
+      r.links ? `Linked **${plural(r.links, "question")}** to ${plural(r.days, "day")}.` : "Nothing to link.",
+      r.links ? "success" : "neutral",
+    );
+    if (r.links) onDone();
+  };
 
   return (
     <div className="grid gap-4">
@@ -243,6 +254,14 @@ function LinkBody({ clock, onDone }: { clock: Clock; onDone: () => void }) {
                 </Button>
               </div>
             </>
+          )}
+          {process.env.NODE_ENV === "development" && (
+            <div className="flex flex-wrap items-center gap-2.5">
+              <Pill tone="amber">DEV</Pill>
+              <Button size="sm" variant="ghost" loading={linkSample.pending} onClick={() => void linkSampleNow()}>
+                Skip the AI: link the sample questions
+              </Button>
+            </div>
           )}
         </Step>
         <Step n={2} title="Paste its answer" delay={0} bare>
