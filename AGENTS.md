@@ -41,6 +41,7 @@ The owner has **no hosting budget**. Orbit is deployed on **Vercel's free (Hobby
 9. **Prompts the app hands to AI chats are product features.** If you change a data format, update every prompt that describes it and its test.
 10. **Imports always use the `@/` alias** (`@/components/ui`, `@/lib/grade`, `@/types/tables`), never relative paths like `./` or `../`, even inside the same folder. `@/` is the project root (`tsconfig.json` `paths`).
 11. Do not delete, rename or reformat code you were not asked to touch.
+12. **Never use default (system) emojis in the UI**: no ✓, ℹ️, ⚠️, ✅, 🔴 or similar in labels, titles, pills, toasts or messages you write. They look different on every device and can't follow the theme. Use an icon from `components/icons.tsx` (add one there if it is missing, in the same style) or plain words. (The 🔴 CAUTION line the owner wants in agent replies is the owner's own convention, not UI.)
 
 ## About the owner and how to work with them
 The owner prefers: short, plain final replies; paste-ready code; the **problem explained first, then the code**; a big 🔴 CAUTION line for anything the user must NOT do (for example when a destructive action is possible). They copy and paste rather than read, so keep UI wording self-explanatory.
