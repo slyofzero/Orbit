@@ -47,8 +47,10 @@ function topDialog(): HTMLDialogElement | null {
  *  `special` = animated gradient with a sparkle, for celebrations. A third argument adds a button
  *  ({ label: "Undo", onClick }). `error` toasts get a Copy button (copies the message). Every toast stays 5 s,
  *  but never leaves while the pointer is over it.
- *  Toasts are above everything, open dialogs included: the stack is a `popover` (the browser's top layer), moved
- *  into the open modal dialog (else the dialog makes it unclickable); each move shows it again on top.
+ *  Toasts belong to no screen or dialog: they outlive whatever showed them and sit above everything, open dialogs
+ *  included. The stack is a `popover` (the browser's top layer) inside one holder element that is never re-created:
+ *  it is moved into the top open modal dialog (else the dialog makes it unclickable) and back to <body> the moment
+ *  that dialog closes or is removed, and each move shows the stack again on top.
  *  A toast slides in, and on leaving slides out to the right; the toasts above it then glide down. */
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -88,28 +90,31 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setToasts((all) => all.map((x) => (x.id === t.id ? { ...x, copied: true } : x)));
   };
 
-  // Where the stack lives: inside the top open modal dialog (or the body), re-checked whenever a dialog opens or
-  // closes. Each show puts it last in the top layer, so it is above that dialog.
-  const [host, setHost] = useState<HTMLElement | null>(null);
-  useEffect(() => {
-    const update = () => setHost(topDialog() ?? document.body);
-    update();
-    const watch = new MutationObserver(update);
-    watch.observe(document.body, { subtree: true, attributes: true, attributeFilter: ["open"] });
-    return () => watch.disconnect();
-  }, []);
-  // Shown once per host (a new host = a new element, last in the top layer). Never hidden and re-shown while
-  // toasts are on it: hiding restarts the animations inside, which cut the slide-outs short.
+  // The holder: made once, portalled into, and moved by hand (moving a node keeps the toasts in it, where a new
+  // portal target would remount them). It follows the top open modal dialog, else <body>. A dialog can be removed
+  // while still open (its screen unmounted mid fade-out), taking the holder with it: then it is simply put back.
   const stack = useRef<HTMLDivElement>(null);
-  useLayoutEffect(() => {
-    const el = stack.current;
-    if (!el) return;
-    try {
-      if (!el.matches(":popover-open")) el.showPopover();
-    } catch {
-      // no Popover API: the z-index still puts it above the page
-    }
-  }, [host]);
+  const [holder, setHolder] = useState<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const h = document.createElement("div");
+    const place = () => {
+      const target = topDialog() ?? document.body;
+      if (h.parentElement === target) return;
+      target.appendChild(h);
+      raise(stack.current); // last in the top layer = above the dialog that just opened
+    };
+    place();
+    setHolder(h);
+    const watch = new MutationObserver((records) => {
+      if (!h.isConnected || records.some((r) => r.type === "attributes")) place();
+    });
+    watch.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ["open"] });
+    return () => {
+      watch.disconnect();
+      h.remove();
+    };
+  }, []);
+  useLayoutEffect(() => raise(stack.current), [holder]);
 
   // FLIP: after every change, toasts whose position moved animate from where they were to where they are.
   const els = useRef(new Map<number, HTMLDivElement>());
@@ -194,12 +199,24 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider value={show}>
       {children}
-      {host && createPortal(region, host)}
+      {holder && createPortal(region, holder)}
     </Ctx.Provider>
   );
 }
 
 export const useToast = () => useContext(Ctx);
+
+/** Puts the stack (again) last in the top layer. Hiding first is what moves it up; a stack that was taken out of
+ *  the page is already hidden. */
+function raise(el: HTMLElement | null) {
+  if (!el) return;
+  try {
+    if (el.matches(":popover-open")) el.hidePopover();
+    el.showPopover();
+  } catch {
+    // no Popover API: the z-index still puts it above the page
+  }
+}
 
 const TONE: Record<ToastTone, string> = {
   neutral: "bg-ink text-sheet",
