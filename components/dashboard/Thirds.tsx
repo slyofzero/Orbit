@@ -39,7 +39,7 @@ export function MockScoresCard() {
     <Card className={PANEL} title="Mock scores">
       {!data?.length ? (
         <Text variant="muted">
-          No mocks yet. <Link href="/practice/mocks">Take a diagnostic mock</Link> to see where you start.
+          No mocks yet. <Link href="/practice?tab=mocks">Take a diagnostic mock</Link> to see where you start.
         </Text>
       ) : (
         <Table<MockRow>
@@ -83,7 +83,10 @@ export function WeakestCard() {
             return (
               <div key={w.id} className="grid gap-1">
                 <div className="flex items-baseline gap-2">
-                  <Link href={`/practice/${w.id}`} className="min-w-0 flex-1 truncate">
+                  <Link
+                    href={`/practice/session?topic=${encodeURIComponent(w.id)}`}
+                    className="min-w-0 flex-1 truncate"
+                  >
                     {w.name}
                   </Link>
                   <Text as="span" variant="hint">

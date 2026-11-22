@@ -124,7 +124,7 @@ export function AttemptReview({ attemptId }: { attemptId: string }) {
       </div>
 
       {a.status === "failed" && (
-        <Callout tone="caution" title="CAUTION: this test failed">
+        <Callout tone="caution" title="this test failed">
           {`${a.failed_reason ?? "A rule of the test was broken."} It is not scored and its answers don't count in your stats. You can still look through it below.`}
         </Callout>
       )}

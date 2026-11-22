@@ -145,7 +145,7 @@ export function MocksTab() {
         </Callout>
       )}
 
-      <Callout tone="caution" title="CAUTION: some mocks run in full screen">
+      <Callout tone="caution" title="some mocks run in full screen">
         In a mock marked **Full screen**, pressing Esc, switching tabs or windows, or refreshing leaves full screen. The
         first time you get a warning; the second time the test ends and is marked **failed**. The timer keeps running
         while you are away. Treat it like the real exam.

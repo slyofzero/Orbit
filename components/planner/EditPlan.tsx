@@ -556,7 +556,7 @@ function DayEditor({
       {!locked &&
         (askDelete ? (
           <div className="grid gap-2.5">
-            <Callout tone="caution" title="🔴 CAUTION">
+            <Callout tone="caution" title="this can't be undone">
               <Text>
                 This deletes the day with its tasks, ticks and linked questions. Your answers are kept. It can&apos;t be
                 undone.

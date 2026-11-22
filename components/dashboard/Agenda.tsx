@@ -128,12 +128,12 @@ export function Agenda({
             {(topics.length > 0 || day.kind === "mock") && (
               <div className="mt-3.5 flex flex-wrap gap-2">
                 {topics.map((t) => (
-                  <Button key={t.id} variant="soft" href={`/practice/${t.id}`}>
+                  <Button key={t.id} variant="soft" href={`/practice/session?topic=${encodeURIComponent(t.id)}`}>
                     {`Practise ${t.name.split("(")[0].trim()}`}
                   </Button>
                 ))}
                 {day.kind === "mock" && (
-                  <Button variant="primary" href="/practice/mocks">
+                  <Button variant="primary" href="/practice?tab=mocks">
                     Start the mock
                   </Button>
                 )}

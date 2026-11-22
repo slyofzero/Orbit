@@ -72,12 +72,12 @@ export function DayBody({ data, date, today, hour }: { data: DayData; date: IsoD
       )}
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {topics.map((t) => (
-          <Button key={t.id} variant="soft" size="sm" href={`/practice/${t.id}`}>
+          <Button key={t.id} variant="soft" size="sm" href={`/practice/session?topic=${encodeURIComponent(t.id)}`}>
             {t.name.split("(")[0].trim()}
           </Button>
         ))}
         {day.kind === "mock" && (
-          <Button variant="primary" size="sm" href="/practice/mocks">
+          <Button variant="primary" size="sm" href="/practice?tab=mocks">
             Start the mock
           </Button>
         )}

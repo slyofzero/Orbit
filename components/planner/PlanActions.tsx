@@ -119,7 +119,7 @@ export function UnlinkQuestions({ open, onClose, clock }: { open: boolean; onClo
         </>
       }
     >
-      <Callout tone="caution" title="🔴 CAUTION">
+      <Callout tone="caution" title="this removes linked questions">
         <Text>{`This removes the linked questions from **every open day** of your plan. ${LOCKED} Your questions, answers, tasks and ticks all stay. You can link again any time with **Link questions**.`}</Text>
       </Callout>
     </Dialog>
@@ -297,7 +297,7 @@ function LinkBody({ clock, onDone }: { clock: Clock; onDone: () => void }) {
               </div>
               <Notes warnings={check.warnings} />
               {linkedOpen > 0 && (
-                <Callout tone="caution" title="🔴 CAUTION">
+                <Callout tone="caution" title="this replaces links">
                   <Text>{`Applying this **replaces** the links of every open day (${plural(linkedOpen, "day")} linked now): an open day the answer leaves out loses its links. ${LOCKED} Your tasks, ticks and answers are kept.`}</Text>
                 </Callout>
               )}
@@ -440,7 +440,7 @@ export function UploadPlan({
             </div>
             <Notes warnings={check!.warnings} />
             {current && (
-              <Callout tone="caution" title="🔴 CAUTION">
+              <Callout tone="caution" title="this replaces your plan">
                 <Text>{`This **replaces** your plan **${current}**: its days, tasks, ticks, linked questions and milestones stop showing. Your questions and answers stay. Use **Export plan** first if you might want it back.`}</Text>
               </Callout>
             )}

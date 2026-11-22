@@ -115,7 +115,7 @@ export function ExamIntro({ mockId }: { mockId: string }) {
       </Card>
 
       {mock.full_screen && (
-        <Callout tone="caution" title="CAUTION: this test runs in full screen">
+        <Callout tone="caution" title="this test runs in full screen">
           {`Do NOT press Esc, switch tabs or windows, or refresh. Leaving full screen ${ALLOWED_WARNINGS === 1 ? "once" : `${ALLOWED_WARNINGS} times`} gives you a warning; leaving it again **ends the test as failed**, and it is not scored. The timer never pauses.`}
         </Callout>
       )}

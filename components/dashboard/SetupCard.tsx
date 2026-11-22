@@ -15,7 +15,7 @@ export function SetupCard() {
       actions={
         <div className="flex flex-wrap gap-2.5">
           {!data.hasPlan && (
-            <Button variant="primary" href="/planner/upload">
+            <Button variant="primary" href="/onboarding">
               Load a plan
             </Button>
           )}

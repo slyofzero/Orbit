@@ -91,7 +91,7 @@ export function SettingsBackup() {
         <Button variant="soft" loading={reset.pending} onClick={resetMilestones}>
           Reset milestones to the plan&apos;s own
         </Button>
-        <Button variant="soft" href="/planner/upload">
+        <Button variant="soft" href="/planner/manage">
           Change plan
         </Button>
         {!wipe ? (
