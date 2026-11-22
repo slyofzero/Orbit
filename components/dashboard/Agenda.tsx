@@ -1,12 +1,12 @@
 "use client";
-// v1's agenda: the selected day's tasks, its linked questions (the "main event"),
-// the practice target and the next few days. Ticking a task saves it (plan.tickTask). Work carried over from
-// earlier days (bonus, docs/PLANS.md §5) isn't built yet, so the bonus block isn't shown. The copy button hands an
-// AI chat a prompt for the day (lib/dashboard.ts dayHelpPrompt).
+// v1's agenda: the selected day's tasks, its linked questions (the "main event"), work carried over from
+// earlier days (bonus, docs/PLANS.md §5), the practice target and the next few days. Ticking a task, carried ones
+// too, saves it (plan.tickTask). The copy button hands an AI chat a prompt for the day (lib/dashboard.ts
+// dayHelpPrompt).
 
 import { ActionRow, Button, Card, Checkbox, CopyButton, Heading, Pill, ProgressBar, Text } from "@/components/ui";
 import { KIND_LABEL, KIND_PILL, PANEL } from "@/components/dashboard/kit";
-import { DayLock, MainEvent } from "@/components/plan/DayParts";
+import { BonusBlock, DayLock, MainEvent } from "@/components/plan/DayParts";
 import { cx } from "@/components/utils/cx";
 import { useMutation, useQuery } from "@/lib/db/client";
 import { WEEKDAYS_SHORT, addDays, formatDate, formatLong, parseIso, weekday, type IsoDate } from "@/lib/dates";
@@ -29,8 +29,9 @@ export function Agenda({
   const { data } = useQuery("dashboard.day", { date: selected, today });
   const { run: tickTask } = useMutation("plan.tickTask");
   if (!data) return <Card className={cx(PANEL, "px-6 py-[22px] min-[981px]:absolute min-[981px]:inset-0")} />;
-  const { day, tasks, questions, answeredOn, topics, next, upcoming } = data;
+  const { day, tasks, questions, answeredOn, topics, next, upcoming, carried } = data;
   const tomorrow = addDays(today, 1);
+  const bonus = { total: carried.questions.length, done: carried.questions.filter((q) => q.done).length };
 
   return (
     <Card className={cx(PANEL, "px-6 py-[22px] min-[981px]:absolute min-[981px]:inset-0 min-[981px]:overflow-y-auto")}>
@@ -53,9 +54,9 @@ export function Agenda({
                     hours: day.hours,
                     title: day.title,
                     note: day.note,
-                    tasks: tasks.map((t) => t.body),
+                    tasks: [...tasks, ...carried.tasks].map((t) => t.body),
                     topics: topics.map((t) => t.name),
-                    questions: questions.total,
+                    questions: questions.total + bonus.total,
                   })
                 }
               />
@@ -104,15 +105,16 @@ export function Agenda({
                 label={t.body}
               />
             ))}
-            {questions.total > 0 && (
+            {questions.total + bonus.total > 0 && (
               <MainEvent
                 date={selected}
                 total={questions.total}
                 answered={questions.answered}
                 correct={questions.correct}
-                bonus={[]}
+                bonus={bonus}
               />
             )}
+            <BonusBlock items={carried.tasks} onTick={(taskId, done) => tickTask({ taskId, done })} />
             {questions.total > 0 && (
               <div className="mt-3.5">
                 <ProgressBar

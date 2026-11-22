@@ -34,3 +34,9 @@ export interface TopicQuestions {
   topic: { id: string; name: string; subject_name: string } | null; // null = no such topic
   items: LoadedQuestion[];
 }
+
+/** `question.day`: one plan day's linked questions, then the bonus ones carried into it (docs/PLANS.md §5).
+ *  The topic is the day ("Questions for …", and the plan's name). */
+export interface DayQuestions extends TopicQuestions {
+  bonus: Record<string, string>; // bonus question id → the IsoDate it was carried from
+}

@@ -1,6 +1,7 @@
 "use client";
-// The topic practice screen: /practice/session?topic=<id>, or ?q=<question id> for a sitting of just that one
-// question (Manage pack's Questions table opens a row this way). One question at a time with Previous / Next, a
+// The practice screens: /practice/session?topic=<id>, or ?q=<question id> for a sitting of just that one question
+// (Manage pack's Questions table opens a row this way), and /practice/day?date=<YYYY-MM-DD> for a plan day's linked
+// questions, then the bonus ones carried into it, set apart in amber (the main event's "Practise these questions"). One question at a time with Previous / Next, a
 // palette to jump around, and a progress bar. Each answer is stored when you check it (`question.record`);
 // questions you opened and never answered are stored as skipped when you finish or leave, so their time counts
 // (docs/STATS.md). Only the first check of a question counts in a sitting; "Try again" is just for practice.
@@ -13,11 +14,15 @@ import { Button, Card, EmptyState, Heading, Pill, ProgressBar, StatTile, Text } 
 import { IconChevronLeft, IconChevronRight, IconRefresh } from "@/components/icons";
 import { useSittingClock } from "@/components/utils/useSittingClock";
 import { useMutation, useQuery } from "@/lib/db/client";
+import { formatShort, isIsoDate, todayIST, type IsoDate } from "@/lib/dates";
 import type { Verdict } from "@/lib/grade";
+import type { TopicQuestions } from "@/lib/questions";
 import { outcomeOf, paletteState, pendingSkips, startIndex, summarize } from "@/lib/session";
 import type { AnswerOutcome } from "@/types/tables";
 
-const BACK = "/practice?tab=topics";
+type Back = { href: string; label: string };
+const TOPICS: Back = { href: "/practice?tab=topics", label: "Practice" };
+const PLANNER: Back = { href: "/planner", label: "Planner" };
 
 /** Reads the topic from the address; "Practise again" starts a fresh sitting by remounting it. */
 export function PracticeSessionScreen() {
@@ -25,9 +30,14 @@ export function PracticeSessionScreen() {
   const topicId = params.get("topic");
   const questionId = params.get("q");
   const [round, setRound] = useState(0);
-  if (!topicId && !questionId) return <Missing />;
+  if (!topicId && !questionId)
+    return (
+      <EmptyState icon="🧭" title="No topic chosen" action={<Button href={TOPICS.href}>Back to Practice</Button>}>
+        Pick a topic on the Practice page to start.
+      </EmptyState>
+    );
   return (
-    <Sitting
+    <TopicSitting
       key={`${topicId}:${questionId}:${round}`}
       topicId={topicId}
       questionId={questionId}
@@ -36,24 +46,69 @@ export function PracticeSessionScreen() {
   );
 }
 
-function Missing() {
+function TopicSitting(p: { topicId: string | null; questionId: string | null; onAgain: () => void }) {
+  const { data } = useQuery("question.topic", { topicId: p.topicId, questionId: p.questionId });
   return (
-    <EmptyState icon="🧭" title="No topic chosen" action={<Button href={BACK}>Back to Practice</Button>}>
-      Pick a topic on the Practice page to start.
-    </EmptyState>
+    <Sitting
+      data={data}
+      back={TOPICS}
+      onAgain={p.onAgain}
+      empty={
+        p.questionId
+          ? "This question isn't a practice question any more (it was deleted, or moved out of this topic or bank)."
+          : "This topic has no practice questions (code questions are on the Programming tab)."
+      }
+    />
+  );
+}
+
+/** /practice/day?date=: the day's linked questions, then its bonus (carried-over) ones. */
+export function DayPracticeScreen() {
+  const raw = useSearchParams().get("date");
+  const date = raw && isIsoDate(raw) ? raw : null;
+  const [round, setRound] = useState(0);
+  if (!date)
+    return (
+      <EmptyState icon="🧭" title="No day chosen" action={<Button href={PLANNER.href}>Back to Planner</Button>}>
+        Open a day on the planner or the dashboard and press **Practise these questions**.
+      </EmptyState>
+    );
+  return <DaySitting key={`${date}:${round}`} date={date} onAgain={() => setRound((r) => r + 1)} />;
+}
+
+function DaySitting({ date, onAgain }: { date: IsoDate; onAgain: () => void }) {
+  const [today] = useState(todayIST);
+  const { data } = useQuery("question.day", { date, today });
+  return (
+    <Sitting
+      data={data}
+      back={PLANNER}
+      onAgain={onAgain}
+      bonus={data?.bonus}
+      empty={
+        data?.topic
+          ? "No questions are linked to this day, and none were carried over to it. Link some in Manage plan."
+          : "This date isn't a day of your plan."
+      }
+    />
   );
 }
 
 function Sitting({
-  topicId,
-  questionId,
+  data,
+  back,
   onAgain,
+  empty,
+  bonus = {},
 }: {
-  topicId: string | null;
-  questionId: string | null;
+  data: TopicQuestions | undefined;
+  back: Back;
   onAgain: () => void;
+  /** what the empty state says */
+  empty: string;
+  /** the day page's bonus questions (carried over): question id → the day it came from. They come last. */
+  bonus?: Record<string, IsoDate>;
 }) {
-  const { data } = useQuery("question.topic", { topicId, questionId });
   const record = useMutation("question.record");
   const [at, setAt] = useState<number | null>(null); // null = not moved yet: open on the first untried question
   const [visited, setVisited] = useState<string[]>([]); // opened this sitting, in order (palette + kept mounted)
@@ -114,11 +169,15 @@ function Sitting({
   if (!data) return null;
   if (!data.topic || items.length === 0)
     return (
-      <EmptyState icon="🔎" title="Nothing to practise here" action={<Button href={BACK}>Back to Practice</Button>}>
-        {questionId
-          ? "This question isn't a practice question any more (it was deleted, or moved out of this topic or bank)."
-          : "This topic has no practice questions (code questions are on the Programming tab)."}
-      </EmptyState>
+      <div className="grid gap-5">
+        <EmptyState
+          icon="🔎"
+          title="Nothing to practise here"
+          action={<Button href={back.href}>{`Back to ${back.label}`}</Button>}
+        >
+          {empty}
+        </EmptyState>
+      </div>
     );
 
   const total = items.length;
@@ -142,8 +201,8 @@ function Sitting({
                 : "Every question answered."}
             </Text>
             <div className="flex flex-wrap gap-2.5">
-              <Button variant="primary" href={BACK}>
-                Back to Practice
+              <Button variant="primary" href={back.href}>
+                {`Back to ${back.label}`}
               </Button>
               <Button variant="soft" icon={<IconRefresh />} onClick={onAgain}>
                 Practise again
@@ -156,6 +215,9 @@ function Sitting({
   }
 
   const states = items.map((x) => paletteState(outcomes[x.question.id], visited.includes(x.question.id)));
+  // bonus questions come after the day's own: [0, split) own, [split, total) bonus
+  const firstBonus = items.findIndex((x) => bonus[x.question.id]);
+  const split = firstBonus < 0 ? total : firstBonus;
   const last = index === total - 1;
   const finish = () => {
     flush();
@@ -165,11 +227,12 @@ function Sitting({
   return (
     <div className="grid gap-5">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <Button href={BACK} variant="ghost" size="sm" icon={<IconChevronLeft />}>
-          Practice
+        <Button href={back.href} variant="ghost" size="sm" icon={<IconChevronLeft />}>
+          {back.label}
         </Button>
         <Heading level={1}>{data.topic.name}</Heading>
         <Pill tone="neutral">{data.topic.subject_name}</Pill>
+        {split < total && <Pill tone="amber">{`+ ${total - split} bonus`}</Pill>}
         <Button variant="secondary" className="ml-auto" onClick={finish}>
           Finish
         </Button>
@@ -200,7 +263,12 @@ function Sitting({
           {/* opened questions stay mounted (hidden), so going back keeps your answer and the verdict */}
           {items.map((x, i) =>
             visited.includes(x.question.id) || i === index ? (
-              <div key={x.question.id} hidden={i !== index}>
+              <div key={x.question.id} hidden={i !== index} className="grid gap-2.5">
+                {bonus[x.question.id] && (
+                  <div>
+                    <Pill tone="amber">{`Bonus · carried over from ${formatShort(bonus[x.question.id])}`}</Pill>
+                  </div>
+                )}
                 <AnyQuestion question={x.question} detail={x.detail} number={i + 1} onAnswer={answer(x.question.id)} />
               </div>
             ) : null,
@@ -208,7 +276,30 @@ function Sitting({
         </div>
 
         <Card title="Questions" className="min-[980px]:sticky min-[980px]:top-6">
-          <QuestionPalette states={states} current={index} onJump={setAt} />
+          <div className="grid gap-4">
+            {split > 0 && (
+              <QuestionPalette
+                states={states.slice(0, split)}
+                current={index < split ? index : -1}
+                onJump={setAt}
+                label={split < total ? "This day's questions" : "Questions"}
+              />
+            )}
+            {split < total && (
+              <div className="grid gap-2.5 rounded-[14px] border-[1.5px] border-dashed border-amber bg-amber/8 px-3 py-2.5">
+                <Text as="div" className="text-amber">
+                  {`**Bonus** · carried over from earlier days`}
+                </Text>
+                <QuestionPalette
+                  states={states.slice(split)}
+                  start={split + 1}
+                  current={index >= split ? index - split : -1}
+                  onJump={(i) => setAt(split + i)}
+                  label="Bonus questions"
+                />
+              </div>
+            )}
+          </div>
         </Card>
       </div>
     </div>

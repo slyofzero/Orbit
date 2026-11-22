@@ -83,6 +83,12 @@ When a day ends with work left, its unfinished tasks and questions are shared ou
 
 **Edge case:** editing a past day (adding a task to last Monday) changes Monday's carry-over. That's expected: the split always reflects the plan as it is now.
 
+**Where it lives.** The split rules are in `lib/carry.ts` (`carryChunks`, `pendingAtEnd`), and the read is in `lib/db/queries/carry.ts` (`carriedInto`), which `dashboard.day` returns as `carried`. Tests: `scripts/checks/carry.ts`. On screen:
+- **Carried tasks** show in the bonus block (`components/plan/DayParts.tsx` `BonusBlock`) on the dashboard agenda and the planner, and ticking one ticks the original (`plan.tickTask`).
+- **Carried questions** add to the main event's count (its gold stretch).
+- **"Practise these questions"** opens `/practice/day?date=<date>` (`question.day`): the day's linked questions, then the bonus ones carried into it, every type, code questions too. Bonus questions sit in their own amber "Bonus" group in the palette, and each carries a "carried over from <day>" tag. Answering one ticks it on its own day.
+- **Dismissing** a carried item isn't built (§6), so the bonus block has no unlink.
+
 
 ## 5b. The plan file (import)
 

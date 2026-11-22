@@ -1,15 +1,16 @@
 "use client";
 // Pieces of a plan day shared by the dashboard's agenda and the planner (v1): the day lock beside the
-// day's name, the "main event" (the day's linked questions) and the bonus block (carried-over work).
+// day's name, the "main event" (the day's linked questions, plus questions carried over from earlier days) and the
+// bonus block (tasks carried over from earlier days, docs/PLANS.md §5). Ticking a carried task ticks the original.
 
-import { Button, Checkbox, IconButton, Pill, ProgressBar, Text, Tooltip, type ProgressSegment } from "@/components/ui";
-import { IconLock, IconLockOpen, IconUnlink } from "@/components/icons";
+import { Button, Checkbox, Pill, ProgressBar, Text, Tooltip, type ProgressSegment } from "@/components/ui";
+import { IconLock, IconLockOpen } from "@/components/icons";
 import { cx } from "@/components/utils/cx";
 import { formatShort, type IsoDate } from "@/lib/dates";
 import { LOCK_HOUR, dayLock } from "@/lib/dashboard";
 
-/** One item carried over from an earlier day (docs/PLANS.md §5). */
-export type BonusItem = { key: string; from: IsoDate; body: string; done: boolean };
+/** One task carried over from an earlier day (docs/PLANS.md §5). */
+export type BonusItem = { id: number; from: IsoDate; body: string; done: boolean };
 
 /** v1's lock beside the day's name: green and open before LOCK_HOUR today, red and locked after (and on past days). */
 export function DayLock({ date, today, hour }: { date: IsoDate; today: IsoDate; hour: number }) {
@@ -38,7 +39,9 @@ export function DayLock({ date, today, hour }: { date: IsoDate; today: IsoDate; 
 }
 
 /** v1's "main event": the day's linked questions in a warm gradient frame; faded once all are answered.
- *  `onUnlink` adds v1's "Unlink this day" button (the planner shows it while the day isn't locked). */
+ *  `bonus` counts the questions carried into the day; "Practise these questions" opens the day's own
+ *  questions (/practice/day?date=); carried ones are practised on their own day. `onUnlink` adds v1's "Unlink this day" button (the planner shows it while the day
+ *  isn't locked; it unlinks the day's own questions only). */
 export function MainEvent({
   date,
   total,
@@ -51,10 +54,10 @@ export function MainEvent({
   total: number;
   answered: number;
   correct: number;
-  bonus: { total: number; done: number }[];
+  bonus: { total: number; done: number };
   onUnlink?: () => void;
 }) {
-  const b = bonus.reduce((s, x) => ({ total: s.total + x.total, done: s.done + x.done }), { total: 0, done: 0 });
+  const b = bonus;
   const done = answered >= total && b.done >= b.total;
   const segments: ProgressSegment[] = [
     { value: answered, max: total, tone: "warm" },
@@ -70,9 +73,11 @@ export function MainEvent({
       <Text as="div" className="special-text font-bold">
         {`${done ? "Done" : "Main event"}: your questions for this day`}
       </Text>
-      <Text variant="small" className="mt-0.5">
-        {`${answered} of ${total} answered, ${correct} correct`}
-      </Text>
+      {total > 0 && (
+        <Text variant="small" className="mt-0.5">
+          {`${answered} of ${total} answered, ${correct} correct`}
+        </Text>
+      )}
       {b.total > 0 && (
         <Text variant="small" className="text-amber">
           {`+ ${b.total} bonus carried over, ${b.done} answered`}
@@ -82,10 +87,10 @@ export function MainEvent({
         <ProgressBar label="Questions answered" showLabel={false} segments={segments} />
       </div>
       <div className="mt-2.5 flex flex-wrap gap-2">
-        <Button variant="special" href={`/day/${date}`}>
+        <Button variant="special" href={`/practice/day?date=${date}`}>
           Practise these questions
         </Button>
-        {onUnlink && (
+        {onUnlink && total > 0 && (
           <Button variant="soft" onClick={onUnlink}>
             Unlink this day
           </Button>
@@ -95,16 +100,9 @@ export function MainEvent({
   );
 }
 
-/** v1's bonus block: unfinished work from earlier days, shared out over the next 3 planned days. */
-export function BonusBlock({
-  items,
-  onTick,
-  onUnlink,
-}: {
-  items: BonusItem[];
-  onTick: (key: string, done: boolean) => void;
-  onUnlink: (key: string) => void;
-}) {
+/** v1's bonus block: unfinished tasks from earlier days, shared out over the next 3 planned days. Ticking one
+ *  ticks the original task, so its own day can still turn done (late). */
+export function BonusBlock({ items, onTick }: { items: BonusItem[]; onTick: (id: number, done: boolean) => void }) {
   if (!items.length) return null;
   const froms = [...new Set(items.map((i) => formatShort(i.from)))];
   return (
@@ -113,20 +111,9 @@ export function BonusBlock({
         {`**Bonus** carried over from ${froms.join(", ")}`}
       </Text>
       {items.map((it) => (
-        <div key={it.key} className="flex items-start gap-2">
-          <div className="min-w-0 flex-1">
-            <Pill tone="amber">{`from ${formatShort(it.from)}`}</Pill>
-            <Checkbox variant="task" checked={it.done} burst={14} onChange={(v) => onTick(it.key, v)} label={it.body} />
-          </div>
-          <IconButton
-            label="Unlink from this day"
-            size="sm"
-            variant="ghost"
-            className="mt-6"
-            onClick={() => onUnlink(it.key)}
-          >
-            <IconUnlink />
-          </IconButton>
+        <div key={it.id} className="min-w-0">
+          <Pill tone="amber">{`from ${formatShort(it.from)}`}</Pill>
+          <Checkbox variant="task" checked={it.done} burst={14} onChange={(v) => onTick(it.id, v)} label={it.body} />
         </div>
       ))}
     </div>

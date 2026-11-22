@@ -8,6 +8,7 @@ import type { PlanDayKind, PlanDayStatus } from "@/types/tables";
 import { addDays, type IsoDate } from "@/lib/dates";
 
 import { buildHero, type HeroDay, type HeroMilestone } from "@/lib/runway";
+import { carriedInto } from "@/lib/db/queries/carry";
 
 export const dashboardQueries = {
   /** The hero (v1's runway): countdown, plan note, day track with milestone flags, today's tasks, streak. */
@@ -49,7 +50,8 @@ export const dashboardQueries = {
   }),
 
   /** The agenda for one date: the day, its tasks (ticked or not), its linked questions (answered, correct),
-   *  questions answered that date, topics to practise, the next planned day and the days coming up after today. */
+   *  questions answered that date, topics to practise, the next planned day, the days coming up after today, and
+   *  the work carried into it from earlier days (`carried`, docs/PLANS.md §5; lib/db/queries/carry.ts). */
   "dashboard.day": read(
     [
       "plans",
@@ -127,7 +129,8 @@ export const dashboardQueries = {
          WHERE plan_id = ? AND on_date > ? AND on_date <> ? ORDER BY on_date LIMIT 4`,
         [plan.id, p.today, p.date],
       );
-      return { day, tasks, questions, answeredOn, topics, next, upcoming };
+      const carried = day ? carriedInto(sql, plan.id, p.date, p.today) : { tasks: [], questions: [] };
+      return { day, tasks, questions, answeredOn, topics, next, upcoming, carried };
     },
   ),
 

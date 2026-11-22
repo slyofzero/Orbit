@@ -1,10 +1,10 @@
 "use client";
 // What a planner day holds (v1's DayBody): its tasks, the main event (linked questions, with "Unlink this day"
-// while the day isn't locked), the practice target, topic shortcuts and "Tick all". Used by the day cards and the
-// open day rows. Carried-over bonus work (docs/PLANS.md §5) isn't built yet, so the bonus block isn't shown.
+// while the day isn't locked), work carried over from earlier days (bonus, docs/PLANS.md §5), the practice target,
+// topic shortcuts and "Tick all" (the day's own tasks). Used by the day cards and the open day rows.
 
 import { Button, Checkbox, ProgressBar, useToast } from "@/components/ui";
-import { MainEvent } from "@/components/plan/DayParts";
+import { BonusBlock, MainEvent } from "@/components/plan/DayParts";
 import { useMutation, useQuery } from "@/lib/db/client";
 import type { ResultOf } from "@/lib/db/queries";
 import { dayLock } from "@/lib/dashboard";
@@ -18,8 +18,9 @@ export function DayBody({ data, date, today, hour }: { data: DayData; date: IsoD
   const { run: tickDay } = useMutation("plan.tickDay");
   const { run: unlinkDay } = useMutation("plan.unlinkDay");
   const { run: relinkDay } = useMutation("plan.relinkDay");
-  const { day, tasks, questions, answeredOn, topics } = data;
+  const { day, tasks, questions, answeredOn, topics, carried } = data;
   if (!day) return null;
+  const bonus = { total: carried.questions.length, done: carried.questions.filter((q) => q.done).length };
   const allDone = tasks.length > 0 && tasks.every((t) => t.done);
   const locked = dayLock(date, today, hour) === "locked";
 
@@ -48,16 +49,17 @@ export function DayBody({ data, date, today, hour }: { data: DayData; date: IsoD
           label={t.body}
         />
       ))}
-      {questions.total > 0 && (
+      {questions.total + bonus.total > 0 && (
         <MainEvent
           date={date}
           total={questions.total}
           answered={questions.answered}
           correct={questions.correct}
-          bonus={[]}
+          bonus={bonus}
           onUnlink={locked ? undefined : () => void unlink()}
         />
       )}
+      <BonusBlock items={carried.tasks} onTick={(taskId, done) => tickTask({ taskId, done })} />
       {questions.total > 0 && (
         <div className="mt-2.5 mb-1">
           <ProgressBar

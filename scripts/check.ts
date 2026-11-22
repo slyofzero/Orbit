@@ -18,6 +18,7 @@ import "@/scripts/checks/quotes";
 import "@/scripts/checks/grading";
 import "@/scripts/checks/dashboard";
 import "@/scripts/checks/planner";
+import "@/scripts/checks/carry";
 import "@/scripts/checks/practice";
 import "@/scripts/checks/session";
 import "@/scripts/checks/exam";
