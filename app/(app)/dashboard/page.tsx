@@ -33,10 +33,12 @@ function Rise({ on, i, className, children }: { on: boolean; i: number; classNam
 
 // v1's dashboard grid: 12 columns. The main block (calendar 5 + agenda 4, then three cards of 3) takes 9,
 // the side (milestones, where you stand) 3. Below 1500px both take the full width (the side as 2 columns);
-// below 980px everything is one column.
+// below 980px everything is one column. The side's two cards are always the same height (`auto-rows-fr`), side by
+// side or stacked.
 const GRID = "mt-[22px] grid grid-cols-12 items-start gap-[22px]";
 const MAIN = "col-span-9 grid grid-cols-9 items-start gap-[22px] max-[1500px]:col-span-12 max-[980px]:grid-cols-1";
-const SIDE = "col-span-3 grid gap-[22px] max-[1500px]:col-span-12 max-[1500px]:grid-cols-2 max-[980px]:grid-cols-1";
+const SIDE =
+  "col-span-3 grid auto-rows-fr gap-[22px] max-[1500px]:col-span-12 max-[1500px]:grid-cols-2 max-[980px]:grid-cols-1";
 const CAL = "col-span-5 max-[980px]:col-span-1";
 // the agenda is as tall as the calendar beside it and scrolls inside (v1)
 const AGENDA = "col-span-4 max-[980px]:col-span-1 min-[981px]:relative min-[981px]:self-stretch";
