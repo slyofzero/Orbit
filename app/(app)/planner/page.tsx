@@ -184,7 +184,7 @@ function NextDays({
   return (
     // clip sideways only, so the centre card's glow and hover lift still show above and below
     <div className="-my-4 overflow-x-clip py-4">
-      <div className="mx-auto grid w-[calc((100%-40px)/3)] max-[1100px]:w-full">
+      <div className="mx-auto grid grid-cols-1 w-[calc((100%-40px)/3)] max-[1100px]:w-full">
         {carouselDays(today, offset).map(({ date, pos }) => {
           const center = pos === 0;
           const side = Math.abs(pos) === 1;

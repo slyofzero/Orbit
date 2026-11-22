@@ -72,7 +72,13 @@ export function DayBody({ data, date, today, hour }: { data: DayData; date: IsoD
       )}
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {topics.map((t) => (
-          <Button key={t.id} variant="soft" size="sm" href={`/practice/session?topic=${encodeURIComponent(t.id)}`}>
+          <Button
+            key={t.id}
+            variant="soft"
+            size="sm"
+            className="max-w-full rounded-2xl! text-left leading-snug! whitespace-normal!"
+            href={`/practice/session?topic=${encodeURIComponent(t.id)}`}
+          >
             {t.name.split("(")[0].trim()}
           </Button>
         ))}
