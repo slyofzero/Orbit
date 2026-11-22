@@ -3,8 +3,9 @@ import type { ReactNode } from "react";
 import type { QuestionRow } from "@/types/tables";
 import type { Verdict } from "@/lib/grade";
 import { Button, Pill, Rich, SparkleBadge } from "@/components/ui";
-import { IconCheck, IconRefresh } from "@/components/icons";
+import { IconCheck, IconPencil, IconRefresh } from "@/components/icons";
 import { cx, txt } from "@/components/utils";
+import { useEditQuestion } from "@/components/question/editContext";
 import { DIFFICULTY_LABEL, DIFFICULTY_TONE, TYPE_LABEL, fmtMarks } from "@/components/question/format";
 
 export type FrameResult = {
@@ -53,6 +54,7 @@ export function QuestionFrame({
   exam?: boolean; // a mock in progress: no Check button and no verdict, just the instruction under the answer
 }) {
   const q = question;
+  const edit = useEditQuestion();
   const stem = <Rich text={q.stem} block className="text-[1.08rem] leading-[1.65]" />;
   const answer = <div className="grid gap-2.5">{children}</div>;
   const footer = exam ? (
@@ -93,6 +95,11 @@ export function QuestionFrame({
         {number !== undefined && <Pill tone="ink">Q{number}</Pill>}
         <Pill tone="blue">{TYPE_LABEL[q.type]}</Pill>
         <Pill tone={DIFFICULTY_TONE[q.difficulty]}>{DIFFICULTY_LABEL[q.difficulty]}</Pill>
+        {edit && !exam && (
+          <Button variant="ghost" size="sm" icon={<IconPencil />} onClick={() => edit(q.id)}>
+            Edit
+          </Button>
+        )}
         <span className="ml-auto inline-flex gap-2.5 text-[0.85rem] font-bold">
           <span className="text-green">
             +{fmtMarks(q.marks)} {q.marks === 1 ? "mark" : "marks"}

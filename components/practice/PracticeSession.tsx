@@ -12,6 +12,7 @@ import { useSearchParams } from "next/navigation";
 import { AnyQuestion, QuestionPalette } from "@/components/question";
 import { Button, Card, EmptyState, Heading, Pill, ProgressBar, StatTile, Text } from "@/components/ui";
 import { IconChevronLeft, IconChevronRight, IconRefresh } from "@/components/icons";
+import { EditQuestionHost } from "@/components/manage/EditQuestionHost";
 import { useSittingClock } from "@/components/utils/useSittingClock";
 import { useMutation, useQuery } from "@/lib/db/client";
 import { formatShort, isIsoDate, todayIST, type IsoDate } from "@/lib/dates";
@@ -225,83 +226,95 @@ function Sitting({
   };
 
   return (
-    <div className="grid gap-5">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <Button href={back.href} variant="ghost" size="sm" icon={<IconChevronLeft />}>
-          {back.label}
-        </Button>
-        <Heading level={1}>{data.topic.name}</Heading>
-        <Pill tone="neutral">{data.topic.subject_name}</Pill>
-        {split < total && <Pill tone="amber">{`+ ${total - split} bonus`}</Pill>}
-        <Button variant="secondary" className="ml-auto" onClick={finish}>
-          Finish
-        </Button>
-      </div>
-
-      <div className="grid items-start gap-5 min-[980px]:grid-cols-[minmax(0,1fr)_280px]">
-        <div className="grid gap-4">
-          {/* above the question, so Previous / Next stay put whatever the question's height */}
-          <div className="flex flex-wrap items-end justify-between gap-x-5 gap-y-3">
-            <div className="max-w-[420px] min-w-[200px] flex-1">
-              <ProgressBar label={`${done} of ${total} answered`} value={done} max={total} tone="green" />
-            </div>
-            <div className="flex gap-2.5">
-              <Button variant="soft" icon={<IconChevronLeft />} disabled={index === 0} onClick={() => setAt(index - 1)}>
-                Previous
-              </Button>
-              {last ? (
-                <Button variant="primary" onClick={finish}>
-                  Finish
-                </Button>
-              ) : (
-                <Button variant="primary" iconAfter={<IconChevronRight />} onClick={() => setAt(index + 1)}>
-                  Next
-                </Button>
-              )}
-            </div>
-          </div>
-          {/* opened questions stay mounted (hidden), so going back keeps your answer and the verdict */}
-          {items.map((x, i) =>
-            visited.includes(x.question.id) || i === index ? (
-              <div key={x.question.id} hidden={i !== index} className="grid gap-2.5">
-                {bonus[x.question.id] && (
-                  <div>
-                    <Pill tone="amber">{`Bonus · carried over from ${formatShort(bonus[x.question.id])}`}</Pill>
-                  </div>
-                )}
-                <AnyQuestion question={x.question} detail={x.detail} number={i + 1} onAnswer={answer(x.question.id)} />
-              </div>
-            ) : null,
-          )}
+    <EditQuestionHost>
+      <div className="grid gap-5">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <Button href={back.href} variant="ghost" size="sm" icon={<IconChevronLeft />}>
+            {back.label}
+          </Button>
+          <Heading level={1}>{data.topic.name}</Heading>
+          <Pill tone="neutral">{data.topic.subject_name}</Pill>
+          {split < total && <Pill tone="amber">{`+ ${total - split} bonus`}</Pill>}
+          <Button variant="secondary" className="ml-auto" onClick={finish}>
+            Finish
+          </Button>
         </div>
 
-        <Card title="Questions" className="min-[980px]:sticky min-[980px]:top-6">
+        <div className="grid items-start gap-5 min-[980px]:grid-cols-[minmax(0,1fr)_280px]">
           <div className="grid gap-4">
-            {split > 0 && (
-              <QuestionPalette
-                states={states.slice(0, split)}
-                current={index < split ? index : -1}
-                onJump={setAt}
-                label={split < total ? "This day's questions" : "Questions"}
-              />
-            )}
-            {split < total && (
-              <div className="grid gap-2.5 rounded-[14px] border-[1.5px] border-dashed border-amber bg-amber/8 px-3 py-2.5">
-                <Text as="div" className="text-amber">
-                  {`**Bonus** · carried over from earlier days`}
-                </Text>
-                <QuestionPalette
-                  states={states.slice(split)}
-                  start={split + 1}
-                  current={index >= split ? index - split : -1}
-                  onJump={(i) => setAt(split + i)}
-                  label="Bonus questions"
-                />
+            {/* above the question, so Previous / Next stay put whatever the question's height */}
+            <div className="flex flex-wrap items-end justify-between gap-x-5 gap-y-3">
+              <div className="max-w-[420px] min-w-[200px] flex-1">
+                <ProgressBar label={`${done} of ${total} answered`} value={done} max={total} tone="green" />
               </div>
+              <div className="flex gap-2.5">
+                <Button
+                  variant="soft"
+                  icon={<IconChevronLeft />}
+                  disabled={index === 0}
+                  onClick={() => setAt(index - 1)}
+                >
+                  Previous
+                </Button>
+                {last ? (
+                  <Button variant="primary" onClick={finish}>
+                    Finish
+                  </Button>
+                ) : (
+                  <Button variant="primary" iconAfter={<IconChevronRight />} onClick={() => setAt(index + 1)}>
+                    Next
+                  </Button>
+                )}
+              </div>
+            </div>
+            {/* opened questions stay mounted (hidden), so going back keeps your answer and the verdict */}
+            {items.map((x, i) =>
+              visited.includes(x.question.id) || i === index ? (
+                <div key={x.question.id} hidden={i !== index} className="grid gap-2.5">
+                  {bonus[x.question.id] && (
+                    <div>
+                      <Pill tone="amber">{`Bonus · carried over from ${formatShort(bonus[x.question.id])}`}</Pill>
+                    </div>
+                  )}
+                  <AnyQuestion
+                    question={x.question}
+                    detail={x.detail}
+                    number={i + 1}
+                    onAnswer={answer(x.question.id)}
+                  />
+                </div>
+              ) : null,
             )}
           </div>
-        </Card>
+
+          <Card title="Questions" className="min-[980px]:sticky min-[980px]:top-6">
+            <div className="grid gap-4">
+              {split > 0 && (
+                <QuestionPalette
+                  states={states.slice(0, split)}
+                  current={index < split ? index : -1}
+                  onJump={setAt}
+                  label={split < total ? "This day's questions" : "Questions"}
+                />
+              )}
+              {split < total && (
+                <div className="grid gap-2.5 rounded-[14px] border-[1.5px] border-dashed border-amber bg-amber/8 px-3 py-2.5">
+                  <Text as="div" className="text-amber">
+                    {`**Bonus** · carried over from earlier days`}
+                  </Text>
+                  <QuestionPalette
+                    states={states.slice(split)}
+                    start={split + 1}
+                    current={index >= split ? index - split : -1}
+                    onJump={(i) => setAt(split + i)}
+                    label="Bonus questions"
+                  />
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
       </div>
-    </div>
+    </EditQuestionHost>
   );
 }

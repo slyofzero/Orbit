@@ -10,6 +10,7 @@ import { useSearchParams } from "next/navigation";
 import { CodeQuestion } from "@/components/question";
 import { Button, EmptyState, Pill, Text } from "@/components/ui";
 import { IconChevronLeft, IconChevronRight } from "@/components/icons";
+import { EditQuestionHost } from "@/components/manage/EditQuestionHost";
 import { useSittingClock } from "@/components/utils/useSittingClock";
 import { useMutation, useQuery } from "@/lib/db/client";
 import type { Verdict } from "@/lib/grade";
@@ -84,34 +85,36 @@ function CodeSitting({ id }: { id: string }) {
   const { question, detail, latest } = data.item;
   const solved = verdict === "correct" || (verdict === undefined && latest === "correct");
   return (
-    <div className="grid gap-5">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <Button href={BACK} variant="ghost" size="sm" icon={<IconChevronLeft />}>
-          Programming
-        </Button>
-        <Text variant="small" as="span">{`Question ${data.index + 1} of ${data.total}`}</Text>
-        {data.topic && <Pill tone="neutral">{`${data.topic.subject_name}: ${data.topic.name}`}</Pill>}
-        {solved && <Pill tone="green">✓ Solved</Pill>}
-        <div className="ml-auto flex gap-2.5">
-          <Button
-            variant="soft"
-            icon={<IconChevronLeft />}
-            disabled={!data.prev}
-            href={data.prev ? href(data.prev) : undefined}
-          >
-            Previous
+    <EditQuestionHost>
+      <div className="grid gap-5">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <Button href={BACK} variant="ghost" size="sm" icon={<IconChevronLeft />}>
+            Programming
           </Button>
-          <Button
-            variant="primary"
-            iconAfter={<IconChevronRight />}
-            disabled={!data.next}
-            href={data.next ? href(data.next) : undefined}
-          >
-            Next
-          </Button>
+          <Text variant="small" as="span">{`Question ${data.index + 1} of ${data.total}`}</Text>
+          {data.topic && <Pill tone="neutral">{`${data.topic.subject_name}: ${data.topic.name}`}</Pill>}
+          {solved && <Pill tone="green">✓ Solved</Pill>}
+          <div className="ml-auto flex gap-2.5">
+            <Button
+              variant="soft"
+              icon={<IconChevronLeft />}
+              disabled={!data.prev}
+              href={data.prev ? href(data.prev) : undefined}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="primary"
+              iconAfter={<IconChevronRight />}
+              disabled={!data.next}
+              href={data.next ? href(data.next) : undefined}
+            >
+              Next
+            </Button>
+          </div>
         </div>
+        <CodeQuestion question={question} detail={detail as QuestionCodeRow} onAnswer={answer} split rows={18} />
       </div>
-      <CodeQuestion question={question} detail={detail as QuestionCodeRow} onAnswer={answer} split rows={18} />
-    </div>
+    </EditQuestionHost>
   );
 }
