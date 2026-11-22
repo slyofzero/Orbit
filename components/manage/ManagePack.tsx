@@ -121,7 +121,7 @@ export function ManagePack() {
         ) : tab === "upload" ? (
           <UploadPanel onLoaded={setLoaded} />
         ) : (
-          <MocksPanel overview={data} />
+          <MocksPanel overview={data} onLoaded={setLoaded} />
         )}
       </div>
 

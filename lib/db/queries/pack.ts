@@ -1,19 +1,36 @@
 // Question files: import a pack of questions and mocks.
 // Named queries (docs/STORAGE.md §2); how to write one: lib/db/queries/index.ts.
 
-import { write } from "@/lib/db/queries/core";
+import { read, write } from "@/lib/db/queries/core";
 
 import { insertSql } from "@/lib/db/codec";
 
-import { type TableName } from "@/lib/db/sql";
+import { type Sql, type TableName } from "@/lib/db/sql";
 
-import { parseQuestionFile, questionHash, type FileQuestion } from "@/lib/questionFile";
+import { bankRefErrors, parseQuestionFile, questionHash, type FileQuestion } from "@/lib/questionFile";
+
+/** The most ids one `pack.missing` call checks (a file holds at most this many mock questions anyway). */
+const MISSING_MAX = 5000;
+
+/** Which of these question ids are not in the bank (deleted or retired ones count as missing). */
+function missingFromBank(sql: Sql, ids: string[]): Set<string> {
+  const out = new Set<string>();
+  for (const id of new Set(ids))
+    if (!sql.get("SELECT 1 FROM questions WHERE id = ? AND retired_at IS NULL", [id])) out.add(id);
+  return out;
+}
 
 export const packQueries = {
+  /** For the upload preview: the mock question ids of a file (`bankRefs`) that aren't in the bank. */
+  "pack.missing": read(["questions"], (sql, p: { ids: string[] }) => [
+    ...missingFromBank(sql, p.ids.slice(0, MISSING_MAX)),
+  ]),
+
   /** Imports a question file (lib/questionFile.ts): subjects, topics, tags, questions and mocks, as one pack.
    *  The file is checked again here, so nothing unchecked is ever saved; on any error nothing is written.
    *  Subjects, topics and tags are matched by name (without case) and created when missing; a question that
-   *  is already in the bank (same words, same answer) is not added twice, and mocks use the existing copy. */
+   *  is already in the bank (same words, same answer) is not added twice, and mocks use the existing copy. A mock
+   *  may also use questions already in the bank by their id; one found nowhere refuses the file. */
   "pack.import": write(
     [
       "packs",
@@ -35,6 +52,11 @@ export const packQueries = {
       const r = parseQuestionFile(p.text);
       if (!r.file) return { ok: false as const, errors: r.errors, warnings: r.warnings };
       const f = r.file;
+      const missing = missingFromBank(
+        sql,
+        f.bankRefs.map((b) => b.id),
+      );
+      if (missing.size) return { ok: false as const, errors: bankRefErrors(f, missing), warnings: r.warnings };
       if (p.fileHash) {
         const same = sql.get<{ name: string }>("SELECT name FROM packs WHERE file_hash = ? LIMIT 1", [p.fileHash]);
         if (same)
@@ -193,7 +215,7 @@ export const packQueries = {
           s.questions.forEach((ref, j) =>
             sql.run("INSERT INTO mock_items (section_id, question_id, position) VALUES (?, ?, ?)", [
               sectionId,
-              ids.get(ref)!,
+              ids.get(ref) ?? ref, // not in this file: a question already in the bank (checked above)
               j + 1,
             ]),
           );

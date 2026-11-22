@@ -4,18 +4,34 @@
 // its own page (MockDetail): its details (name, minutes, full screen, instructions), then its sections and
 // questions, and Delete. The open mock is in the address (?mock=<id>), so Back returns to the cards; the view slides
 // in from the right when a mock opens and from the left on the way back (styles/animations/manage-mocks.css).
-// Ids are the system's (db/schema.sql), so a new mock needs only a name and its minutes.
+// Ids are the system's (db/schema.sql), so a new mock needs only a name and its minutes. "Upload a mock test" loads
+// a question file holding mock tests (the mock AI prompt writes one) as a pack, as Manage pack → Upload does.
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { ConfirmPhraseDialog } from "@/components/manage/ConfirmPhraseDialog";
 import { MockDetail } from "@/components/manage/MockDetail";
+import { PackUpload } from "@/components/manage/PackUpload";
+import type { Celebration } from "@/components/practice/ImportCelebration";
 import type { Overview } from "@/components/manage/QuestionsPanel";
-import { IconArrowRight, IconLines, IconTrash } from "@/components/icons";
-import { Button, Card, Heading, Pill, Rich, StatTile, Text, TextField, useToast } from "@/components/ui";
+import { IconArrowRight, IconLines, IconTrash, IconUpload } from "@/components/icons";
+import {
+  Button,
+  Card,
+  CopyButton,
+  Dialog,
+  Heading,
+  Pill,
+  Rich,
+  StatTile,
+  Text,
+  TextField,
+  useToast,
+} from "@/components/ui";
 import { useMutation, useQuery } from "@/lib/db/client";
 import type { ResultOf } from "@/lib/db/queries";
 import { DELETE_MOCKS_PHRASE } from "@/lib/manage";
+import { questionsPrompt } from "@/lib/prompts/questionsPrompt";
 
 type Mock = ResultOf<"manage.mocks">[number];
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
@@ -81,7 +97,7 @@ function MockCard({ m, onOpen }: { m: Mock; onOpen: () => void }) {
   );
 }
 
-export function MocksPanel({ overview }: { overview: Overview }) {
+export function MocksPanel({ overview, onLoaded }: { overview: Overview; onLoaded: (c: Celebration) => void }) {
   const toast = useToast();
   const sp = useSearchParams();
   const router = useRouter();
@@ -93,6 +109,7 @@ export function MocksPanel({ overview }: { overview: Overview }) {
   const [minutes, setMinutes] = useState("180");
   const [err, setErr] = useState("");
   const [wiping, setWiping] = useState(false); // the "Delete all mock tests" dialog is open
+  const [uploading, setUploading] = useState(false); // the "Upload a mock test" dialog is open
   const wipe = useMutation("manage.emptyBank");
   // which way the last switch went (list → a mock, or back), so the new view slides in from that side; set while
   // rendering (React's "state from the previous render" pattern) so the first frame already animates
@@ -191,7 +208,38 @@ export function MocksPanel({ overview }: { overview: Overview }) {
         <Button variant="primary" loading={add.pending} onClick={addIt}>
           Add mock test
         </Button>
+        <Button variant="soft" icon={<IconUpload />} onClick={() => setUploading(true)}>
+          Upload a mock test
+        </Button>
       </div>
+      <Dialog open={uploading} onClose={() => setUploading(false)} title="Upload a mock test" size="wide">
+        <div className="grid gap-4">
+          <Text variant="small" block>
+            A mock test comes as a question file: its mock-only questions plus the test (name, minutes, sections). Copy
+            the prompt into any AI chat, answer its questions, then drop or paste the JSON it gives back. Each file is
+            loaded as its own pack (listed in **Upload**). A mock runs in full screen unless the file says
+            `"full_screen": false`.
+          </Text>
+          <div>
+            <CopyButton
+              variant="primary"
+              text={() => questionsPrompt("mocks")}
+              label="Copy AI prompt: mock test"
+              copiedLabel="Copied. Paste it into your AI chat"
+            />
+          </div>
+          <PackUpload
+            title="Drop your mock test file(s) here"
+            hint={{
+              noMocks: "This file holds **no mock test**: its questions still load, but no new card appears here.",
+            }}
+            onLoaded={(c) => {
+              setUploading(false);
+              onLoaded(c);
+            }}
+          />
+        </div>
+      </Dialog>
       {err && (
         <Text variant="error" className="my-2">
           {err}

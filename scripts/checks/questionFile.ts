@@ -1,7 +1,7 @@
 // check.ts section: questionFile. Run: bun run check
 import { tabEmpty, type PracticeCounts } from "@/lib/practice";
 import { exampleQuestions, questionsPrompt } from "@/lib/prompts/questionsPrompt";
-import { PACK_FORMAT, parseQuestionFile, questionHash, questionSummary } from "@/lib/questionFile";
+import { PACK_FORMAT, bankRefErrors, parseQuestionFile, questionHash, questionSummary } from "@/lib/questionFile";
 import { QUERIES, type QueryDef } from "@/lib/db/queries";
 import { transaction } from "@/lib/db/sql";
 import { ok, freshDb, bunSql } from "@/scripts/checks/helpers";
@@ -107,10 +107,25 @@ console.log("question file (lib/questionFile.ts)");
     ...file({ ...base, id: "a" }, { ...base, id: "b", text: "Q2?" }),
     mocks: [{ name: "M", minutes: 30, sections }],
   });
-  ok(
-    refusedWith(mock([{ name: "S", questions: ["zz"] }]), "isn't in"),
-    "a mock using an unknown question id is refused",
-  );
+  {
+    const p = parse(mock([{ name: "S", questions: ["a", "zz"] }]));
+    ok(
+      p.file !== null &&
+        p.file.bankRefs.length === 1 &&
+        p.file.bankRefs[0].id === "zz" &&
+        bankRefErrors(p.file, new Set(["zz"]))[0].includes("isn't in this file or in your question bank") &&
+        bankRefErrors(p.file, new Set()).length === 0,
+      "a mock question id not in the file is left for the bank to answer (bankRefs, bankRefErrors)",
+    );
+    const one = parse({ name: "Lone mock", minutes: 30, sections: [{ name: "S", questions: ["q_1"] }] });
+    ok(
+      one.file?.name === "Lone mock" &&
+        one.file.mocks.length === 1 &&
+        one.file.bankRefs[0]?.id === "q_1" &&
+        one.warnings.some((w) => w.includes("one mock test on its own")),
+      "one mock on its own (no questions / mocks keys) is read as a file holding just that mock",
+    );
+  }
   ok(
     refusedWith(
       mock([
@@ -121,6 +136,16 @@ console.log("question file (lib/questionFile.ts)");
     ),
     "a question in two sections of one mock is refused",
   );
+  {
+    const one = (extra: object) => {
+      const f = mock([{ name: "S", questions: ["a"] }]);
+      return parse({ ...f, mocks: [{ ...f.mocks[0], ...extra }] }).file?.mocks[0].full_screen;
+    };
+    ok(
+      one({}) === true && one({ full_screen: true }) === true && one({ full_screen: false }) === false,
+      "a mock runs in full screen unless the file says false",
+    );
+  }
   ok(refusedWith(mock([]), "sections"), "a mock with no sections is refused");
   ok(
     refusedWith(mock([{ name: "S", minutes: 99, questions: ["a"] }]), "minutes"),
@@ -236,5 +261,35 @@ console.log("question file (lib/questionFile.ts)");
       !tabEmpty("mocks", counts()),
     "…and the mock's questions are mock-only, so topic practice never shows them",
   );
+  {
+    // a mock using questions already in the bank, by their id
+    const inBank = (
+      d.query("SELECT id FROM questions WHERE pool = 'mock' ORDER BY id LIMIT 2").all() as { id: string }[]
+    ).map((r) => r.id);
+    const lone = (ids: string[]) =>
+      JSON.stringify({ name: "From the bank", minutes: 20, sections: [{ name: "S", questions: ids }] });
+    const before = n("mocks");
+    const nope = imp(lone([inBank[0], "q_nowhere"]));
+    ok(
+      !nope.ok && nope.errors![0].includes("q_nowhere") && n("mocks") === before && n("packs") === 4,
+      "pack.import: a mock id found neither in the file nor in the bank refuses the file and writes nothing",
+    );
+    const yes = imp(lone(inBank));
+    const items = (
+      d
+        .query(
+          "SELECT i.question_id AS id FROM mock_items i JOIN mock_sections s ON s.id = i.section_id JOIN mocks m ON m.id = s.mock_id WHERE m.name = 'From the bank' ORDER BY i.position",
+        )
+        .all() as { id: string }[]
+    ).map((r) => r.id);
+    ok(
+      yes.ok && yes.mocks === 1 && yes.total === 0 && items.join() === inBank.join(),
+      "pack.import: a lone mock uses the bank's questions by id, in order, adding none",
+    );
+    const missing = transaction(s3, () =>
+      (QUERIES["pack.missing"] as unknown as QueryDef<unknown, string[]>).run(s3, { ids: [inBank[0], "q_x", "q_x"] }),
+    );
+    ok(missing.join() === "q_x", "pack.missing: lists the ids the bank doesn't have, once each");
+  }
   ok(d.query("PRAGMA foreign_key_check").all().length === 0, "pack.import: no foreign key violations");
 }

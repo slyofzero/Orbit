@@ -96,12 +96,12 @@ Every day must fall between "starts_on" and "ends_on". A single "date" beats a r
       "name": text,                    // R. up to ${Q.mockName}
       "minutes": number,               // R. whole number, 1 to ${Q.minutes}: the whole test's time limit
       "instructions": text,            // O. up to ${Q.instructions}
-      "full_screen": true | false,     // O. default false
+      "full_screen": true | false,     // O. default true
       "sections": [                    // R. 1 to ${Q.sections} sections
         {
           "name": text,                // R
           "minutes": number,           // O. whole number, at most the mock's minutes
-          "questions": [text]          // R. at least 1 "id" from this file's "questions"; once per mock
+          "questions": [text]          // R. at least 1 question "id": from this file's "questions", or one already in the user's question bank; once per mock
         }
       ]
     }

@@ -4,107 +4,28 @@
 // (lib/questionFile.ts) and saved with pack.import, one pack per file. Orbit can hold many packs; a question
 // that is already in your bank is not added twice.
 
-import { useEffect, useState } from "react";
-import { sha256 } from "@/components/practice/PracticeOnboarding";
+import { useState } from "react";
+import { PackUpload } from "@/components/manage/PackUpload";
 import type { Celebration } from "@/components/practice/ImportCelebration";
-import {
-  Button,
-  Callout,
-  Card,
-  CopyButton,
-  FileInput,
-  ImportProblems,
-  Stat,
-  Table,
-  Text,
-  TextArea,
-  TextField,
-  useToast,
-  type Column,
-} from "@/components/ui";
+import { Button, Card, CopyButton, Table, Text, TextField, useToast, type Column } from "@/components/ui";
 import { dbCall, useMutation, useQuery } from "@/lib/db/client";
 import type { ResultOf } from "@/lib/db/queries";
 import { formatDate, todayIST } from "@/lib/dates";
 import { downloadText } from "@/lib/download";
 import { fileNameOf } from "@/lib/manage";
 import { questionsPrompt } from "@/lib/prompts/questionsPrompt";
-import { LIMITS, parseQuestionFile, questionSummary, type QuestionParse } from "@/lib/questionFile";
+import { LIMITS } from "@/lib/questionFile";
 
 type Pack = ResultOf<"manage.packs">[number];
-interface Checked {
-  name: string;
-  text: string;
-  hash: string;
-  parse: QuestionParse;
-}
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
-/** Pasting is for one file's text; a huge one is better dropped as a file. */
-const PASTE_MAX = 400_000;
 
 export function UploadPanel({ onLoaded }: { onLoaded: (c: Celebration) => void }) {
   const toast = useToast();
   const { data: packs } = useQuery("manage.packs");
   const rename = useMutation("manage.renamePack");
   const remove = useMutation("manage.removePack");
-  const imp = useMutation("pack.import");
   const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null);
   const [ask, setAsk] = useState<string | null>(null);
-  const [files, setFiles] = useState<File[]>([]);
-  const [text, setText] = useState("");
-  const [checked, setChecked] = useState<Checked[]>([]);
-  const [done, setDone] = useState<string[] | null>(null);
-
-  // check every file (and the pasted text) as soon as it lands
-  useEffect(() => {
-    let live = true;
-    const sources: Promise<{ name: string; text: string }>[] = files.map(async (f) => ({
-      name: f.name,
-      text: await f.text(),
-    }));
-    if (text.trim()) sources.push(Promise.resolve({ name: "Pasted text", text }));
-    Promise.all(sources)
-      .then((all) =>
-        Promise.all(all.map(async (x) => ({ ...x, hash: await sha256(x.text), parse: parseQuestionFile(x.text) }))),
-      )
-      .then((r) => {
-        if (!live) return;
-        setChecked(r);
-        if (r.length) setDone(null);
-      });
-    return () => {
-      live = false;
-    };
-  }, [files, text]);
-
-  const good = checked.filter((x) => x.parse.file);
-  const bad = checked.filter((x) => !x.parse.file);
-  const sums = good.map((x) => questionSummary(x.parse.file!));
-  const sum = (k: keyof ReturnType<typeof questionSummary>) => sums.reduce((n, s) => n + s[k], 0);
-  const warnings = [...new Set(good.flatMap((x) => x.parse.warnings))];
-
-  const load = async () => {
-    const notes: string[] = [];
-    let added = 0;
-    let mocks = 0;
-    for (const x of good) {
-      const r = await imp.run({ text: x.text, fileName: x.name === "Pasted text" ? null : x.name, fileHash: x.hash });
-      if (!r) return; // the hook already showed the error
-      if (!r.ok) {
-        notes.push(`${x.name}: ${r.errors[0]}`);
-        continue;
-      }
-      added += r.total;
-      mocks += r.mocks;
-      notes.push(
-        `${r.name}: ${plural(r.total, "new question")}${r.mocks ? `, ${plural(r.mocks, "mock test")}` : ""}.`,
-        ...r.warnings,
-      );
-    }
-    setFiles([]);
-    setText("");
-    setDone([...new Set(notes)]);
-    if (added || mocks) onLoaded({ questions: added, mocks });
-  };
 
   const exportPack = async (p: Pack) => {
     try {
@@ -252,101 +173,7 @@ export function UploadPanel({ onLoaded }: { onLoaded: (c: Celebration) => void }
       </Card>
 
       <Card title="2. Upload or paste it">
-        <div className="grid gap-3">
-          <FileInput
-            accept=".json,application/json"
-            multiple
-            files={files}
-            onChange={setFiles}
-            title="Drop your question file(s) here"
-            description="Pick several files at once to load them all · checked the moment they land"
-            buttonLabel="Upload JSON file(s)"
-          />
-          <TextArea
-            aria-label="Paste a question file"
-            rows={8}
-            spellCheck={false}
-            placeholder='…or paste the JSON here, e.g. { "format": "orbit-questions", "name": "My pack", "questions": [ … ] }'
-            value={
-              text.length > PASTE_MAX
-                ? `(${(text.length / 1e6).toFixed(1)} MB pasted: too big to show. Check the preview below, or press Clear.)`
-                : text
-            }
-            readOnly={text.length > PASTE_MAX}
-            onChange={(e) => setText(e.target.value)}
-          />
-          {(text || files.length > 0) && (
-            <div>
-              <Button
-                variant="soft"
-                size="sm"
-                onClick={() => {
-                  setText("");
-                  setFiles([]);
-                }}
-              >
-                Clear
-              </Button>
-            </div>
-          )}
-
-          {bad.map((x) => (
-            <ImportProblems key={x.name} kind="questions" fileName={x.name} errors={x.parse.errors} />
-          ))}
-
-          {good.length > 0 && (
-            <Callout
-              tone="success"
-              title={
-                good.length === 1 ? `✓ Looks good: ${good[0].parse.file!.name}` : `✓ Looks good: ${good.length} files`
-              }
-            >
-              <div className="mt-2 grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-3">
-                {(
-                  [
-                    [sum("practice"), "practice questions"],
-                    [sum("programming"), "programming questions"],
-                    [sum("mockQuestions"), "mock questions"],
-                    [sum("mocks"), "mock tests"],
-                    [sum("topics"), "topics"],
-                  ] as [number, string][]
-                )
-                  .filter(([n]) => n > 0)
-                  .map(([n, label]) => (
-                    <Stat key={label} value={n} label={label} />
-                  ))}
-              </div>
-              {warnings.length > 0 && (
-                <ul className="mt-2 mb-0 grid gap-1 pl-5">
-                  {warnings.map((w) => (
-                    <li key={w}>
-                      <Text as="span" variant="small">
-                        {w}
-                      </Text>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <div className="mt-3">
-                <Button variant="primary" loading={imp.pending} onClick={load}>
-                  {good.length === 1 ? "Load this pack" : `Load all ${good.length} packs`}
-                </Button>
-              </div>
-            </Callout>
-          )}
-
-          {done && (
-            <Callout tone="info" title="Loaded">
-              <ul className="m-0 grid gap-1 pl-5">
-                {done.map((m) => (
-                  <li key={m}>
-                    <Text as="span">{m}</Text>
-                  </li>
-                ))}
-              </ul>
-            </Callout>
-          )}
-        </div>
+        <PackUpload onLoaded={onLoaded} />
       </Card>
     </div>
   );

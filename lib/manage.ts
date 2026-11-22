@@ -334,7 +334,7 @@ export function exportFile(name: string, questions: ExportQuestion[], mocks: Exp
       name: m.name,
       minutes: m.minutes,
       ...(m.instructions ? { instructions: m.instructions } : {}),
-      ...(m.full_screen ? { full_screen: true } : {}),
+      full_screen: m.full_screen, // always written: left out means full screen
       sections: m.sections
         .map((s) => ({
           name: s.name,

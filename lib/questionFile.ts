@@ -7,7 +7,7 @@
 //       { "id": "la-1", "subject": "Linear Algebra", "topic": "Eigenvalues", "type": "mcq", "difficulty": "easy",
 //         "marks": 1, "negative_marks": 0.33, "text": "…", "options": ["…", "…"], "answer": "B",
 //         "explanation": "…", "tags": ["conceptual"], "pool": "practice" } ],
-//     "mocks": [ { "name": "…", "minutes": 180, "instructions": "…", "full_screen": false,
+//     "mocks": [ { "name": "…", "minutes": 180, "instructions": "…", "full_screen": true,
 //                  "sections": [ { "name": "…", "minutes": 60, "questions": ["la-1", …] } ] } ] }
 //
 // Answers by type: mcq "answer" = one letter ("A"…) or 0-based number · msq = a list of those · nat = a number
@@ -72,7 +72,7 @@ export type FileQuestion = Base & Detail;
 export interface FileMockSection {
   name: string;
   minutes: number | null;
-  questions: string[]; // refs of questions in this file
+  questions: string[]; // refs of questions in this file, or ids of questions already in the bank (see `bankRefs`)
 }
 export interface FileMock {
   name: string;
@@ -87,6 +87,9 @@ export interface QuestionFile {
   mocks: FileMock[];
   /** ref of a dropped duplicate → ref of the copy kept (mocks use the kept one). */
   merged: Record<string, string>;
+  /** Mock question ids that aren't in this file: they must be questions already in the bank. The parser can't see
+   *  the bank, so pack.import (and the upload preview, `question.missing`) checks them with `bankRefErrors`. */
+  bankRefs: { id: string; where: string }[];
 }
 export interface QuestionParse {
   file: QuestionFile | null; // null = refused; see errors
@@ -160,7 +163,14 @@ export function parseQuestionFile(input: unknown): QuestionParse {
     err('The file must be one JSON object: { "format": "orbit-questions", "name": …, "questions": […] }.');
     return refused();
   }
-  const o = data;
+  let o = data;
+  // one mock test on its own ({ "name", "minutes", "sections" }, e.g. copied out of an exported pack): read it as a
+  // file that holds just that mock
+  const bare = o.questions === undefined && o.mocks === undefined && Array.isArray(o.sections);
+  if (bare) {
+    o = { format: PACK_FORMAT, name: o.name, mocks: [o] };
+    warnings.push("This is one mock test on its own, so it was read as a file holding just that mock.");
+  }
 
   let fixedSlashes = 0;
   const clean = (v: string) => {
@@ -359,6 +369,7 @@ export function parseQuestionFile(input: unknown): QuestionParse {
   // ----- mocks -----
   const mocks: FileMock[] = [];
   const used = new Set<string>();
+  const bankRefs: { id: string; where: string }[] = [];
   rawMocks.forEach((m, i) => {
     const w = `mocks[${i}]`;
     if (!isObj(m) || typeof m.name !== "string" || !m.name.trim()) return err(`${w} needs a "name".`);
@@ -376,7 +387,8 @@ export function parseQuestionFile(input: unknown): QuestionParse {
     }
     if (!Array.isArray(m.sections) || m.sections.length === 0 || m.sections.length > LIMITS.sections)
       return err(`${w}.sections must be a list of 1 to ${LIMITS.sections} sections.`);
-    const inMock = new Set<FileQuestion>();
+    const inMock = new Set<string>(); // "f:<file ref>" or "b:<bank id>"
+    const fromBank: { id: string; where: string }[] = [];
     const sections: FileMockSection[] = [];
     let bad = false;
     (m.sections as unknown[]).forEach((s, k) => {
@@ -399,32 +411,40 @@ export function parseQuestionFile(input: unknown): QuestionParse {
         s.questions.some((r) => typeof r !== "string" && typeof r !== "number")
       ) {
         bad = true;
-        return err(`${sw}.questions must be a list of question ids from this file.`);
+        return err(`${sw}.questions must be a list of question ids.`);
       }
       const refs: string[] = [];
       for (const r0 of s.questions as (string | number)[]) {
         const r = String(r0).trim();
         const q = byRef.get(merged[r] ?? r);
-        if (!q) {
+        if (!r) {
           bad = true;
-          return err(`${sw} uses the question id "${r}", which isn't in "questions".`);
+          return err(`${sw}.questions has an empty question id.`);
         }
-        if (inMock.has(q)) {
+        const key = q ? `f:${q.ref}` : `b:${r}`;
+        if (inMock.has(key)) {
           bad = true;
           return err(`${sw}: question "${r}" is already in this mock (once per mock).`);
         }
-        inMock.add(q);
-        used.add(q.ref!);
-        refs.push(q.ref!);
+        inMock.add(key);
+        if (q) {
+          used.add(q.ref!);
+          refs.push(q.ref!);
+        } else {
+          // not in this file: it must already be in the bank (checked on import)
+          fromBank.push({ id: r, where: sw });
+          refs.push(r);
+        }
       }
       sections.push({ name: clean(s.name).slice(0, LIMITS.mockName), minutes: sMinutes, questions: refs });
     });
     if (bad) return;
+    bankRefs.push(...fromBank);
     mocks.push({
       name: clean(m.name),
       instructions,
       minutes,
-      full_screen: m.full_screen === true,
+      full_screen: m.full_screen !== false, // left out = full screen (as v1)
       sections,
     });
   });
@@ -434,7 +454,16 @@ export function parseQuestionFile(input: unknown): QuestionParse {
 
   if (fixedSlashes) warnings.push(`${fixedSlashes} maths backslash(es) were broken by JSON and have been put back.`);
   if (errors.length) return refused();
-  return { file: { name, questions, mocks, merged }, errors, warnings };
+  return { file: { name, questions, mocks, merged, bankRefs }, errors, warnings };
+}
+
+/** Errors for mock question ids found neither in the file nor in the bank (`missing` = the ids the bank lacks).
+ *  Empty = every mock question is there. */
+export function bankRefErrors(f: QuestionFile, missing: ReadonlySet<string>): string[] {
+  return f.bankRefs
+    .filter((b) => missing.has(b.id))
+    .slice(0, MAX_ERRORS)
+    .map((b) => `${b.where} uses the question id "${b.id}", which isn't in this file or in your question bank.`);
 }
 
 /** Counts for the preview, in the Practice tabs' own terms. */
