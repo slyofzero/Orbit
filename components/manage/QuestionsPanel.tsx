@@ -3,10 +3,10 @@
 // QUESTION_BANKS): Practice, Programming (code questions) and Mock (mock-only questions; filter by mock). Find a
 // question by id or text, filter by topic, then edit or delete it, or add a new one; "Empty" clears the whole
 // bank after you type its phrase. ?q=<id> in the address opens that question. Clicking a row opens that one
-// question in a new tab (`openHref`). Shown in pages of MANAGE_PAGE (20)
+// question in this tab (`openHref`; a mock-only question opens the editor). Shown in pages of MANAGE_PAGE (20)
 // rows, so a big pack never loads all at once; changing the bank, search or a filter goes back to page 1.
 
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ConfirmPhraseDialog } from "@/components/manage/ConfirmPhraseDialog";
 import { QuestionEditor } from "@/components/manage/QuestionEditor";
@@ -32,11 +32,11 @@ type Editing =
   | { id: string }
   | { id: null; preset?: { mockId: string; sectionId: number | null }; type?: QuestionType }
   | null;
-/** Where a row opens (new tab): a practice question as a sitting of just itself, a code question on its
- *  Programming screen, a mock-only question (no practice screen of its own) in the editor here. */
+/** Where a row opens (this tab): a practice question as a sitting of just itself, a code question on its
+ *  Programming screen. A mock-only question has no practice screen of its own: null, it opens in the editor. */
 const openHref = (r: Row) =>
   r.pool === "mock"
-    ? `/practice/manage?q=${encodeURIComponent(r.id)}`
+    ? null
     : r.type === "code"
       ? `/practice/code?id=${encodeURIComponent(r.id)}`
       : `/practice/session?q=${encodeURIComponent(r.id)}`;
@@ -44,6 +44,7 @@ const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? o
 
 export function QuestionsPanel({ overview }: { overview: Overview }) {
   const toast = useToast();
+  const router = useRouter();
   const focusId = useSearchParams().get("q");
   const [bank, setBank] = useState<QuestionBank>("practice");
   const [needle, setNeedle] = useState(focusId ?? "");
@@ -231,7 +232,17 @@ export function QuestionsPanel({ overview }: { overview: Overview }) {
       </Text>
 
       {data && (
-        <Table columns={columns} rows={data.rows} rowKey={(r) => r.id} rowHref={openHref} empty="Nothing matches." />
+        <Table
+          columns={columns}
+          rows={data.rows}
+          rowKey={(r) => r.id}
+          onRowClick={(r) => {
+            const href = openHref(r);
+            if (href) router.push(href);
+            else setEdit({ id: r.id });
+          }}
+          empty="Nothing matches."
+        />
       )}
       {data && pager.pages > 1 && (
         <nav aria-label="Pages of questions" className="mt-3 flex flex-wrap items-center justify-center gap-2.5">
