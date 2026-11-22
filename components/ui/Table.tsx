@@ -18,6 +18,7 @@ export type Column<T> = {
  *  `specialRow` highlights the rows it returns true for (e.g. your best topic). `rowHref` makes a row open that
  *  address in a new tab when clicked (or Enter on the focused row); clicks on a button or link inside it don't.
  *  `groupBy` draws a heavier line wherever the group changes from one row to the next (e.g. tasks of one day).
+ *  `onRowClick` runs instead when the row has no `rowHref` (e.g. opens a dialog about it).
  *  `rowTone` tints a whole row green or red (e.g. done / missed), the same colours as the Topics progress rows. */
 export function Table<T>({
   columns,
@@ -29,6 +30,7 @@ export function Table<T>({
   rowHref,
   groupBy,
   rowTone,
+  onRowClick,
 }: {
   columns: Column<T>[];
   rows: T[];
@@ -39,6 +41,7 @@ export function Table<T>({
   rowHref?: (row: T) => string | null;
   groupBy?: (row: T) => string | number;
   rowTone?: (row: T) => "green" | "red" | null;
+  onRowClick?: (row: T) => void;
 }) {
   const [sort, setSort] = useState<{ key: string; dir: 1 | -1 } | null>(null);
   const sorted = useMemo(() => {
@@ -108,14 +111,18 @@ export function Table<T>({
               const tone = rowTone?.(r) ?? null;
               const newGroup = !!groupBy && i > 0 && groupBy(r) !== groupBy(sorted[i - 1]);
               const href = rowHref?.(r) ?? null;
-              const open = () => href && window.open(href, "_blank", "noopener");
+              const clickable = !!href || !!onRowClick;
+              const open = () => {
+                if (href) window.open(href, "_blank", "noopener");
+                else onRowClick?.(r);
+              };
               return (
                 <tr
                   key={rowKey(r)}
-                  tabIndex={href ? 0 : undefined}
+                  tabIndex={clickable ? 0 : undefined}
                   title={href ? "Opens in a new tab" : undefined}
                   onClick={
-                    href
+                    clickable
                       ? (e) => {
                           // a button, link or field inside the row does its own thing
                           if ((e.target as HTMLElement).closest("button, a, input, textarea, [role=button]")) return;
@@ -124,7 +131,7 @@ export function Table<T>({
                       : undefined
                   }
                   onKeyDown={
-                    href
+                    clickable
                       ? (e) => {
                           if (e.key === "Enter" && e.target === e.currentTarget) open();
                         }
@@ -138,7 +145,7 @@ export function Table<T>({
                         ? "bg-red/20 hover:bg-red/30"
                         : "hover:bg-sheet-2",
                     newGroup && "[&>td]:border-t-2 [&>td]:border-t-line",
-                    href &&
+                    clickable &&
                       "cursor-pointer focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent",
                     specialRow?.(r) &&
                       "special-tint animate-flow [&>td:first-child]:font-bold [&>td:first-child]:shadow-[inset_3px_0_0_var(--special-b)]",

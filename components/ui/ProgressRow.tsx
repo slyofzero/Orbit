@@ -23,14 +23,16 @@ export function StatusDot({ tone, label }: { tone: StatusTone; label: string }) 
 const clamp = (n: number) => Math.max(0, Math.min(100, n));
 
 /** v1's practice row: a lead (usually a `StatusDot`), a title, and a short `end` text. The row is its own
- *  progress bar: `good` percent of its width is tinted green, then `bad` percent red. `href` makes it a link,
- *  otherwise `onClick` makes it a button. `hint` is the hover text. */
+ *  progress bar: `good` percent of its width is tinted green, then `bad` percent red, then `skipped` percent grey
+ *  (e.g. opened but never answered); the rest stays plain. `href` makes it a link, otherwise `onClick` makes it a
+ *  button. `hint` is the hover text. */
 export function ProgressRow({
   lead,
   title,
   end,
   good = 0,
   bad = 0,
+  skipped = 0,
   hint,
   href,
   onClick,
@@ -41,6 +43,7 @@ export function ProgressRow({
   end?: ReactNode;
   good?: number; // 0-100: share tinted green
   bad?: number; // 0-100: share tinted red, after the green
+  skipped?: number; // 0-100: share tinted grey, after the red
   hint?: string;
   href?: string;
   onClick?: () => void;
@@ -48,10 +51,11 @@ export function ProgressRow({
 }) {
   const ok = clamp(good);
   const wrong = clamp(ok + bad);
+  const skip = clamp(wrong + skipped);
   const style: CSSProperties | undefined =
-    wrong > 0
+    skip > 0
       ? {
-          backgroundImage: `linear-gradient(90deg, color-mix(in srgb, var(--green) 30%, transparent) ${ok}%, color-mix(in srgb, var(--red) 30%, transparent) ${ok}% ${wrong}%, transparent ${wrong}%)`,
+          backgroundImage: `linear-gradient(90deg, color-mix(in srgb, var(--green) 30%, transparent) ${ok}%, color-mix(in srgb, var(--red) 30%, transparent) ${ok}% ${wrong}%, color-mix(in srgb, var(--gray) 22%, transparent) ${wrong}% ${skip}%, transparent ${skip}%)`,
         }
       : undefined;
   const cls = cx(

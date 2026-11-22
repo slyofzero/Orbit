@@ -27,6 +27,7 @@ import { plannerQueries } from "@/lib/db/queries/planner";
 import { questionQueries } from "@/lib/db/queries/question";
 import { mockQueries } from "@/lib/db/queries/mock";
 import { manageQueries } from "@/lib/db/queries/manage";
+import { statsQueries } from "@/lib/db/queries/stats";
 import { devQueries } from "@/lib/db/queries/dev";
 import type { QueryDef } from "@/lib/db/queries/core";
 
@@ -45,6 +46,7 @@ export const QUERIES = {
   ...questionQueries,
   ...mockQueries,
   ...manageQueries,
+  ...statsQueries,
   ...devQueries,
 };
 

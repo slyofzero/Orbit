@@ -1319,6 +1319,15 @@ function SearchDemo() {
             bad={20}
             onClick={() => {}}
           />
+          <ProgressRow
+            title="Matrices (with skipped)"
+            end="**3** / 4 q"
+            good={25}
+            bad={25}
+            skipped={25}
+            hint="4 questions: 1 right, 1 wrong, 1 opened and left, 1 not seen"
+            onClick={() => {}}
+          />
         </div>
       </Demo>
       <Demo caption="Disclosure: controlled (open / onOpenChange) with a flush body, as a subject section">
@@ -1615,6 +1624,7 @@ function Callouts() {
 }
 
 function TableDemo() {
+  const toast = useToast();
   const cols: Column<TopicRow>[] = [
     { key: "topic", header: "Topic $\\tau$", cell: (r) => r.topic, sortValue: (r) => r.topic },
     {
@@ -1666,6 +1676,16 @@ function TableDemo() {
         Clickable rows (rowHref): a row opens its address in a new tab
       </Text>
       <Table caption="Topics, clickable" columns={cols} rows={TOPICS} rowKey={(r) => r.topic} rowHref={() => "/dev"} />
+      <Text variant="caption" as="span">
+        Clickable rows (onRowClick): a row runs a function, e.g. opens a dialog about it (here a toast)
+      </Text>
+      <Table
+        caption="Topics, click handler"
+        columns={cols}
+        rows={TOPICS}
+        rowKey={(r) => r.topic}
+        onRowClick={(r) => toast(`Clicked **${r.topic}**`)}
+      />
       <Text variant="caption" as="span">
         Grouped rows (groupBy): a heavier line where the group changes, here strong ($\ge 70\%$) and the rest
       </Text>
