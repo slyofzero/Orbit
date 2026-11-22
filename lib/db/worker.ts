@@ -6,11 +6,13 @@
 //   2. Sets the connection PRAGMAs and migrates the file to the newest schema (lib/db/migrate.ts).
 //   3. Runs named queries (lib/db/queries/): reads directly, writes in one transaction, and
 //      reports every table a write may have changed (lib/db/effects.ts).
+//   4. Deletes pictures no question uses (`image.sweep`, lib/db/queries/image.ts) when it opens and every hour.
 
 import sqlite3InitModule from "@sqlite.org/sqlite-wasm";
 import schemaSql from "@/db/schema.sql";
 import { readEffects, affectedTables, type Effects } from "@/lib/db/effects";
 import { migrate } from "@/lib/db/migrate";
+import { IMAGE_SWEEP_EVERY_MS } from "@/lib/images";
 import { MIGRATIONS } from "@/lib/db/migrations";
 import { QUERIES, type QueryDef } from "@/lib/db/queries";
 import { transaction, type Bind, type Row, type Sql } from "@/lib/db/sql";
@@ -94,6 +96,8 @@ async function open(profile: string): Promise<OpenInfo> {
             PRAGMA cache_size = -4000;`);
   const { from, to } = migrate(sql, schemaSql, MIGRATIONS);
   effects = readEffects(sql);
+  sweepImages();
+  setInterval(sweepImages, IMAGE_SWEEP_EVERY_MS);
   const reads: Record<string, string[]> = {};
   for (const [name, def] of Object.entries(QUERIES) as [string, QueryDef<unknown, unknown>][])
     if (def.kind === "read") reads[name] = [...def.tables];
@@ -105,6 +109,12 @@ async function open(profile: string): Promise<OpenInfo> {
     reads,
     openMs: Math.round(performance.now() - t0),
   };
+}
+
+/** Deletes pictures no question uses (`image.sweep`). Housekeeping: a failure is logged, never shown. */
+function sweepImages() {
+  const r = call("image.sweep", {});
+  if (!r.ok) console.warn("Orbit: picture clean-up failed:", r.error);
 }
 
 function call(name: string, params: unknown): Reply {

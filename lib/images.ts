@@ -2,6 +2,11 @@
 // as `img:<hash>` (e.g. ![graph](img:h3f9a…)). Never put base64 picture data inside text.
 
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5 MB per picture
+/** A stored picture no question uses is deleted (`image.sweep`) only once it is this old: a picture added in the
+ *  editor is saved before its question is, so a fresh one is never swept away mid-edit. */
+export const UNUSED_IMAGE_GRACE_MS = 24 * 60 * 60 * 1000;
+/** The database worker sweeps unused pictures when it opens, then this often. */
+export const IMAGE_SWEEP_EVERY_MS = 60 * 60 * 1000;
 
 /** "h" + the first 32 hex characters of the SHA-256 of the bytes. Same picture → same name. */
 export async function hashImage(bytes: ArrayBuffer | Uint8Array): Promise<string> {

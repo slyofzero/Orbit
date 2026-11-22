@@ -25,7 +25,7 @@ import {
 } from "@/lib/manage";
 import { editBoxes, editPrompt } from "@/lib/prompts/editPrompt";
 import { parseQuestionFile } from "@/lib/questionFile";
-import { hashImage } from "@/lib/images";
+import { UNUSED_IMAGE_GRACE_MS, hashImage } from "@/lib/images";
 import { sampleFile, sampleFileName } from "@/lib/samplePacks";
 import { QUERIES, type QueryDef, type ResultOf } from "@/lib/db/queries";
 import { transaction } from "@/lib/db/sql";
@@ -229,6 +229,22 @@ console.log("manage pack queries (lib/db/queries/manage.ts)");
     s.get<{ n: number }>("SELECT count(*) AS n FROM question_images WHERE question_id = ?", [first.id])!.n === 0,
     "save: a picture taken out of the text is unlinked",
   );
+  {
+    const used = await hashImage(new Uint8Array([9, 8, 7]));
+    q("image.add", { hash: used, bytes: new Uint8Array([9, 8, 7]), mime: "image/png" });
+    q("manage.saveQuestion", { id: first.id, form: { ...form, text: `${form.text} ![x](img:${used})` }, target: null });
+    const uses = Object.fromEntries(q("image.usage", { limit: 50 }).map((r) => [r.hash, r.uses]));
+    ok(uses[used] === 1 && uses[pic] === 0, "image.usage: how many questions use each picture (0 = unused)");
+    ok(q("image.sweep", {}).removed === 0, "image.sweep: a new unused picture is kept for a day (it may be mid-edit)");
+    const later = Date.now() + UNUSED_IMAGE_GRACE_MS + 1;
+    ok(
+      q("image.sweep", { now: later }).removed === 1 &&
+        q("image.get", { hash: pic }) === null &&
+        q("image.get", { hash: used }) !== null,
+      "image.sweep: an old unused picture is deleted, a used one stays",
+    );
+    q("manage.saveQuestion", { id: first.id, form, target: null });
+  }
   ok(
     q("manage.saveQuestion", {
       id: first.id,
