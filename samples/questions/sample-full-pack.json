@@ -1,0 +1,906 @@
+{
+  "format": "orbit-questions",
+  "version": 1,
+  "name": "Sample full pack",
+  "questions": [
+    {
+      "id": "la-01",
+      "subject": "Linear Algebra",
+      "topic": "Matrices",
+      "type": "mcq",
+      "difficulty": "easy",
+      "marks": 1,
+      "negative_marks": 0.33,
+      "text": "What is the determinant of $\\begin{pmatrix}3 & 1\\\\ 2 & 4\\end{pmatrix}$?",
+      "options": [
+        "$10$",
+        "$14$",
+        "$12$",
+        "$2$"
+      ],
+      "answer": "A",
+      "explanation": "$3\\cdot4 - 1\\cdot2 = 10$.",
+      "tags": [
+        "determinant"
+      ]
+    },
+    {
+      "id": "la-02",
+      "subject": "Linear Algebra",
+      "topic": "Matrices",
+      "type": "nat",
+      "difficulty": "medium",
+      "marks": 2,
+      "text": "What is the rank of $\\begin{pmatrix}1&2&3\\\\2&4&6\\\\1&0&1\\end{pmatrix}$?",
+      "answer": 2,
+      "tolerance": 0,
+      "explanation": "Row 2 is twice row 1, and row 3 is independent of row 1, so the rank is $2$."
+    },
+    {
+      "id": "la-03",
+      "subject": "Linear Algebra",
+      "topic": "Matrices",
+      "type": "msq",
+      "difficulty": "medium",
+      "marks": 2,
+      "text": "Which of these matrices are **invertible**?",
+      "options": [
+        "$\\begin{pmatrix}1&0\\\\0&1\\end{pmatrix}$",
+        "$\\begin{pmatrix}1&2\\\\2&4\\end{pmatrix}$",
+        "$\\begin{pmatrix}0&1\\\\1&0\\end{pmatrix}$",
+        "$\\begin{pmatrix}0&0\\\\0&5\\end{pmatrix}$"
+      ],
+      "answer": [
+        "A",
+        "C"
+      ],
+      "explanation": "A matrix is invertible when its determinant is not $0$: the determinants are $1, 0, -1, 0$."
+    },
+    {
+      "id": "la-04",
+      "subject": "Linear Algebra",
+      "topic": "Matrices",
+      "type": "mcq",
+      "difficulty": "easy",
+      "marks": 1,
+      "negative_marks": 0.33,
+      "text": "If $A$ is $3\\times 4$ and $B$ is $4\\times 2$, what is the shape of $AB$?",
+      "options": [
+        "$3\\times 2$",
+        "$4\\times 4$",
+        "$2\\times 3$",
+        "Not defined"
+      ],
+      "answer": "A",
+      "explanation": "The inner sizes match ($4$), and the result takes the outer sizes: $3\\times 2$."
+    },
+    {
+      "id": "la-05",
+      "subject": "Linear Algebra",
+      "topic": "Eigenvalues",
+      "type": "mcq",
+      "difficulty": "medium",
+      "marks": 1,
+      "negative_marks": 0.33,
+      "text": "The eigenvalues of $\\begin{pmatrix}2&1\\\\1&2\\end{pmatrix}$ are:",
+      "options": [
+        "$1$ and $3$",
+        "$2$ and $2$",
+        "$0$ and $4$",
+        "$-1$ and $3$"
+      ],
+      "answer": "A",
+      "explanation": "$\\det(A-\\lambda I) = (2-\\lambda)^2 - 1 = 0$ gives $\\lambda = 1, 3$."
+    },
+    {
+      "id": "la-06",
+      "subject": "Linear Algebra",
+      "topic": "Eigenvalues",
+      "type": "nat",
+      "difficulty": "easy",
+      "marks": 1,
+      "text": "A $3\\times3$ matrix has eigenvalues $1$, $2$ and $5$. What is its determinant?",
+      "answer": 10,
+      "tolerance": 0,
+      "explanation": "The determinant is the product of the eigenvalues: $1\\cdot2\\cdot5 = 10$."
+    },
+    {
+      "id": "la-07",
+      "subject": "Linear Algebra",
+      "topic": "Eigenvalues",
+      "type": "msq",
+      "difficulty": "hard",
+      "marks": 2,
+      "text": "For a real **symmetric** matrix, which statements are always true?",
+      "options": [
+        "All eigenvalues are real",
+        "It is diagonalisable",
+        "All eigenvalues are positive",
+        "Eigenvectors of distinct eigenvalues are orthogonal"
+      ],
+      "answer": [
+        "A",
+        "B",
+        "D"
+      ],
+      "explanation": "The spectral theorem gives real eigenvalues, an orthonormal eigenbasis and orthogonal eigenvectors. Positivity needs positive definiteness."
+    },
+    {
+      "id": "la-08",
+      "subject": "Linear Algebra",
+      "topic": "Eigenvalues",
+      "type": "str",
+      "difficulty": "medium",
+      "marks": 1,
+      "text": "Name the sum of the diagonal entries of a square matrix (one word).",
+      "answer": "trace",
+      "match": "exact",
+      "explanation": "The **trace** equals the sum of the eigenvalues."
+    },
+    {
+      "id": "pr-01",
+      "subject": "Probability",
+      "topic": "Counting",
+      "type": "nat",
+      "difficulty": "easy",
+      "marks": 1,
+      "text": "How many different 4-letter arrangements can be made from the letters of **WORD**?",
+      "answer": 24,
+      "tolerance": 0,
+      "explanation": "$4! = 24$."
+    },
+    {
+      "id": "pr-02",
+      "subject": "Probability",
+      "topic": "Counting",
+      "type": "nat",
+      "difficulty": "medium",
+      "marks": 2,
+      "text": "How many arrangements of the letters of **LEVEL** are there?",
+      "answer": 30,
+      "tolerance": 0,
+      "explanation": "$\\frac{5!}{2!\\,2!} = 30$ (two L's, two E's)."
+    },
+    {
+      "id": "pr-03",
+      "subject": "Probability",
+      "topic": "Counting",
+      "type": "mcq",
+      "difficulty": "easy",
+      "marks": 1,
+      "negative_marks": 0.33,
+      "text": "$\\binom{6}{2}$ equals:",
+      "options": [
+        "$15$",
+        "$12$",
+        "$30$",
+        "$36$"
+      ],
+      "answer": "A",
+      "explanation": "$\\frac{6\\cdot5}{2} = 15$."
+    },
+    {
+      "id": "pr-04",
+      "subject": "Probability",
+      "topic": "Counting",
+      "type": "mcq",
+      "difficulty": "hard",
+      "marks": 2,
+      "negative_marks": 0.66,
+      "text": "In how many ways can 8 people sit around a round table (rotations count as the same)?",
+      "options": [
+        "$5040$",
+        "$40320$",
+        "$2520$",
+        "$720$"
+      ],
+      "answer": "A",
+      "explanation": "Fix one person: $(8-1)! = 5040$."
+    },
+    {
+      "id": "pr-05",
+      "subject": "Probability",
+      "topic": "Random variables",
+      "type": "mcq",
+      "difficulty": "easy",
+      "marks": 1,
+      "negative_marks": 0.33,
+      "text": "A fair die is rolled. What is $E[X]$?",
+      "options": [
+        "$3.5$",
+        "$3$",
+        "$4$",
+        "$6$"
+      ],
+      "answer": "A",
+      "explanation": "$\\frac{1+2+\\dots+6}{6} = 3.5$."
+    },
+    {
+      "id": "pr-06",
+      "subject": "Probability",
+      "topic": "Random variables",
+      "type": "nat",
+      "difficulty": "medium",
+      "marks": 2,
+      "text": "$X \\sim \\text{Binomial}(n=10, p=0.3)$. What is $\\text{Var}(X)$?",
+      "answer": 2.1,
+      "tolerance": 0,
+      "explanation": "$np(1-p) = 10\\cdot0.3\\cdot0.7 = 2.1$."
+    },
+    {
+      "id": "pr-07",
+      "subject": "Probability",
+      "topic": "Random variables",
+      "type": "msq",
+      "difficulty": "medium",
+      "marks": 2,
+      "text": "Which of these are **continuous** distributions?",
+      "options": [
+        "Normal",
+        "Poisson",
+        "Exponential",
+        "Bernoulli"
+      ],
+      "answer": [
+        "A",
+        "C"
+      ],
+      "explanation": "Poisson and Bernoulli take whole-number values."
+    },
+    {
+      "id": "pr-08",
+      "subject": "Probability",
+      "topic": "Random variables",
+      "type": "str",
+      "difficulty": "easy",
+      "marks": 1,
+      "text": "List the possible values of $X$ = number of heads in 2 coin tosses (comma-separated).",
+      "answer": "0,1,2",
+      "match": "set",
+      "explanation": "Zero, one or two heads."
+    },
+    {
+      "id": "pr-09",
+      "subject": "Probability",
+      "topic": "Conditional probability",
+      "type": "mcq",
+      "difficulty": "medium",
+      "marks": 1,
+      "negative_marks": 0.33,
+      "text": "$P(A) = 0.5$, $P(B) = 0.4$, $P(A \\cap B) = 0.2$. What is $P(A \\mid B)$?",
+      "options": [
+        "$0.5$",
+        "$0.4$",
+        "$0.2$",
+        "$0.8$"
+      ],
+      "answer": "A",
+      "explanation": "$\\frac{0.2}{0.4} = 0.5$. (So $A$ and $B$ are independent.)"
+    },
+    {
+      "id": "pr-10",
+      "subject": "Probability",
+      "topic": "Conditional probability",
+      "type": "nat",
+      "difficulty": "hard",
+      "marks": 2,
+      "text": "A test is $90\\%$ accurate for both sick and healthy people, and $1\\%$ of people are sick. Someone tests positive. What is the chance (to 3 decimal places) that they are sick?",
+      "answer": 0.083,
+      "tolerance": 0.001,
+      "explanation": "Bayes: $\\frac{0.9\\cdot0.01}{0.9\\cdot0.01 + 0.1\\cdot0.99} = \\frac{0.009}{0.108} \\approx 0.083$."
+    },
+    {
+      "id": "ca-01",
+      "subject": "Calculus",
+      "topic": "Limits",
+      "type": "mcq",
+      "difficulty": "easy",
+      "marks": 1,
+      "negative_marks": 0.33,
+      "text": "$\\lim_{x\\to 0} \\frac{\\sin x}{x}$ is:",
+      "options": [
+        "$1$",
+        "$0$",
+        "$\\infty$",
+        "Does not exist"
+      ],
+      "answer": "A",
+      "explanation": "A standard limit."
+    },
+    {
+      "id": "ca-02",
+      "subject": "Calculus",
+      "topic": "Limits",
+      "type": "nat",
+      "difficulty": "medium",
+      "marks": 2,
+      "text": "Find $\\lim_{x\\to 2} \\frac{x^2-4}{x-2}$.",
+      "answer": 4,
+      "tolerance": 0,
+      "explanation": "Factor: $\\frac{(x-2)(x+2)}{x-2} = x+2 \\to 4$."
+    },
+    {
+      "id": "ca-03",
+      "subject": "Calculus",
+      "topic": "Limits",
+      "type": "mcq",
+      "difficulty": "medium",
+      "marks": 1,
+      "negative_marks": 0.33,
+      "text": "$\\lim_{x\\to\\infty} \\left(1+\\frac{1}{x}\\right)^x$ is:",
+      "options": [
+        "$e$",
+        "$1$",
+        "$\\infty$",
+        "$0$"
+      ],
+      "answer": "A",
+      "explanation": "This limit defines $e$."
+    },
+    {
+      "id": "ca-04",
+      "subject": "Calculus",
+      "topic": "Derivatives",
+      "type": "mcq",
+      "difficulty": "easy",
+      "marks": 1,
+      "negative_marks": 0.33,
+      "text": "$\\frac{d}{dx} \\left(x^3\\right)$ is:",
+      "options": [
+        "$3x^2$",
+        "$x^2$",
+        "$3x^3$",
+        "$\\frac{x^4}{4}$"
+      ],
+      "answer": "A",
+      "explanation": "Power rule."
+    },
+    {
+      "id": "ca-05",
+      "subject": "Calculus",
+      "topic": "Derivatives",
+      "type": "nat",
+      "difficulty": "medium",
+      "marks": 2,
+      "text": "$f(x) = x^3 - 3x$. At what **positive** $x$ does $f$ have a local minimum?",
+      "answer": 1,
+      "tolerance": 0,
+      "explanation": "$f'(x) = 3x^2 - 3 = 0$ gives $x = \\pm1$; $f''(1) = 6 > 0$."
+    },
+    {
+      "id": "ca-06",
+      "subject": "Calculus",
+      "topic": "Derivatives",
+      "type": "msq",
+      "difficulty": "hard",
+      "marks": 2,
+      "text": "Which functions are differentiable at $x = 0$?",
+      "options": [
+        "$|x|$",
+        "$x^2$",
+        "$x|x|$",
+        "$\\sqrt[3]{x}$"
+      ],
+      "answer": [
+        "B",
+        "C"
+      ],
+      "explanation": "$|x|$ has a corner and $\\sqrt[3]{x}$ a vertical tangent at $0$; $x|x|$ has derivative $2|x|$, which is $0$ at $0$."
+    },
+    {
+      "id": "ca-07",
+      "subject": "Calculus",
+      "topic": "Derivatives",
+      "type": "str",
+      "difficulty": "easy",
+      "marks": 1,
+      "text": "What is the derivative of $e^x$? (Write it as you would type it, e.g. `e^x`.)",
+      "answer": "e^x",
+      "match": "exact",
+      "explanation": "$e^x$ is its own derivative."
+    },
+    {
+      "id": "ca-08",
+      "subject": "Calculus",
+      "topic": "Integrals",
+      "type": "nat",
+      "difficulty": "easy",
+      "marks": 1,
+      "text": "Evaluate $\\int_0^2 3x^2\\,dx$.",
+      "answer": 8,
+      "tolerance": 0,
+      "explanation": "$\\left[x^3\\right]_0^2 = 8$."
+    },
+    {
+      "id": "ca-09",
+      "subject": "Calculus",
+      "topic": "Integrals",
+      "type": "mcq",
+      "difficulty": "medium",
+      "marks": 1,
+      "negative_marks": 0.33,
+      "text": "$\\int x e^x\\,dx$ equals:",
+      "options": [
+        "$(x-1)e^x + C$",
+        "$xe^x + C$",
+        "$\\frac{x^2}{2}e^x + C$",
+        "$(x+1)e^x + C$"
+      ],
+      "answer": "A",
+      "explanation": "By parts with $u = x$, $dv = e^x dx$."
+    },
+    {
+      "id": "ca-10",
+      "subject": "Calculus",
+      "topic": "Integrals",
+      "type": "nat",
+      "difficulty": "hard",
+      "marks": 2,
+      "text": "Evaluate $\\int_0^{\\infty} e^{-2x}\\,dx$.",
+      "answer": 0.5,
+      "tolerance": 0,
+      "explanation": "$\\left[-\\tfrac{1}{2}e^{-2x}\\right]_0^\\infty = \\tfrac12$."
+    },
+    {
+      "id": "ds-01",
+      "subject": "Data Structures",
+      "topic": "Complexity",
+      "type": "mcq",
+      "difficulty": "easy",
+      "marks": 1,
+      "negative_marks": 0.33,
+      "text": "Binary search on a sorted array of $n$ items takes:",
+      "options": [
+        "$O(\\log n)$",
+        "$O(n)$",
+        "$O(1)$",
+        "$O(n \\log n)$"
+      ],
+      "answer": "A",
+      "explanation": "The search space halves each step."
+    },
+    {
+      "id": "ds-02",
+      "subject": "Data Structures",
+      "topic": "Complexity",
+      "type": "msq",
+      "difficulty": "medium",
+      "marks": 2,
+      "text": "Which sorting algorithms have **worst-case** $O(n \\log n)$ time?",
+      "options": [
+        "Merge sort",
+        "Quick sort",
+        "Heap sort",
+        "Insertion sort"
+      ],
+      "answer": [
+        "A",
+        "C"
+      ],
+      "explanation": "Quick sort is $O(n^2)$ in the worst case; insertion sort is $O(n^2)$."
+    },
+    {
+      "id": "ds-03",
+      "subject": "Data Structures",
+      "topic": "Stacks and queues",
+      "type": "str",
+      "difficulty": "easy",
+      "marks": 1,
+      "text": "Which structure is Last In, First Out? (one word)",
+      "answer": "stack",
+      "match": "exact",
+      "explanation": "A **stack** is LIFO; a queue is FIFO."
+    },
+    {
+      "id": "ds-04",
+      "subject": "Data Structures",
+      "topic": "Trees",
+      "type": "nat",
+      "difficulty": "medium",
+      "marks": 2,
+      "text": "How many nodes does a **full** binary tree of height $3$ have (a single root has height $0$)?",
+      "answer": 15,
+      "tolerance": 0,
+      "explanation": "$2^{h+1} - 1 = 2^4 - 1 = 15$."
+    },
+    {
+      "id": "py-01",
+      "subject": "Programming",
+      "topic": "Basics",
+      "type": "code",
+      "difficulty": "easy",
+      "marks": 2,
+      "text": "Read two integers on one line and print their sum. (Python)\n\nInput: `3 4` → Output: `7`",
+      "starter": "a, b = map(int, input().split())\n# your code here\n",
+      "explanation": "```python\na, b = map(int, input().split())\nprint(a + b)\n```\n\nSplit the line, convert to `int`, and add."
+    },
+    {
+      "id": "py-02",
+      "subject": "Programming",
+      "topic": "Loops",
+      "type": "code",
+      "difficulty": "easy",
+      "marks": 2,
+      "text": "Read $n$ and print the sum $1 + 2 + \\dots + n$. (Python)",
+      "starter": "n = int(input())\n# your code here\n",
+      "explanation": "```python\nn = int(input())\nprint(n * (n + 1) // 2)\n```\n\nA loop works too, but the formula $\\frac{n(n+1)}{2}$ is $O(1)$."
+    },
+    {
+      "id": "py-03",
+      "subject": "Programming",
+      "topic": "Strings",
+      "type": "code",
+      "difficulty": "easy",
+      "marks": 2,
+      "text": "Write `is_palindrome(s)` that returns `True` if the string reads the same both ways, ignoring case. (Python)",
+      "starter": "def is_palindrome(s):\n    # your code here\n    pass\n",
+      "explanation": "```python\ndef is_palindrome(s):\n    s = s.lower()\n    return s == s[::-1]\n```\n\n`s[::-1]` reverses the string."
+    },
+    {
+      "id": "py-04",
+      "subject": "Programming",
+      "topic": "Lists",
+      "type": "code",
+      "difficulty": "medium",
+      "marks": 2,
+      "text": "Write `second_largest(xs)` that returns the second largest **distinct** value in a list of at least two distinct numbers. (Python)",
+      "starter": "def second_largest(xs):\n    # your code here\n    pass\n",
+      "explanation": "```python\ndef second_largest(xs):\n    first = second = float('-inf')\n    for x in xs:\n        if x > first:\n            first, second = x, first\n        elif first > x > second:\n            second = x\n    return second\n```\n\nOne pass, $O(n)$ time, keeping the top two values."
+    },
+    {
+      "id": "py-05",
+      "subject": "Programming",
+      "topic": "Dictionaries",
+      "type": "code",
+      "difficulty": "medium",
+      "marks": 2,
+      "text": "Write `word_count(text)` that returns a dictionary mapping each word (lower case, split on spaces) to how many times it appears. (Python)",
+      "starter": "def word_count(text):\n    # your code here\n    pass\n",
+      "explanation": "```python\ndef word_count(text):\n    counts = {}\n    for w in text.lower().split():\n        counts[w] = counts.get(w, 0) + 1\n    return counts\n```\n\n`dict.get(w, 0)` gives $0$ for a new word. `collections.Counter` does the same."
+    },
+    {
+      "id": "py-06",
+      "subject": "Programming",
+      "topic": "Recursion",
+      "type": "code",
+      "difficulty": "medium",
+      "marks": 2,
+      "text": "Write `fib(n)` returning the $n$-th Fibonacci number ($fib(0) = 0$, $fib(1) = 1$) in $O(n)$ time. (Python)",
+      "starter": "def fib(n):\n    # your code here\n    pass\n",
+      "explanation": "```python\ndef fib(n):\n    a, b = 0, 1\n    for _ in range(n):\n        a, b = b, a + b\n    return a\n```\n\nThe naive recursion is exponential; keeping the last two values is linear."
+    },
+    {
+      "id": "py-07",
+      "subject": "Programming",
+      "topic": "Searching",
+      "type": "code",
+      "difficulty": "hard",
+      "marks": 3,
+      "text": "Write `binary_search(xs, target)` that returns the index of `target` in the sorted list `xs`, or `-1` if it is not there. (Python)",
+      "starter": "def binary_search(xs, target):\n    # your code here\n    pass\n",
+      "explanation": "```python\ndef binary_search(xs, target):\n    lo, hi = 0, len(xs) - 1\n    while lo <= hi:\n        mid = (lo + hi) // 2\n        if xs[mid] == target:\n            return mid\n        if xs[mid] < target:\n            lo = mid + 1\n        else:\n            hi = mid - 1\n    return -1\n```\n\nHalve the range each step: $O(\\log n)$."
+    },
+    {
+      "id": "m1-01",
+      "subject": "Linear Algebra",
+      "topic": "Matrices",
+      "type": "mcq",
+      "difficulty": "easy",
+      "marks": 1,
+      "negative_marks": 0.33,
+      "text": "The transpose of a $2\\times5$ matrix has shape:",
+      "options": [
+        "$5\\times2$",
+        "$2\\times5$",
+        "$5\\times5$",
+        "$2\\times2$"
+      ],
+      "answer": "A",
+      "explanation": "Rows and columns swap.",
+      "pool": "mock"
+    },
+    {
+      "id": "m1-02",
+      "subject": "Linear Algebra",
+      "topic": "Matrices",
+      "type": "nat",
+      "difficulty": "medium",
+      "marks": 2,
+      "text": "What is $\\det\\begin{pmatrix}1&2&0\\\\0&3&0\\\\0&0&4\\end{pmatrix}$?",
+      "answer": 12,
+      "tolerance": 0,
+      "explanation": "Upper triangular: the product of the diagonal, $1\\cdot3\\cdot4$.",
+      "pool": "mock"
+    },
+    {
+      "id": "m1-03",
+      "subject": "Linear Algebra",
+      "topic": "Eigenvalues",
+      "type": "mcq",
+      "difficulty": "medium",
+      "marks": 1,
+      "negative_marks": 0.33,
+      "text": "If $\\lambda$ is an eigenvalue of an invertible $A$, then an eigenvalue of $A^{-1}$ is:",
+      "options": [
+        "$1/\\lambda$",
+        "$\\lambda$",
+        "$-\\lambda$",
+        "$\\lambda^2$"
+      ],
+      "answer": "A",
+      "explanation": "$Av = \\lambda v \\Rightarrow A^{-1}v = \\frac{1}{\\lambda} v$.",
+      "pool": "mock"
+    },
+    {
+      "id": "m1-04",
+      "subject": "Linear Algebra",
+      "topic": "Eigenvalues",
+      "type": "msq",
+      "difficulty": "hard",
+      "marks": 2,
+      "text": "A $2\\times2$ matrix has trace $5$ and determinant $6$. Which are its eigenvalues?",
+      "options": [
+        "$2$",
+        "$3$",
+        "$1$",
+        "$6$"
+      ],
+      "answer": [
+        "A",
+        "B"
+      ],
+      "explanation": "$\\lambda^2 - 5\\lambda + 6 = 0$ gives $2$ and $3$.",
+      "pool": "mock"
+    },
+    {
+      "id": "m1-05",
+      "subject": "Calculus",
+      "topic": "Limits",
+      "type": "mcq",
+      "difficulty": "easy",
+      "marks": 1,
+      "negative_marks": 0.33,
+      "text": "$\\lim_{x\\to 0} \\frac{e^x - 1}{x}$ is:",
+      "options": [
+        "$1$",
+        "$0$",
+        "$e$",
+        "$\\infty$"
+      ],
+      "answer": "A",
+      "explanation": "It is the derivative of $e^x$ at $0$.",
+      "pool": "mock"
+    },
+    {
+      "id": "m1-06",
+      "subject": "Calculus",
+      "topic": "Derivatives",
+      "type": "nat",
+      "difficulty": "medium",
+      "marks": 2,
+      "text": "The slope of $y = x^2 + 3x$ at $x = 2$ is:",
+      "answer": 7,
+      "tolerance": 0,
+      "explanation": "$y' = 2x + 3 = 7$.",
+      "pool": "mock"
+    },
+    {
+      "id": "m1-07",
+      "subject": "Calculus",
+      "topic": "Integrals",
+      "type": "nat",
+      "difficulty": "medium",
+      "marks": 2,
+      "text": "Evaluate $\\int_1^{e} \\frac{1}{x}\\,dx$.",
+      "answer": 1,
+      "tolerance": 0,
+      "explanation": "$\\ln e - \\ln 1 = 1$.",
+      "pool": "mock"
+    },
+    {
+      "id": "m1-08",
+      "subject": "Calculus",
+      "topic": "Integrals",
+      "type": "mcq",
+      "difficulty": "hard",
+      "marks": 2,
+      "negative_marks": 0.66,
+      "text": "The area between $y = x$ and $y = x^2$ on $[0, 1]$ is:",
+      "options": [
+        "$\\frac16$",
+        "$\\frac12$",
+        "$\\frac13$",
+        "$\\frac14$"
+      ],
+      "answer": "A",
+      "explanation": "$\\int_0^1 (x - x^2)\\,dx = \\frac12 - \\frac13 = \\frac16$.",
+      "pool": "mock"
+    },
+    {
+      "id": "m2-01",
+      "subject": "Probability",
+      "topic": "Counting",
+      "type": "mcq",
+      "difficulty": "easy",
+      "marks": 1,
+      "negative_marks": 0.33,
+      "text": "How many subsets does a set of $5$ elements have?",
+      "options": [
+        "$32$",
+        "$25$",
+        "$10$",
+        "$120$"
+      ],
+      "answer": "A",
+      "explanation": "$2^5 = 32$.",
+      "pool": "mock"
+    },
+    {
+      "id": "m2-02",
+      "subject": "Probability",
+      "topic": "Counting",
+      "type": "nat",
+      "difficulty": "medium",
+      "marks": 2,
+      "text": "How many ways can a committee of $3$ be chosen from $5$ men and $4$ women with exactly $2$ women?",
+      "answer": 30,
+      "tolerance": 0,
+      "explanation": "$\\binom42 \\binom51 = 6\\cdot5 = 30$.",
+      "pool": "mock"
+    },
+    {
+      "id": "m2-03",
+      "subject": "Probability",
+      "topic": "Random variables",
+      "type": "mcq",
+      "difficulty": "medium",
+      "marks": 1,
+      "negative_marks": 0.33,
+      "text": "If $X \\sim \\text{Poisson}(\\lambda = 4)$, then $\\text{Var}(X)$ is:",
+      "options": [
+        "$4$",
+        "$2$",
+        "$16$",
+        "$\\frac14$"
+      ],
+      "answer": "A",
+      "explanation": "For a Poisson variable the mean and variance are both $\\lambda$.",
+      "pool": "mock"
+    },
+    {
+      "id": "m2-04",
+      "subject": "Probability",
+      "topic": "Random variables",
+      "type": "msq",
+      "difficulty": "hard",
+      "marks": 2,
+      "text": "For **independent** $X$ and $Y$, which always hold?",
+      "options": [
+        "$E[X+Y] = E[X]+E[Y]$",
+        "$\\text{Var}(X+Y) = \\text{Var}(X)+\\text{Var}(Y)$",
+        "$E[XY] = E[X]E[Y]$",
+        "$\\text{Var}(XY) = \\text{Var}(X)\\text{Var}(Y)$"
+      ],
+      "answer": [
+        "A",
+        "B",
+        "C"
+      ],
+      "explanation": "Linearity of expectation holds always; the next two need independence; the last is false in general.",
+      "pool": "mock"
+    },
+    {
+      "id": "m2-05",
+      "subject": "Probability",
+      "topic": "Conditional probability",
+      "type": "nat",
+      "difficulty": "medium",
+      "marks": 2,
+      "text": "Two fair dice are rolled. Given the sum is $8$, what is the probability that both show $4$? (to 2 decimal places)",
+      "answer": 0.2,
+      "tolerance": 0.01,
+      "explanation": "There are $5$ ways to roll a sum of $8$; one of them is $(4,4)$: $\\frac15$.",
+      "pool": "mock"
+    },
+    {
+      "id": "m2-06",
+      "subject": "Data Structures",
+      "topic": "Complexity",
+      "type": "mcq",
+      "difficulty": "easy",
+      "marks": 1,
+      "negative_marks": 0.33,
+      "text": "Looking up a key in a hash table takes, on average:",
+      "options": [
+        "$O(1)$",
+        "$O(\\log n)$",
+        "$O(n)$",
+        "$O(n^2)$"
+      ],
+      "answer": "A",
+      "explanation": "With a good hash function, buckets stay small.",
+      "pool": "mock"
+    },
+    {
+      "id": "m2-07",
+      "subject": "Data Structures",
+      "topic": "Stacks and queues",
+      "type": "str",
+      "difficulty": "medium",
+      "marks": 1,
+      "text": "Push $1, 2, 3$ onto an empty stack, then pop twice. List the popped values in order (comma-separated).",
+      "answer": "3,2",
+      "match": "list",
+      "explanation": "A stack returns the most recent item first.",
+      "pool": "mock"
+    },
+    {
+      "id": "m2-08",
+      "subject": "Data Structures",
+      "topic": "Trees",
+      "type": "nat",
+      "difficulty": "hard",
+      "marks": 2,
+      "text": "A binary search tree is built by inserting $5, 3, 8, 1, 4, 9$ in that order. What is its height (a single root has height $0$)?",
+      "answer": 2,
+      "tolerance": 0,
+      "explanation": "$5$ is the root; $3$ and $8$ are at depth $1$; $1$, $4$ and $9$ are at depth $2$.",
+      "pool": "mock"
+    }
+  ],
+  "mocks": [
+    {
+      "name": "Sample mock 1: Linear algebra and calculus",
+      "minutes": 45,
+      "instructions": "Eight questions in two sections. **Negative marking** applies to multiple-choice questions only.",
+      "full_screen": false,
+      "sections": [
+        {
+          "name": "Linear algebra",
+          "questions": [
+            "m1-01",
+            "m1-02",
+            "m1-03",
+            "m1-04"
+          ]
+        },
+        {
+          "name": "Calculus",
+          "questions": [
+            "m1-05",
+            "m1-06",
+            "m1-07",
+            "m1-08"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Sample mock 2: Probability and data structures",
+      "minutes": 40,
+      "instructions": "Eight questions in two sections. The test opens **full screen**.",
+      "full_screen": true,
+      "sections": [
+        {
+          "name": "Probability",
+          "minutes": 25,
+          "questions": [
+            "m2-01",
+            "m2-02",
+            "m2-03",
+            "m2-04",
+            "m2-05"
+          ]
+        },
+        {
+          "name": "Data structures",
+          "questions": [
+            "m2-06",
+            "m2-07",
+            "m2-08"
+          ]
+        }
+      ]
+    }
+  ]
+}

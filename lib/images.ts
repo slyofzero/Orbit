@@ -1,41 +1,53 @@
-// Pictures in questions. In the pack file a question writes ![what it shows](img:name) and the top-level "images" object holds the picture itself
-// as a data URI. The app gives every picture a name made from its content (h…), so the same picture is stored once, and keeps the
-// pictures outside the pack (they are big): see lib/imageStore.ts. Everything here is pure, so scripts/check.ts can test it.
-import type { PackData } from "./packs";
+// Picture references. A picture is stored once, named by a hash of its bytes, and text refers to it
+// as `img:<hash>` (e.g. ![graph](img:h3f9a…)). Never put base64 picture data inside text.
 
-export const IMG = /!\[([^\]\n]*)\]\(([^)\s]+)\)/g;
-export const DATA_IMG = /^data:image\/(png|jpeg|webp|gif|svg\+xml);base64,[A-Za-z0-9+/=]+$/;
-export const MAX_IMAGE = 3_000_000; // characters in one data URI (about 2.2 MB of picture)
-export const MAX_IMAGES_TOTAL = 80_000_000;
-export const MAX_IMAGE_COUNT = 2000;
+export const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5 MB per picture
+/** A stored picture no question uses is deleted (`image.sweep`) only once it is this old: a picture added in the
+ *  editor is saved before its question is, so a fresh one is never swept away mid-edit. */
+export const UNUSED_IMAGE_GRACE_MS = 24 * 60 * 60 * 1000;
+/** The database worker sweeps unused pictures when it opens, then this often. */
+export const IMAGE_SWEEP_EVERY_MS = 60 * 60 * 1000;
 
-/** A short name made from the picture itself: the same picture always gets the same name. */
-export function hashData(s: string): string {
-  let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
-  for (let i = 0; i < s.length; i++) { const c = s.charCodeAt(i); h1 = Math.imul(h1 ^ c, 2654435761); h2 = Math.imul(h2 ^ c, 1597334677); }
-  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
-  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
-  return `h${(h1 >>> 0).toString(36)}${(h2 >>> 0).toString(36)}-${s.length.toString(36)}`;
+/** "h" + the first 32 hex characters of the SHA-256 of the bytes. Same picture → same name. */
+export async function hashImage(bytes: ArrayBuffer | Uint8Array): Promise<string> {
+  const data = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  const digest = await crypto.subtle.digest("SHA-256", data as Uint8Array<ArrayBuffer>);
+  const hex = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  return "h" + hex.slice(0, 32);
 }
 
-/** Splits text into plain pieces and picture pieces. */
-export function splitImages(text: string): ({ text: string } | { alt: string; src: string })[] {
-  const out: ({ text: string } | { alt: string; src: string })[] = [];
-  let last = 0;
-  for (const m of text.matchAll(IMG)) {
-    if (m.index! > last) out.push({ text: text.slice(last, m.index) });
-    out.push({ alt: m[1], src: m[2] });
-    last = m.index! + m[0].length;
-  }
-  if (last < text.length) out.push({ text: text.slice(last) });
-  return out;
+export const imageRef = (hash: string) => `img:${hash}`;
+
+/** "img:h3f9a…" → "h3f9a…"; anything else → null. */
+export const refToHash = (src: string) => (src.startsWith("img:") ? src.slice(4) : null);
+
+/** Why a file can't be used as a picture, or null if it is fine. */
+export function imageProblem(file: { type: string; size: number }): string | null {
+  if (!file.type.startsWith("image/")) return "That file is not a picture. Use a PNG, JPG, GIF, WebP or SVG.";
+  if (file.size > MAX_IMAGE_BYTES) return "That picture is larger than 5 MB. Make it smaller and try again.";
+  return null;
 }
 
-/** The stored pictures (img:name) that a text uses. */
-export const storedImageNames = (text: string): string[] => [...text.matchAll(IMG)].map((m) => m[2]).filter((s) => s.startsWith("img:")).map((s) => s.slice(4));
+/** The picture names (`img:<hash>`) used in these texts, each once, in order of appearance. */
+export function imageHashes(texts: readonly (string | null | undefined)[]): string[] {
+  const out = new Set<string>();
+  for (const t of texts)
+    for (const m of (t ?? "").matchAll(/\]\(img:([A-Za-z0-9_-]+)(?:\s+\d{1,3}%)?\)/g)) out.add(m[1]);
+  return [...out];
+}
 
-/** Every stored picture the pack's questions use, in the practice bank and in the mock tests. */
-export function packImageNames(pack: PackData): string[] {
-  const qs = [...pack.questions, ...(pack.mockTests ?? []).flatMap((m) => m.sections.flatMap((x) => x.questions))];
-  return [...new Set(qs.flatMap((q) => [q.text, q.explanation, ...(q.options ?? [])]).flatMap((t) => storedImageNames(t ?? "")))];
+/** A markdown picture `![alt](img:<hash> or https://…)` with its optional size (`50%`), as the parser reads it. */
+const PICTURE = /!\[((?:\\.|[^\]\\])*)\]\(\s*(img:[A-Za-z0-9_-]+|https?:\/\/[^\s)]+)(?:\s+(\d{1,3})%)?\s*\)/g;
+
+/** The size (percent of the line) of each picture in the text, in order; null = full width. */
+export function pictureSizes(text: string): (number | null)[] {
+  return [...text.matchAll(PICTURE)].map((m) => (m[3] ? Number(m[3]) : null));
+}
+
+/** The text with the `index`-th picture set to `percent` (100 or more = full width, which needs no tag). */
+export function setPictureSize(text: string, index: number, percent: number): string {
+  let i = -1;
+  return text.replace(PICTURE, (all, alt: string, src: string) =>
+    ++i === index ? `![${alt}](${src}${percent < 100 ? ` ${Math.max(10, Math.round(percent))}%` : ""})` : all,
+  );
 }

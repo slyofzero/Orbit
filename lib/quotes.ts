@@ -1,5 +1,6 @@
-// A pool of short, original lines about effort, discipline and getting through life. Shown on the dashboard (components/QuoteCard.tsx)
-// and now and then by the study buddy (components/Companion.tsx). None repeats until all have been shown.
+// A pool of short, original lines about effort, discipline and getting through life (from v1).
+// Shown by the dashboard's quote banner. Order: a fresh shuffle each visit, so none repeats until all
+// have been shown (nothing is saved between visits).
 export const QUOTES: string[] = [
   // hard work
   "Hard work is quiet. It doesn't announce itself; it just shows up in the results.",
@@ -136,3 +137,20 @@ export const QUOTES: string[] = [
   "Keep going. Ordinary persistence looks a lot like greatness from far away.",
   "You are closer than you were yesterday. That's enough reason to continue.",
 ];
+
+/** The quote indexes 0…n−1 in a random order (Fisher–Yates). `rnd` is injectable for tests. */
+export function shuffledOrder(n: number, rnd: () => number = Math.random): number[] {
+  const order = Array.from({ length: n }, (_, i) => i);
+  for (let i = n - 1; i > 0; i--) {
+    const j = Math.floor(rnd() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  return order;
+}
+
+/** The next shuffle once every quote has been shown: a new order that doesn't start with `last`. */
+export function nextOrder(n: number, last: number, rnd: () => number = Math.random): number[] {
+  const order = shuffledOrder(n, rnd);
+  if (n > 1 && order[0] === last) [order[0], order[n - 1]] = [order[n - 1], order[0]];
+  return order;
+}

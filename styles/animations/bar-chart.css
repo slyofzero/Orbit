@@ -1,0 +1,11 @@
+/* The small bar chart (components/ui/BarChart.tsx), from v1: bars grow up from the base one after another.
+   Imported by styles/site.css. Reduced motion switches it off (styles/site.css). */
+@theme inline {
+  --animate-bar-grow: bar-grow 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+
+  @keyframes bar-grow {
+    from {
+      transform: scaleY(0);
+    }
+  }
+}

@@ -1,0 +1,177 @@
+{
+  "format": "orbit-questions",
+  "version": 1,
+  "name": "Maths practice",
+  "questions": [
+    {
+      "id": "la-1",
+      "subject": "Linear Algebra",
+      "topic": "Eigenvalues",
+      "type": "mcq",
+      "difficulty": "easy",
+      "marks": 1,
+      "negative_marks": 0.33,
+      "text": "The eigenvalues of $\\begin{pmatrix}2 & 0\\\\ 0 & 5\\end{pmatrix}$ are:",
+      "options": [
+        "$2$ and $5$",
+        "$0$ and $7$",
+        "$10$ only",
+        "$2$ only"
+      ],
+      "answer": "A",
+      "explanation": "A diagonal matrix has its diagonal entries as eigenvalues.",
+      "tags": [
+        "conceptual"
+      ]
+    },
+    {
+      "id": "la-3",
+      "subject": "Linear Algebra",
+      "topic": "Eigenvalues",
+      "type": "mcq",
+      "difficulty": "medium",
+      "marks": 2,
+      "negative_marks": 0.66,
+      "text": "A $2\\times2$ matrix has trace $5$ and determinant $6$. Its eigenvalues are:",
+      "options": [
+        "$1$ and $6$",
+        "$2$ and $3$",
+        "$-2$ and $-3$",
+        "$5$ and $1$"
+      ],
+      "answer": "B",
+      "explanation": "The eigenvalues add up to the trace and multiply to the determinant: $\\lambda_1+\\lambda_2 = 5$ and $\\lambda_1\\lambda_2 = 6$, so they are $2$ and $3$.",
+      "tags": [
+        "trace",
+        "determinant"
+      ]
+    },
+    {
+      "id": "la-4",
+      "subject": "Linear Algebra",
+      "topic": "Eigenvalues",
+      "type": "msq",
+      "difficulty": "hard",
+      "marks": 2,
+      "text": "Which statements are true for every real **symmetric** matrix? Pick every one.",
+      "options": [
+        "Its eigenvalues are all real.",
+        "Eigenvectors of different eigenvalues are orthogonal.",
+        "Its eigenvalues are all positive.",
+        "It is diagonalisable."
+      ],
+      "answer": [
+        "A",
+        "B",
+        "D"
+      ],
+      "explanation": "The spectral theorem gives real eigenvalues, orthogonal eigenvectors and diagonalisability. Eigenvalues can be negative, so C is false.",
+      "tags": [
+        "conceptual"
+      ]
+    },
+    {
+      "id": "la-5",
+      "subject": "Linear Algebra",
+      "topic": "Eigenvalues",
+      "type": "nat",
+      "difficulty": "medium",
+      "marks": 1,
+      "text": "If $\\lambda = 3$ is an eigenvalue of $A$, what is the matching eigenvalue of $A^2 + A$?",
+      "answer": 12,
+      "tolerance": 0,
+      "explanation": "If $Av = \\lambda v$ then $(A^2 + A)v = (\\lambda^2 + \\lambda)v$, and $3^2 + 3 = 12$."
+    },
+    {
+      "id": "la-2",
+      "subject": "Linear Algebra",
+      "topic": "Vectors",
+      "type": "msq",
+      "difficulty": "medium",
+      "marks": 2,
+      "text": "Which pairs of vectors are **orthogonal**?",
+      "options": [
+        "$(1,0)$ and $(0,1)$",
+        "$(1,1)$ and $(1,-1)$",
+        "$(2,1)$ and $(1,2)$"
+      ],
+      "answer": [
+        "A",
+        "B"
+      ],
+      "explanation": "Orthogonal means the dot product is $0$."
+    },
+    {
+      "id": "pr-1",
+      "subject": "Probability",
+      "topic": "Counting",
+      "type": "nat",
+      "difficulty": "easy",
+      "marks": 1,
+      "text": "In how many ways can 3 people be chosen from 7?",
+      "answer": 35,
+      "tolerance": 0,
+      "explanation": "$\\binom{7}{3} = 35$."
+    },
+    {
+      "id": "pr-3",
+      "subject": "Probability",
+      "topic": "Counting",
+      "type": "mcq",
+      "difficulty": "easy",
+      "marks": 1,
+      "negative_marks": 0.33,
+      "text": "How many different arrangements are there of the letters in the word **ORBIT**?",
+      "options": [
+        "$25$",
+        "$60$",
+        "$120$",
+        "$720$"
+      ],
+      "answer": "C",
+      "explanation": "Five different letters can be arranged in $5! = 120$ ways."
+    },
+    {
+      "id": "pr-4",
+      "subject": "Probability",
+      "topic": "Counting",
+      "type": "nat",
+      "difficulty": "hard",
+      "marks": 2,
+      "text": "A fair coin is flipped $3$ times. What is the probability of getting **exactly two heads**? Give it as a decimal.",
+      "answer": 0.375,
+      "tolerance": 0.001,
+      "explanation": "There are $\\binom{3}{2} = 3$ ways out of $2^3 = 8$ equally likely outcomes, so $\\frac{3}{8} = 0.375$."
+    },
+    {
+      "id": "pr-2",
+      "subject": "Probability",
+      "topic": "Random variables",
+      "type": "str",
+      "difficulty": "medium",
+      "marks": 1,
+      "text": "List the possible values of a Bernoulli random variable (comma-separated).",
+      "answer": "0,1",
+      "match": "set",
+      "explanation": "It takes $0$ or $1$."
+    },
+    {
+      "id": "pr-5",
+      "subject": "Probability",
+      "topic": "Random variables",
+      "type": "mcq",
+      "difficulty": "medium",
+      "marks": 1,
+      "negative_marks": 0.33,
+      "text": "Consider these statements about a random variable $X$ and a constant $c$:\n\n1. $E[X + c] = E[X] + c$\n2. $\\text{Var}(X + c) = \\text{Var}(X) + c$\n3. $\\text{Var}(cX) = c^2\\,\\text{Var}(X)$\n\nWhich are true?",
+      "options": [
+        "1 only",
+        "1 and 3",
+        "2 and 3",
+        "1, 2 and 3"
+      ],
+      "answer": "B",
+      "explanation": "Adding a constant shifts the mean but not the spread, so statement 2 is false: $\\text{Var}(X + c) = \\text{Var}(X)$."
+    }
+  ]
+}

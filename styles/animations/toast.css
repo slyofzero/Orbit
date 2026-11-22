@@ -1,0 +1,21 @@
+/* Toasts sliding in and out (components/ui/Toast.tsx). -flow = the special version (slide + gradient drift).
+   Imported by styles/site.css. `inline` so var(--special-speed) etc. resolve where the animation runs. */
+@theme inline {
+  --animate-toast-in: toast-in 0.2s ease-out;
+  --animate-toast-out: toast-out 0.24s ease-in forwards;
+  --animate-toast-in-flow: toast-in 0.2s ease-out, flow var(--special-speed) ease-in-out infinite alternate;
+  --animate-toast-out-flow: toast-out 0.24s ease-in forwards, flow var(--special-speed) ease-in-out infinite alternate;
+
+  @keyframes toast-in {
+    from {
+      opacity: 0;
+      transform: translateX(24px);
+    }
+  }
+  @keyframes toast-out {
+    to {
+      opacity: 0;
+      transform: translateX(calc(100% + 24px));
+    }
+  }
+}

@@ -1,0 +1,28 @@
+/* Manage plan (components/planner/ManagePlan.tsx): the task table slides in from the side you moved towards.
+   A tab (or page) to the right comes in from the right, one to the left from the left. Same feel as Manage pack's
+   mock slide (manage-mocks.css). Imported by styles/site.css. */
+@theme inline {
+  --animate-tasks-from-right: tasks-from-right 0.34s cubic-bezier(0.2, 0.8, 0.2, 1);
+  --animate-tasks-from-left: tasks-from-left 0.34s cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  @keyframes tasks-from-right {
+    from {
+      opacity: 0;
+      transform: translateX(40px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes tasks-from-left {
+    from {
+      opacity: 0;
+      transform: translateX(-40px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}

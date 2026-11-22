@@ -1,0 +1,25 @@
+/* Disclosure open / close (components/ui/Disclosure.tsx): the body grows and fades in, and shrinks and fades out
+   before the <details> shuts. The component sets data-expanded a frame after opening and keeps <details> open
+   while it closes, so both directions animate, in every browser. data-settled lets the body overflow again once
+   it stops moving (pop-ups, focus rings). Imported by styles/site.css. Reduced motion switches it off
+   (styles/site.css). Keep the time in step with MOTION_MS in Disclosure.tsx. */
+@utility disclosure-motion {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 0.34s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.26s ease;
+
+  & > * {
+    min-height: 0;
+    overflow: clip;
+  }
+  &[data-expanded] {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+  &[data-settled] > * {
+    overflow: visible;
+  }
+}
