@@ -47,10 +47,10 @@ function load(sql: Sql, where: string, params: string[], order: string): LoadedQ
 }
 
 /** A plan day's sitting (/practice/day?date=): the questions linked to that day (in the day's order), then the
- *  bonus ones carried into it from earlier days (docs/PLANS.md §5), oldest day first. `bonus` maps each bonus
+ *  bonus ones placed on it (plan_bonus, docs/PLANS.md §5), in their order. `bonus` maps each bonus
  *  question to the day it came from; a question that is also the day's own counts as its own. Every type, code
  *  too; retired ones are left out. Answering a bonus question ticks it on its own day (db/schema.sql). */
-function daySitting(sql: Sql, date: IsoDate, today: IsoDate): DayQuestions {
+function daySitting(sql: Sql, date: IsoDate): DayQuestions {
   const plan = sql.get<{ id: string; name: string }>("SELECT id, name FROM plans WHERE is_active = 1");
   const day = plan
     ? sql.get<{ id: number }>("SELECT id FROM plan_days WHERE plan_id = ? AND on_date = ?", [plan.id, date])
@@ -66,7 +66,7 @@ function daySitting(sql: Sql, date: IsoDate, today: IsoDate): DayQuestions {
     .map((r) => r.id);
   const mine = new Set(own);
   const bonus: Record<string, IsoDate> = {};
-  for (const q of carriedInto(sql, plan.id, date, today).questions) if (!mine.has(q.id)) bonus[q.id] ??= q.from;
+  for (const q of carriedInto(sql, plan.id, date).questions) if (!mine.has(q.id)) bonus[q.id] ??= q.from;
   const ids = [...own, ...Object.keys(bonus)].slice(0, SITTING_MAX);
   const topic = { id: date, name: `Questions for ${formatLong(date)}`, subject_name: plan.name };
   if (!ids.length) return { topic, items: [], bonus };
@@ -143,7 +143,7 @@ export const questionQueries = {
       "question_answers",
       ...CARRY_TABLES,
     ],
-    (sql, p: { date: IsoDate; today: IsoDate }): DayQuestions => daySitting(sql, p.date, p.today),
+    (sql, p: { date: IsoDate; today: IsoDate }): DayQuestions => daySitting(sql, p.date),
   ),
 
   /** One code question for the Programming screen: the question, its starter code, your latest counted answer,

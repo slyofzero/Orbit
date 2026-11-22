@@ -61,6 +61,7 @@ export const dashboardQueries = {
       "plan_task_ticks",
       "plan_day_questions",
       "plan_question_ticks",
+      "plan_bonus",
       "question_answers",
       "questions",
       "topics",
@@ -129,7 +130,7 @@ export const dashboardQueries = {
          WHERE plan_id = ? AND on_date > ? AND on_date <> ? ORDER BY on_date LIMIT 4`,
         [plan.id, p.today, p.date],
       );
-      const carried = day ? carriedInto(sql, plan.id, p.date, p.today) : { tasks: [], questions: [] };
+      const carried = day ? carriedInto(sql, plan.id, p.date) : { tasks: [], questions: [] };
       return { day, tasks, questions, answeredOn, topics, next, upcoming, carried };
     },
   ),

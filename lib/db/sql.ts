@@ -48,6 +48,7 @@ export const TABLES = [
   "plan_day_questions",
   "plan_task_ticks",
   "plan_question_ticks",
+  "plan_bonus",
   "plan_day_progress",
   "milestones",
 ] as const;

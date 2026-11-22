@@ -51,6 +51,7 @@ export const BACKUP_ORDER = [
   "plan_day_questions",
   "plan_task_ticks",
   "plan_question_ticks",
+  "plan_bonus",
 ] as const satisfies readonly TableName[];
 
 /** Caches that triggers keep up to date: never exported, only emptied. */

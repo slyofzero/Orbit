@@ -95,7 +95,23 @@ console.log("carry-over: reads and a plan day's sitting");
   const u1 = task("2026-11-19", "u1", 1);
   link("2026-11-20", "q_4", 1);
 
-  const into = (date: string) => carriedInto(s, "pl_1", date, today);
+  const run = <R>(name: keyof typeof QUERIES, params?: unknown) =>
+    transaction(s, () => (QUERIES[name] as unknown as QueryDef<unknown, R>).run(s, params));
+  const n = (q: string, p: unknown[] = []) => (d.query(q).get(...(p as never[])) as { n: number }).n;
+
+  ok(carriedInto(s, "pl_1", "2026-11-17").tasks.length === 0, "nothing is bonus work until plan.carry runs");
+  const first = run<{ days: number; placed: number }>("plan.carry", { today });
+  ok(first.days === 3 && first.placed === 9, "plan.carry places the closed days' unfinished work (3 days, 9 items)");
+  ok(
+    run<{ placed: number }>("plan.carry", { today }).placed === 0 && n("SELECT count(*) AS n FROM plan_bonus") === 9,
+    "a second run the same day does nothing",
+  );
+  ok(
+    (d.query("SELECT carried_before AS c FROM plans").get() as { c: string }).c === today,
+    "plans.carried_before = the day it ran",
+  );
+
+  const into = (date: string) => carriedInto(s, "pl_1", date);
   const names = (date: string) =>
     into(date)
       .tasks.map((x) => x.body)
@@ -125,14 +141,10 @@ console.log("carry-over: reads and a plan day's sitting");
     !into("2026-11-16").tasks.some((x) => x.body === "t1") && !into("2026-11-17").questions.some((x) => x.id === "q_0"),
     "work done on its own day doesn't carry",
   );
-  const n = (q: string, p: unknown[] = []) => (d.query(q).get(...(p as never[])) as { n: number }).n;
   ok(
     n("SELECT tasks_total AS n FROM plan_day_progress WHERE day_id = ?", [dayId["2026-11-17"]]) === 1,
     "the receiving day's status counts only its own items",
   );
-
-  const run = <R>(name: keyof typeof QUERIES, params?: unknown) =>
-    transaction(s, () => (QUERIES[name] as unknown as QueryDef<unknown, R>).run(s, params));
 
   const dayData = run<{ carried: { tasks: { id: number }[]; questions: { id: string }[] } }>("dashboard.day", {
     date: "2026-11-20",
@@ -178,4 +190,131 @@ console.log("carry-over: reads and a plan day's sitting");
   );
   const empty = run<DayQuestions>("question.day", { date: "2026-11-21", today });
   ok(empty.topic !== null && empty.items.length === 0, "question.day: a plan day with nothing linked = no items");
+
+  // ----- moving and removing bonus work (Edit plan) -----
+  type Res = { ok: boolean; error?: string; bonusId?: number; from?: string; to?: string; row?: unknown };
+  const clock = { today, hour: 8 }; // before the lock hour: today is still open
+  const t5 = into("2026-11-20").tasks.find((x) => x.body === "t5")!.bonusId;
+  const moved = run<Res>("plan.moveBonus", { ...clock, bonusId: t5, to: "2026-11-21" });
+  ok(
+    moved.ok && names("2026-11-21") === "t5" && names("2026-11-20") === "u1" && moved.from === "2026-11-20",
+    "Move puts a bonus item on another day and says where it was",
+  );
+  ok(
+    !run<Res>("plan.moveBonus", { ...clock, bonusId: t5, to: "2026-11-19" }).ok &&
+      !run<Res>("plan.moveBonus", { ...clock, bonusId: t5, to: "2026-11-18" }).ok,
+    "Move refuses a locked (past) day and a date that isn't planned",
+  );
+  run("plan.unmoveBonus", { bonusId: t5, to: "2026-11-20" });
+  ok(names("2026-11-20") === "u1,t5" && names("2026-11-21") === "", "Undo of a move puts it back");
+  const u1b = into("2026-11-20").tasks.find((x) => x.body === "u1")!.bonusId;
+  const removed = run<Res>("plan.removeBonus", { bonusId: u1b });
+  ok(removed.ok && names("2026-11-20") === "t5", "Remove takes a bonus item off its day");
+  ok(n("SELECT count(*) AS n FROM plan_tasks WHERE id = ?", [u1]) === 1, "a removed bonus item stays on its own day");
+  run("plan.carry", { today: "2026-11-21" });
+  ok(
+    !names("2026-11-21").includes("u1") && !names("2026-11-20").includes("u1"),
+    "a removed item isn't carried again the next day",
+  );
+  ok(qs("2026-11-21") === "q_4", "the next day's run carries the day that just closed (the 20th's own question)");
+  run("plan.restoreBonus", { row: removed.row });
+  ok(names("2026-11-20") === "u1,t5" || names("2026-11-20") === "t5,u1", "Undo of Remove puts it back");
+
+  // ----- export → import keeps bonus work; a JSON patch moves it -----
+  type Exported = { file: { days: { date: string; bonus?: unknown[] }[]; carried_before?: string }; bonus: number };
+  const ex = run<Exported>("plan.export");
+  const day20 = ex.file.days.find((x) => x.date === "2026-11-20");
+  ok(
+    ex.bonus === n("SELECT count(*) AS n FROM plan_bonus") &&
+      (day20?.bonus?.length ?? 0) === 3 &&
+      ex.file.carried_before === "2026-11-21",
+    "Export plan writes each day's bonus work and carried_before",
+  );
+  const before = (plan: string) =>
+    (
+      d
+        .query(
+          `SELECT t.on_date AS day, f.on_date AS "from", coalesce(k.body, b.question_id) AS item FROM plan_bonus b
+           JOIN plan_days t ON t.id = b.day_id JOIN plan_days f ON f.id = b.from_day_id
+           LEFT JOIN plan_tasks k ON k.id = b.task_id WHERE t.plan_id = ? ORDER BY t.on_date, b.position`,
+        )
+        .all(plan) as unknown[]
+    )
+      .map((x) => JSON.stringify(x))
+      .join();
+  const imported = run<{ ok: boolean; planId: string; bonus: number }>("plan.import", {
+    text: JSON.stringify(ex.file),
+  });
+  ok(
+    imported.ok && imported.bonus === ex.bonus && before(imported.planId) === before("pl_1"),
+    "importing the export puts the same bonus work on the same days",
+  );
+  ok(
+    run<{ placed: number }>("plan.carry", { today: "2026-11-21" }).placed === 0,
+    "an imported plan doesn't carry the days its file says are carried already",
+  );
+  const patch = JSON.stringify({
+    days: [
+      {
+        date: "2026-11-21",
+        title: "Moved here",
+        bonus: [
+          { from: "2026-11-16", question: "q_3" },
+          { from: "2026-11-20", question: "q_4" },
+        ],
+      },
+      { date: "2026-11-22", title: "Bad", bonus: [{ from: "2026-11-16", task: "no such task" }] },
+    ],
+  });
+  const pclock = { today: "2026-11-21", hour: 8 };
+  const checked = run<{ errors: string[]; warnings: string[] }>("plan.checkPatch", { ...pclock, text: patch });
+  ok(
+    checked.errors.length === 0 && checked.warnings.some((w) => w.includes("bonus")),
+    "plan.checkPatch warns about a bonus entry that matches nothing",
+  );
+  const applied = run<{ ok: boolean; bonus: number }>("plan.applyPatch", { ...pclock, text: patch });
+  const mine = (date: string) =>
+    carriedInto(s, imported.planId, date)
+      .questions.map((x) => x.id)
+      .join();
+  ok(
+    applied.ok && mine("2026-11-21") === "q_3,q_4" && !mine("2026-11-20").includes("q_3"),
+    "a JSON patch's bonus list moves bonus work onto the day from wherever it sat",
+  );
+  ok(d.query("PRAGMA foreign_key_check").all().length === 0, "bonus work: no foreign key violations");
+}
+
+console.log("plan_bonus rules (db/schema.sql)");
+{
+  const d = freshDb();
+  d.exec(`INSERT INTO plans (id, name, starts_on, ends_on, is_active, created_at, updated_at)
+          VALUES ('pl_1', 'Plan', '2026-11-01', '2026-11-30', 1, 0, 0);
+          INSERT INTO plan_days (id, plan_id, on_date) VALUES (1, 'pl_1', '2026-11-10'), (2, 'pl_1', '2026-11-11');
+          INSERT INTO plan_tasks (id, day_id, position, body) VALUES (1, 1, 1, 'a'), (2, 2, 1, 'b');`);
+  const refuses = (q: string) => {
+    try {
+      d.exec(q);
+      return false;
+    } catch {
+      return true;
+    }
+  };
+  ok(
+    refuses("INSERT INTO plan_bonus (day_id, position, from_day_id, task_id) VALUES (1, 1, 2, 2)"),
+    "a bonus item can't sit on a day before its own",
+  );
+  ok(
+    refuses("INSERT INTO plan_bonus (day_id, position, from_day_id, task_id) VALUES (2, 1, 1, 2)"),
+    "a task's from_day_id must be the task's own day",
+  );
+  ok(
+    !refuses("INSERT INTO plan_bonus (day_id, position, from_day_id, task_id) VALUES (2, 1, 1, 1)") &&
+      refuses("INSERT INTO plan_bonus (day_id, position, from_day_id, task_id) VALUES (2, 2, 1, 1)"),
+    "an item is placed once",
+  );
+  d.exec("DELETE FROM plan_tasks WHERE id = 1");
+  ok(
+    (d.query("SELECT count(*) AS n FROM plan_bonus").get() as { n: number }).n === 0,
+    "deleting the original removes its bonus row",
+  );
 }

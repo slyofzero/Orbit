@@ -90,6 +90,7 @@ How to fill it in:
 - "kind": ${DAY_KINDS.map((k) => `"${k}" = ${KIND_MEANING[k]}`).join("; ")}.
 - "tasks": short, concrete checklist items I can tick off, e.g. "Solve 10 problems on limits" (not "Study limits").
 - "questions": leave it out unless I give you the question ids.
+- Leave out "bonus" and "carried_before": Orbit writes those itself (unfinished work carried over to later days).
 
 Rules:
 - Dates are YYYY-MM-DD. The whole plan is at most ${LIMITS.days} days, and every day must fall between "starts_on" and "ends_on".

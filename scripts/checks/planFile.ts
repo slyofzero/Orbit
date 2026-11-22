@@ -225,13 +225,68 @@ console.log("patch prompt (lib/prompts/patchPrompt.ts)");
   ok(ex.plan !== null && ex.errors.length === 0 && ex.warnings.length === 0, "the patch prompt's example passes");
   const p = patchPrompt(today, {
     plan: { name: "My plan", description: null, starts_on: "2026-11-01", ends_on: "2027-02-01" },
-    days: [{ date: "2026-11-22", title: "Day", kind: "study", hours: 2, note: null, tasks: ["Do a thing"] }],
+    days: [
+      {
+        date: "2026-11-22",
+        title: "Day",
+        kind: "study",
+        hours: 2,
+        note: null,
+        tasks: ["Do a thing"],
+        bonus: [{ from: "2026-11-18", task: "Old task" }],
+      },
+    ],
+    stuck: [{ on: "2026-11-19", from: "2026-11-17", question: "q_stuck" }],
   });
   ok(
     p.includes(JSON.stringify(examplePatch(today), null, 2)) && p.includes("Do a thing") && p.includes("My plan"),
     "the patch prompt has the example, the open days and the plan name",
   );
+  ok(
+    p.includes("Old task") && p.includes("q_stuck") && p.includes('"bonus"'),
+    "the patch prompt shows each day's bonus work and the bonus stuck on past days, and explains moving it",
+  );
   ok(!/\b(GATE|JEE|NEET|UPSC|SAT|GRE)\b/.test(p), "the patch prompt names no particular exam");
   const bare = parseDayPatch('{"days":[{"date":"2026-12-01","title":"x"}]}');
   ok(bare.plan !== null && !bare.warnings.length, 'a patch needs no "name", milestones or "format" noise');
+}
+
+console.log("plan file: bonus work and carried_before");
+{
+  const file = (days: unknown[], extra: object = {}) =>
+    parsePlanFile({ format: "orbit-plan", name: "P", milestones: [{ name: "E", date: "2026-12-30" }], days, ...extra });
+  const ok1 = file(
+    [
+      { date: "2026-12-01", title: "One", tasks: ["a"], questions: ["q_1"] },
+      {
+        date: "2026-12-02",
+        title: "Two",
+        bonus: [
+          { from: "2026-12-01", task: "a" },
+          { from: "2026-12-01", question: "q_1" },
+          { from: "2026-12-01", task: "a" },
+        ],
+      },
+    ],
+    { carried_before: "2026-12-02" },
+  );
+  ok(
+    ok1.plan !== null &&
+      ok1.plan.days[1].bonus.length === 2 &&
+      ok1.plan.days[1].hasBonus === true &&
+      ok1.plan.days[0].hasBonus === false &&
+      ok1.plan.carried_before === "2026-12-02",
+    "bonus entries are read (repeats once) and carried_before is kept",
+  );
+  ok(
+    !file([{ date: "2026-12-02", title: "x", bonus: [{ from: "2026-12-02", task: "a" }] }]).plan,
+    'a bonus entry whose "from" isn\'t an earlier day is refused',
+  );
+  ok(
+    !file([{ date: "2026-12-02", title: "x", bonus: [{ from: "2026-12-01", task: "a", question: "q" }] }]).plan &&
+      !file([{ date: "2026-12-02", title: "x", bonus: [{ from: "2026-12-01" }] }]).plan,
+    'a bonus entry needs exactly one of "task" / "question"',
+  );
+  ok(!file([{ from: "2026-12-01", to: "2026-12-03", title: "x", bonus: [] }]).plan, '"bonus" on a range is refused');
+  ok(!file([{ date: "2026-12-01", title: "x" }], { carried_before: "soon" }).plan, "a bad carried_before is refused");
 }

@@ -7,9 +7,14 @@
 //     "days": [
 //       { "date": "YYYY-MM-DD", "title": "…", "kind": "study", "hours": 2, "note": "…",
 //         "tasks": ["…"], "questions": ["question id", …] },
-//       { "from": "YYYY-MM-DD", "to": "YYYY-MM-DD", "weekdays": ["mon", …], "title": "…", … } ] }
+//       { "from": "YYYY-MM-DD", "to": "YYYY-MM-DD", "weekdays": ["mon", …], "title": "…", … } ],
+//     "carried_before": "YYYY-MM-DD" }                                 (optional, written by Export plan)
 //
 // Ranges keep files short. A single "date" beats any range; a later range beats an earlier one.
+// Bonus work (docs/PLANS.md §5): a single-"date" day may list "bonus": [{ "from": "YYYY-MM-DD", "task": "…" } or
+// { "from": "YYYY-MM-DD", "question": "id" }], unfinished items of an earlier day placed on this one. The item
+// itself stays on its "from" day. "carried_before": every day before it has had its carry-over written already, so
+// importing doesn't carry those days again. Export plan writes both; an AI writing a new plan leaves them out.
 // Validation refuses with plain-English errors (AGENTS.md rule 5): nothing half-checked is saved.
 // The AI prompt that describes this format is lib/prompts/planPrompt.ts: change both together.
 
@@ -25,6 +30,7 @@ export const LIMITS = {
   tasks: 20, // per day
   milestones: 50,
   questions: 200, // linked per day
+  bonus: 300, // bonus items per day (carried over from earlier days)
   name: 80,
   description: 1500,
   title: 120,
@@ -45,7 +51,11 @@ export interface PlanFileDay {
   tasks: string[];
   questions: string[]; // question ids from the user's packs
   hasQuestions?: boolean; // the entry had a "questions" list (Edit plan's JSON update keeps old links when not)
+  bonus: PlanFileBonus[]; // bonus work placed on this day (docs/PLANS.md §5)
+  hasBonus?: boolean; // the entry had a "bonus" list (Edit plan's JSON update keeps the day's bonus when not)
 }
+/** One bonus item: a task (by its text) or a linked question (by id) of the earlier day `from`. */
+export type PlanFileBonus = { from: IsoDate; task: string } | { from: IsoDate; question: string };
 export interface PlanFileMilestone {
   name: string;
   short: string | null;
@@ -59,6 +69,7 @@ export interface PlanFile {
   ends_on: IsoDate;
   milestones: PlanFileMilestone[];
   days: PlanFileDay[]; // one per date, in date order
+  carried_before: IsoDate | null; // days before this have had their carry-over written; null = none yet
 }
 export interface PlanParse {
   plan: PlanFile | null; // null = refused; see errors
@@ -136,7 +147,7 @@ export function parsePlanFile(input: unknown): PlanParse {
     err('The plan needs a "name", e.g. "name": "Spring semester plan".');
   const name = typeof o.name === "string" ? text(o.name, LIMITS.name) : "";
   const description = optText(o.description, '"description"', LIMITS.description);
-  for (const key of ["starts_on", "ends_on"] as const)
+  for (const key of ["starts_on", "ends_on", "carried_before"] as const)
     if (o[key] !== undefined && (typeof o[key] !== "string" || !isIsoDate(o[key] as string)))
       err(`"${key}" "${String(o[key])}" is not a real date (use YYYY-MM-DD).`);
 
@@ -199,6 +210,34 @@ export function parsePlanFile(input: unknown): PlanParse {
         return err(`${w}.weekdays must be a list of: ${WEEKDAY_NAMES.join(", ")}.`);
       weekdays = (raw.weekdays as string[]).map((d) => (WEEKDAY_NAMES as readonly string[]).indexOf(d.toLowerCase()));
     }
+    const bonus: PlanFileBonus[] = [];
+    if (raw.bonus !== undefined) {
+      if (!single) return err(`${w}: "bonus" only works on a day with one "date", not on a range.`);
+      if (!Array.isArray(raw.bonus)) return err(`${w}.bonus must be a list.`);
+      if (raw.bonus.length > LIMITS.bonus)
+        return err(`${w} has ${raw.bonus.length} bonus items; the most is ${LIMITS.bonus}.`);
+      const seen = new Set<string>();
+      for (const [k, b] of raw.bonus.entries()) {
+        const wb = `${w}.bonus[${k}]`;
+        if (!isObj(b)) return err(`${wb} must be an object: { "from": "YYYY-MM-DD", "task": "…" }.`);
+        if (typeof b.from !== "string" || !isIsoDate(b.from))
+          return err(`${wb}.from "${String(b.from)}" is not a real date (use YYYY-MM-DD).`);
+        if (b.from >= (raw.date as string))
+          return err(`${wb}: bonus work comes from an earlier day, but "from" ${b.from} isn't before ${raw.date}.`);
+        const isTask = b.task !== undefined;
+        if (isTask === (b.question !== undefined))
+          return err(`${wb} needs either "task" (its text) or "question" (its id), not both.`);
+        const v = isTask ? b.task : b.question;
+        if (typeof v !== "string" || !v.trim())
+          return err(`${wb}.${isTask ? "task" : "question"} must be non-empty text.`);
+        const item: PlanFileBonus = isTask
+          ? { from: b.from, task: text(v, LIMITS.task) }
+          : { from: b.from, question: v.trim() };
+        const key = JSON.stringify(item);
+        if (!seen.has(key)) bonus.push(item);
+        seen.add(key);
+      }
+    }
     const note = optText(raw.note, `${w}.note`, LIMITS.note);
     const title = text(raw.title, LIMITS.title);
 
@@ -231,6 +270,8 @@ export function parsePlanFile(input: unknown): PlanParse {
           tasks: [...tasks],
           questions: [...questions],
           hasQuestions: raw.questions !== undefined,
+          bonus: [...bonus],
+          hasBonus: raw.bonus !== undefined,
         },
       });
     }
@@ -282,12 +323,13 @@ export function parsePlanFile(input: unknown): PlanParse {
 
   if (fixedSlashes) warnings.push(`${fixedSlashes} maths backslash(es) were broken by JSON and have been put back.`);
   if (errors.length) return refused();
-  return { plan: { name, description, starts_on, ends_on, milestones, days }, errors, warnings };
+  const carried_before = typeof o.carried_before === "string" ? o.carried_before : null;
+  return { plan: { name, description, starts_on, ends_on, milestones, days, carried_before }, errors, warnings };
 }
 
-/** Export plan: a plan as the file parsePlanFile reads back (every day as its own "date", no ranges).
- *  Optional fields that are empty are left out, so the file stays short. Ticks are progress, not plan: they
- *  aren't in it (Export progress on the dashboard keeps those). */
+/** Export plan: a plan as the file parsePlanFile reads back (every day as its own "date", no ranges), with each
+ *  day's bonus work and `carried_before`. Optional fields that are empty are left out, so the file stays short.
+ *  Ticks are progress, not plan: they aren't in it (Export progress on the dashboard keeps those). */
 export function planToFile(p: PlanFile) {
   return {
     format: PLAN_FORMAT,
@@ -310,7 +352,9 @@ export function planToFile(p: PlanFile) {
       ...(d.note ? { note: d.note } : {}),
       tasks: d.tasks,
       ...(d.questions.length ? { questions: d.questions } : {}),
+      ...(d.bonus.length ? { bonus: d.bonus } : {}),
     })),
+    ...(p.carried_before ? { carried_before: p.carried_before } : {}),
   };
 }
 

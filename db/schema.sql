@@ -393,6 +393,9 @@ CREATE TABLE plans (
   -- the plan file's own milestones, kept so "Reset milestones" can put them back; NULL = none kept
   original_milestones  TEXT CHECK (original_milestones IS NULL OR (json_valid(original_milestones)
                                    AND json_type(original_milestones) = 'array')),
+  -- carry-over (docs/PLANS.md §5): every day before this date has had its unfinished work written out as
+  -- bonus items (plan_bonus); NULL = never run yet
+  carried_before  TEXT CHECK (carried_before IS NULL OR carried_before GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'),
   CHECK (ends_on >= starts_on)
 ) STRICT;
 CREATE UNIQUE INDEX plans_one_active ON plans(is_active) WHERE is_active = 1;
@@ -449,6 +452,39 @@ CREATE TABLE plan_day_questions (
   PRIMARY KEY (day_id, question_id)
 ) STRICT, WITHOUT ROWID;
 CREATE INDEX plan_day_questions_by_question ON plan_day_questions(question_id);
+
+-- CONTENT: bonus work (docs/PLANS.md §5). When a day closes, each item still pending (a task, or a linked
+-- question) is placed on one of the next 3 planned days. The item stays on its own day (from_day_id) and doing it
+-- ticks it there; a bonus row never counts toward the day it sits on (plan_day_progress ignores this table).
+-- It can be moved to another later day or removed. Each item is placed at most once.
+CREATE TABLE plan_bonus (
+  id           INTEGER PRIMARY KEY,
+  day_id       INTEGER NOT NULL REFERENCES plan_days(id) ON DELETE CASCADE,   -- the day it sits on
+  position     REAL NOT NULL,
+  from_day_id  INTEGER NOT NULL REFERENCES plan_days(id) ON DELETE CASCADE,   -- the item's own day
+  task_id      INTEGER UNIQUE REFERENCES plan_tasks(id) ON DELETE CASCADE,    -- a task, or
+  question_id  TEXT,                                                          -- a linked question
+  FOREIGN KEY (from_day_id, question_id) REFERENCES plan_day_questions(day_id, question_id) ON DELETE CASCADE,
+  CHECK ((task_id IS NULL) <> (question_id IS NULL)),
+  UNIQUE (from_day_id, question_id)
+) STRICT;
+CREATE INDEX plan_bonus_by_day ON plan_bonus(day_id, position);
+
+-- A bonus item sits on a later day of the same plan, and a task's from_day_id is the task's own day.
+CREATE TRIGGER plan_bonus_check_ins BEFORE INSERT ON plan_bonus
+WHEN NOT EXISTS (SELECT 1 FROM plan_days t JOIN plan_days f ON f.id = new.from_day_id
+                 WHERE t.id = new.day_id AND t.plan_id = f.plan_id AND t.on_date > f.on_date)
+  OR (new.task_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM plan_tasks WHERE id = new.task_id AND day_id = new.from_day_id))
+BEGIN
+  SELECT RAISE(ABORT, 'plan_bonus: a bonus item must sit on a later day than its own');
+END;
+CREATE TRIGGER plan_bonus_check_upd BEFORE UPDATE OF day_id, from_day_id, task_id ON plan_bonus
+WHEN NOT EXISTS (SELECT 1 FROM plan_days t JOIN plan_days f ON f.id = new.from_day_id
+                 WHERE t.id = new.day_id AND t.plan_id = f.plan_id AND t.on_date > f.on_date)
+  OR (new.task_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM plan_tasks WHERE id = new.task_id AND day_id = new.from_day_id))
+BEGIN
+  SELECT RAISE(ABORT, 'plan_bonus: a bonus item must sit on a later day than its own');
+END;
 
 -- STATE: ticked tasks. Unticking deletes the row.
 CREATE TABLE plan_task_ticks (

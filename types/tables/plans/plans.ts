@@ -16,4 +16,7 @@ export interface PlanRow {
   updated_at: number;
   // the plan file's own milestones, kept so "Reset milestones" can put them back; null = none kept
   original_milestones: { name: string; short: string | null; date: IsoDate; note: string | null }[] | null;
+  // carry-over: every day before this date has had its unfinished work placed as bonus items (plan_bonus);
+  // null = never run yet
+  carried_before: IsoDate | null;
 }

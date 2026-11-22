@@ -12,6 +12,7 @@ This is the plan for study plans. It covers **what is stored**, **when a day cou
 | `plan_day_questions` | content | question linked to a day | `question_id`, `position` |
 | `plan_task_ticks` | state | ticked task | `done_at` |
 | `plan_question_ticks` | state | linked question that got done | the `answer_id` that did it, `done_at` |
+| `plan_bonus` | content | carried-over item placed on a later day | `day_id`, `from_day_id`, `task_id` or `question_id`, `position` (§5) |
 | `plan_day_progress` | state (cache) | plan day | counts, `status`, `done_at` |
 
 - **Content vs state.** Editing or re-importing a plan changes content tables only. Ticks survive edits because they point at a task's ID, never at its position.
@@ -63,7 +64,7 @@ Streaks are **computed when read, never stored.** "Current streak" changes at mi
 
 ## 5. Carry-over: unfinished work spreads over the next 3 days
 
-When a day ends with work left, its unfinished tasks and questions are shared out over the **next 3 planned days**. Like streaks, this is **computed when read, never stored**; it needs no extra table.
+When a day ends with work left, its unfinished tasks and questions are shared out over the **next 3 planned days** as **bonus work**. Unlike streaks, this is **stored**: once per closed day it is written as `plan_bonus` rows, so bonus work is a permanent part of the plan. It is exported with the plan, and the user can move it to another day or remove it.
 
 **What carries over.** A day is closed once its date is before today (IST). Its carried items are the ones that were still pending at the end of that day: no tick, or a tick whose `done_at` is after that day ended. Those items stay carried even after they are done later; they just show as done.
 
@@ -77,17 +78,21 @@ When a day ends with work left, its unfinished tasks and questions are shared ou
 - the **receiving day's** status counts only its own items, so carried work never makes a day `partial`;
 - a linked question answered on a later day ticks the original link automatically (rule in §2).
 
-**Carried items carry once.** A day's carry-over is only its own unfinished items, never items that were carried into it. After 3 days, anything still pending stops showing on later days and stays visible, unfinished, on its original day.
+**Carried items carry once.** A day's carry-over is only its own unfinished items, never items that were carried into it. Bonus work left undone stays on the day it sat on (and, unfinished, on its own day); it doesn't move on by itself.
 
-**Cost:** for today's screen, read the few closed days before it (at most 3 planned days back) with their items and ticks. That's a handful of indexed lookups, all of them small.
+**When it is written.** `plan.carry` (`writeCarry` in `lib/db/queries/carry.ts`) handles every planned day before today that is on or after `plans.carried_before`, then sets `carried_before` to today. `AppFrame` runs it when the app opens, then checks every minute and on coming back to the tab, and runs it again once the IST date changes. A second run the same day does nothing. NULL means it has never run, so every closed day is carried. An item placed already (by an earlier run, an imported file, or the user) is never placed again, and a removed one isn't brought back.
 
-**Edge case:** editing a past day (adding a task to last Monday) changes Monday's carry-over. That's expected: the split always reflects the plan as it is now.
+**The table.** `plan_bonus` has one row per placed item: `day_id` (the day it sits on), `from_day_id` (its own day), and `task_id` or `question_id`. Each item is placed at most once. Triggers keep it on a later day of the same plan. Deleting the original deletes the row (cascade). `plan_day_progress` never reads it, so bonus work never counts toward the receiving day.
 
-**Where it lives.** The split rules are in `lib/carry.ts` (`carryChunks`, `pendingAtEnd`), and the read is in `lib/db/queries/carry.ts` (`carriedInto`), which `dashboard.day` returns as `carried`. Tests: `scripts/checks/carry.ts`. On screen:
+**Moving and removing** (Edit plan, each day's **Bonus carried over** box): **Move** puts an item on another planned day that isn't locked (`plan.moveBonus`, Undo `plan.unmoveBonus`). **Remove** takes it off the day, and it stays unfinished on its own day (`plan.removeBonus`, Undo `plan.restoreBonus`). Bonus work never counts toward its day, so it can be moved off any day, a locked one too. That is how yesterday's undone bonus gets rescheduled.
+
+**Where it lives.** The split rules are in `lib/carry.ts` (`carryChunks`, `pendingAtEnd`). The write and read are in `lib/db/queries/carry.ts` (`writeCarry`, `carriedInto`, `placeBonus`, `setDayBonus`, `findOriginal`, `bonusEntries`). `dashboard.day` returns the bonus as `carried`. Tests: `scripts/checks/carry.ts`. On screen:
 - **Carried tasks** show in the bonus block (`components/plan/DayParts.tsx` `BonusBlock`) on the dashboard agenda and the planner, and ticking one ticks the original (`plan.tickTask`).
 - **Carried questions** add to the main event's count (its gold stretch).
 - **"Practise these questions"** opens `/practice/day?date=<date>` (`question.day`): the day's linked questions, then the bonus ones carried into it, every type, code questions too. Bonus questions sit in their own amber "Bonus" group in the palette, and each carries a "carried over from <day>" tag. Answering one ticks it on its own day.
-- **Dismissing** a carried item isn't built (§6), so the bonus block has no unlink.
+- **Moving / removing** happens in Edit plan (above) or through a JSON patch (§5b); the dashboard and planner bonus block only ticks.
+
+**In files.** Export plan writes each day's bonus work as `"bonus": [{ "from": "YYYY-MM-DD", "task": "text" } | { "from": …, "question": "id" }]` and the plan's `"carried_before"`. `plan.import` puts both back (`setDayBonus`): an entry matches the task with that text, or the linked question, on its `from` day. Entries that match nothing are skipped with a warning. In Edit plan's **Change days with JSON**, a day that lists `"bonus"` gets exactly that list. Items left out are removed, and items listed from another day move here. The `from` day must be over. A day without `"bonus"` keeps its bonus. The patch prompt (`lib/prompts/patchPrompt.ts`) shows each open day's bonus and the unfinished bonus stuck on locked days, so an AI chat can move it.
 
 
 ## 5b. The plan file (import)
@@ -96,7 +101,7 @@ Plans arrive as one JSON file, usually written by an AI chat from the prompt on 
 
 - **Rules and checks:** `lib/planFile.ts` (`parsePlanFile`). Every rule refuses with a plain-English message naming the field (AGENTS.md rule 5). The `plan.import` query checks the file again inside the worker and writes everything in one transaction, so nothing unchecked is ever saved.
 - **The AI prompt:** `lib/prompts/planPrompt.ts`. It asks the user about goal, dates, free time and topics first, then writes the file. Its example must pass the importer (`bun run check`), so **change both together** (rule 9).
-- **Shape:** `name`, optional `description`, `starts_on` / `ends_on` (default: first / last day), `milestones` (`name`, `short`, `date`, `note`), and `days`. A day is one `date` or a range `from` / `to` with optional `weekdays` (`"mon"`…`"sun"`), plus `title`, `kind`, `hours`, `tasks`, `note` and `questions` (question ids).
+- **Shape:** `name`, optional `description`, `starts_on` / `ends_on` (default: first / last day), `milestones` (`name`, `short`, `date`, `note`), `days`, and optional `carried_before`. A day is one `date` or a range `from` / `to` with optional `weekdays` (`"mon"`…`"sun"`), plus `title`, `kind`, `hours`, `tasks`, `note`, `questions` (question ids) and, on a single `date` only, `bonus` (§5). Export plan writes `bonus` and `carried_before`; the plan prompt tells an AI to leave them out.
 - **Overlaps:** a single `date` beats any range; a later range beats an earlier one. Dates with no entry are rest days.
 - **Forgiving where it's safe:** a missing `format` is only a warning; ``` fences around the JSON are removed; LaTeX backslashes that JSON broke (`rac` read as a form feed) are put back, with a warning.
 - **Question links** whose ids aren't in the question bank yet are left out, with a warning (load the pack first to keep them).
@@ -123,4 +128,3 @@ Plans arrive as one JSON file, usually written by an AI chat from the prompt on 
 - **Phases** (the v1 coloured stretches). Milestones exist now (§5d).
 - **Day kinds** (study / light / mock…) and a mock test linked to a day.
 - **Topics per day.** These can be derived from the linked questions' `topic_id`.
-- **Dismissing a carried item** ("don't show this again"). That needs a small state table, e.g. `plan_carry_dismissals (task_id | day_id + question_id)`.

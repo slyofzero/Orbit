@@ -76,7 +76,7 @@ export function useExportPlan() {
       const name = fileNameOf(`${r.name} plan`);
       downloadText(name, JSON.stringify(r.file, null, 2));
       toast(
-        `Exported ${plural(r.days, "day")}, ${plural(r.tasks, "task")} and ${plural(r.links, "linked question")} to **${name}**. Ticks aren't in it: **Export progress** on the dashboard keeps those.`,
+        `Exported ${plural(r.days, "day")}, ${plural(r.tasks, "task")}, ${plural(r.links, "linked question")} and ${plural(r.bonus, "bonus item")} to **${name}**. Ticks aren't in it: **Export progress** on the dashboard keeps those.`,
         "success",
       );
     } catch (e) {

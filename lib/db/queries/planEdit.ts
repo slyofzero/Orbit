@@ -3,6 +3,7 @@
 // and today after the lock hour) are never changed here; the screen passes `today` and `hour` (AGENTS.md rule 7).
 // Named queries (docs/STORAGE.md §2); how to write one: lib/db/queries/index.ts.
 
+import { bonusEntries, carriedInto, findOriginal, placeBonus, setDayBonus } from "@/lib/db/queries/carry";
 import { read, write } from "@/lib/db/queries/core";
 import type { Sql } from "@/lib/db/sql";
 import { dayLock } from "@/lib/dashboard";
@@ -17,6 +18,12 @@ const MAX_QUESTIONS = 50_000;
 const FIND_LIMIT = 8;
 
 type Plan = { id: string; name: string; description: string | null; starts_on: IsoDate; ends_on: IsoDate };
+type BonusRef = { id: number; day_id: number; from_day_id: number; task_id: number | null; question_id: string | null };
+/** A bonus row's original item, as placeBonus takes it. */
+const itemOf = (b: BonusRef) =>
+  b.task_id !== null
+    ? { fromDayId: b.from_day_id, taskId: b.task_id }
+    : { fromDayId: b.from_day_id, questionId: b.question_id ?? "" };
 type Clock = { today: IsoDate; hour: number };
 
 const activePlan = (sql: Sql) =>
@@ -67,63 +74,101 @@ function readPatch(sql: Sql, plan: Plan, c: Clock, text: string) {
   return { errors: [] as string[], warnings, apply: s.apply };
 }
 
+/** A patch's bonus entries that can't be used (nothing to save yet): a "from" day that isn't over, or no such task
+ *  or linked question on it. They are skipped when the patch is applied. */
+function bonusWarnings(sql: Sql, plan: Plan, c: Clock, days: PlanFileDay[]): string[] {
+  const bad = days.flatMap((d) =>
+    d.bonus.filter((b) => b.from >= c.today || !findOriginal(sql, plan.id, b)).map((b) => `${d.date} (${b.from})`),
+  );
+  if (!bad.length) return [];
+  const list = `${bad.slice(0, 4).join(", ")}${bad.length > 4 ? ` and ${bad.length - 4} more` : ""}`;
+  return [
+    `${bad.length} bonus item(s) will be skipped: their "from" day isn't over yet, or has no such task or linked question: ${list}.`,
+  ];
+}
+
 export const planEditQueries = {
   /** Edit plan, JSON update: the plan and its open (not locked) days with their tasks, for the AI prompt
    *  (lib/prompts/patchPrompt.ts). null = no plan. */
-  "plan.patchInput": read(["plans", "plan_days", "plan_tasks"], (sql, c: Clock): PatchInput | null => {
-    const plan = activePlan(sql);
-    if (!plan) return null;
-    const rows = sql
-      .all<{
-        id: number;
-        on_date: IsoDate;
-        title: string | null;
-        kind: PlanDayKind;
-        hours: number | null;
-        note: string | null;
-      }>("SELECT id, on_date, title, kind, hours, note FROM plan_days WHERE plan_id = ? ORDER BY on_date LIMIT 2000", [
-        plan.id,
-      ])
-      .filter((d) => !isLocked(d.on_date, c));
-    const tasks = new Map<number, string[]>();
-    for (const t of sql.all<{ day_id: number; body: string }>(
-      `SELECT t.day_id, t.body FROM plan_tasks t JOIN plan_days d ON d.id = t.day_id
+  "plan.patchInput": read(
+    ["plans", "plan_days", "plan_tasks", "plan_task_ticks", "plan_day_questions", "plan_question_ticks", "plan_bonus"],
+    (sql, c: Clock): PatchInput | null => {
+      const plan = activePlan(sql);
+      if (!plan) return null;
+      const rows = sql
+        .all<{
+          id: number;
+          on_date: IsoDate;
+          title: string | null;
+          kind: PlanDayKind;
+          hours: number | null;
+          note: string | null;
+        }>(
+          "SELECT id, on_date, title, kind, hours, note FROM plan_days WHERE plan_id = ? ORDER BY on_date LIMIT 2000",
+          [plan.id],
+        )
+        .filter((d) => !isLocked(d.on_date, c));
+      const tasks = new Map<number, string[]>();
+      for (const t of sql.all<{ day_id: number; body: string }>(
+        `SELECT t.day_id, t.body FROM plan_tasks t JOIN plan_days d ON d.id = t.day_id
        WHERE d.plan_id = ? ORDER BY t.position, t.id LIMIT 50000`,
-      [plan.id],
-    ))
-      tasks.set(t.day_id, [...(tasks.get(t.day_id) ?? []), t.body]);
-    return {
-      plan,
-      days: rows.map((d) => ({
-        date: d.on_date,
-        title: d.title ?? "Day",
-        kind: d.kind,
-        hours: d.hours,
-        note: d.note,
-        tasks: tasks.get(d.id) ?? [],
-      })),
-    };
-  }),
+        [plan.id],
+      ))
+        tasks.set(t.day_id, [...(tasks.get(t.day_id) ?? []), t.body]);
+      // unfinished bonus work on locked days: the AI may move it onto an open day
+      const stuck = sql
+        .all<{ id: number; on_date: IsoDate }>(
+          "SELECT id, on_date FROM plan_days WHERE plan_id = ? AND on_date <= ? ORDER BY on_date LIMIT 2000",
+          [plan.id, c.today],
+        )
+        .filter((d) => isLocked(d.on_date, c))
+        .flatMap((d) => {
+          const k = carriedInto(sql, plan.id, d.on_date);
+          return [
+            ...k.tasks.filter((t) => !t.done).map((t) => ({ on: d.on_date, from: t.from, task: t.body })),
+            ...k.questions.filter((q) => !q.done).map((q) => ({ on: d.on_date, from: q.from, question: q.id })),
+          ];
+        })
+        .slice(0, LIMITS.bonus);
+      return {
+        plan,
+        days: rows.map((d) => ({
+          date: d.on_date,
+          title: d.title ?? "Day",
+          kind: d.kind,
+          hours: d.hours,
+          note: d.note,
+          tasks: tasks.get(d.id) ?? [],
+          bonus: bonusEntries(sql, d.id),
+        })),
+        stuck,
+      };
+    },
+  ),
 
   /** Edit plan, JSON update, step 1: what a pasted / uploaded patch would do, without saving anything. */
-  "plan.checkPatch": read(["plans", "plan_days"], (sql, p: Clock & { text: string }) => {
-    const plan = activePlan(sql);
-    if (!plan) return null;
-    const r = readPatch(sql, plan, p, p.text);
-    const have = new Set(
-      sql
-        .all<{ d: IsoDate }>("SELECT on_date AS d FROM plan_days WHERE plan_id = ? LIMIT 2000", [plan.id])
-        .map((x) => x.d),
-    );
-    const updated = r.apply.filter((d) => have.has(d.date)).length;
-    return { errors: r.errors, warnings: r.warnings, updated, added: r.apply.length - updated };
-  }),
+  "plan.checkPatch": read(
+    ["plans", "plan_days", "plan_tasks", "plan_day_questions", "plan_bonus"],
+    (sql, p: Clock & { text: string }) => {
+      const plan = activePlan(sql);
+      if (!plan) return null;
+      const r = readPatch(sql, plan, p, p.text);
+      const have = new Set(
+        sql
+          .all<{ d: IsoDate }>("SELECT on_date AS d FROM plan_days WHERE plan_id = ? LIMIT 2000", [plan.id])
+          .map((x) => x.d),
+      );
+      const updated = r.apply.filter((d) => have.has(d.date)).length;
+      const warnings = [...r.warnings, ...bonusWarnings(sql, plan, p, r.apply)];
+      return { errors: r.errors, warnings, updated, added: r.apply.length - updated };
+    },
+  ),
 
   /** Edit plan, JSON update, step 2: checks again and writes the listed dates only. A day in the file gets its
    *  title, type, hours, note and tasks from the file (a task with the same text keeps its tick) and its links if
    *  the file has "questions". Every other day, the plan's name and its milestones stay as they are. One transaction. */
   "plan.applyPatch": write(
-    ["plans", "plan_days", "plan_tasks", "plan_day_questions"],
+    ["plans", "plan_days", "plan_tasks", "plan_day_questions", "plan_bonus"],
     (sql, p: Clock & { text: string }) => {
       const plan = activePlan(sql);
       if (!plan) return { ok: false as const, errors: ["There is no plan to update."] };
@@ -133,6 +178,8 @@ export const planEditQueries = {
       let added = 0;
       let tasks = 0;
       let dropped = 0;
+      let bonus = 0;
+      let skippedBonus = 0;
       for (const d of r.apply) {
         const at = sql.get<{ id: number }>("SELECT id FROM plan_days WHERE plan_id = ? AND on_date = ?", [
           plan.id,
@@ -189,19 +236,28 @@ export const planEditQueries = {
           dropped += d.questions.length - keep.length;
           setDayLinks(sql, dayId, keep);
         }
+        // bonus: the day's list becomes exactly the file's; an item sitting on another day moves here
+        if (d.hasBonus) {
+          const b = setDayBonus(sql, plan.id, dayId, d.bonus, p.today);
+          bonus += b.placed;
+          skippedBonus += b.missing.length;
+        }
       }
       sql.run("UPDATE plans SET updated_at = ? WHERE id = ?", [Date.now(), plan.id]);
-      const warnings = dropped
-        ? [...r.warnings, `${dropped} linked question(s) left out: not in your practice bank.`]
-        : r.warnings;
-      return { ok: true as const, updated, added, tasks, warnings };
+      const warnings = [...r.warnings];
+      if (dropped) warnings.push(`${dropped} linked question(s) left out: not in your practice bank.`);
+      if (skippedBonus)
+        warnings.push(`${skippedBonus} bonus item(s) skipped: their day isn't over, or has no such task or question.`);
+      return { ok: true as const, updated, added, tasks, bonus, warnings };
     },
   ),
 
   /** Export plan: the active plan as an orbit-plan file (lib/planFile.ts planToFile). null = no plan. */
-  "plan.export": read(["plans", "plan_days", "plan_tasks", "plan_day_questions", "milestones"], (sql) => {
+  "plan.export": read(["plans", "plan_days", "plan_tasks", "plan_day_questions", "plan_bonus", "milestones"], (sql) => {
     const plan = activePlan(sql);
     if (!plan) return null;
+    const carriedBefore =
+      sql.get<{ c: IsoDate | null }>("SELECT carried_before AS c FROM plans WHERE id = ?", [plan.id])?.c ?? null;
     const days = sql.all<{
       id: number;
       on_date: IsoDate;
@@ -244,7 +300,9 @@ export const planEditQueries = {
         note: d.note,
         tasks: tasks.get(d.id) ?? [],
         questions: links.get(d.id) ?? [],
+        bonus: bonusEntries(sql, d.id),
       })),
+      carried_before: carriedBefore,
     };
     return {
       file: planToFile(file),
@@ -252,6 +310,7 @@ export const planEditQueries = {
       days: days.length,
       tasks: [...tasks.values()].reduce((n, t) => n + t.length, 0),
       links: [...links.values()].reduce((n, l) => n + l.length, 0),
+      bonus: file.days.reduce((n, d) => n + d.bonus.length, 0),
     };
   }),
 
@@ -465,7 +524,7 @@ export const planEditQueries = {
   ),
 
   /** Edit plan: the plan's details and every day with its task and question counts. null = no plan. */
-  "plan.editDays": read(["plans", "plan_days", "plan_tasks", "plan_day_questions"], (sql) => {
+  "plan.editDays": read(["plans", "plan_days", "plan_tasks", "plan_day_questions", "plan_bonus"], (sql) => {
     const plan = activePlan(sql);
     if (!plan) return null;
     const days = sql.all<{
@@ -476,10 +535,12 @@ export const planEditQueries = {
       hours: number | null;
       tasks: number;
       questions: number;
+      bonus: number;
     }>(
       `SELECT d.id, d.on_date, d.title, d.kind, d.hours,
               (SELECT count(*) FROM plan_tasks t WHERE t.day_id = d.id) AS tasks,
-              (SELECT count(*) FROM plan_day_questions q WHERE q.day_id = d.id) AS questions
+              (SELECT count(*) FROM plan_day_questions q WHERE q.day_id = d.id) AS questions,
+              (SELECT count(*) FROM plan_bonus b WHERE b.day_id = d.id) AS bonus
        FROM plan_days d WHERE d.plan_id = ? ORDER BY d.on_date LIMIT 2000`,
       [plan.id],
     );
@@ -488,7 +549,16 @@ export const planEditQueries = {
 
   /** Edit plan: one day as the editor needs it, with which tasks are ticked and which questions are done. */
   "plan.editDay": read(
-    ["plan_days", "plan_tasks", "plan_task_ticks", "plan_day_questions", "plan_question_ticks", "questions", "topics"],
+    [
+      "plan_days",
+      "plan_tasks",
+      "plan_task_ticks",
+      "plan_day_questions",
+      "plan_question_ticks",
+      "plan_bonus",
+      "questions",
+      "topics",
+    ],
     (sql, p: { dayId: number }) => {
       const day = sql.get<{
         id: number;
@@ -515,9 +585,111 @@ export const planEditQueries = {
           [p.dayId],
         )
         .map((q) => ({ ...q, done: !!q.done }));
-      return { day, tasks, questions };
+      const plan = sql.get<{ id: string }>("SELECT plan_id AS id FROM plan_days WHERE id = ?", [p.dayId])!;
+      const carried = carriedInto(sql, plan.id, day.on_date);
+      const stems = new Map(
+        sql
+          .all<{ id: string; stem: string; topic: string | null }>(
+            `SELECT q.id, substr(q.stem, 1, 300) AS stem, t.name AS topic FROM plan_bonus b
+             JOIN questions q ON q.id = b.question_id LEFT JOIN topics t ON t.id = q.topic_id
+             WHERE b.day_id = ? LIMIT 1200`,
+            [p.dayId],
+          )
+          .map((q) => [q.id, q]),
+      );
+      const bonus = [
+        ...carried.tasks.map((t) => ({ ...t, kind: "task" as const, stem: null, topic: null })),
+        ...carried.questions.map((q) => ({
+          ...q,
+          kind: "question" as const,
+          body: null,
+          stem: stems.get(q.id)?.stem ?? null,
+          topic: stems.get(q.id)?.topic ?? null,
+        })),
+      ];
+      return { day, tasks, questions, bonus };
     },
   ),
+
+  /** Edit plan: moves one bonus item to another planned day that isn't locked. Bonus work never counts toward the
+   *  day it sits on, so it may be moved off any day, a locked one too. Returns where it was, for Undo. */
+  "plan.moveBonus": write(["plan_bonus"], (sql, p: Clock & { bonusId: number; to: IsoDate }) => {
+    const plan = activePlan(sql);
+    const b = sql.get<BonusRef & { from: IsoDate }>(
+      `SELECT b.id, b.day_id, b.from_day_id, b.task_id, b.question_id, f.on_date AS "from"
+       FROM plan_bonus b JOIN plan_days f ON f.id = b.from_day_id WHERE b.id = ? AND f.plan_id = ?`,
+      [p.bonusId, plan?.id ?? ""],
+    );
+    if (!plan || !b) return { ok: false as const, error: "That bonus item is gone. Reload the page." };
+    const to = sql.get<{ id: number }>("SELECT id FROM plan_days WHERE plan_id = ? AND on_date = ?", [plan.id, p.to]);
+    if (!to) return { ok: false as const, error: "That date isn't a planned day. Pick a day that is in your plan." };
+    if (isLocked(p.to, p))
+      return { ok: false as const, error: "That day is locked. Pick today (before it locks) or a later day." };
+    if (p.to <= b.from) return { ok: false as const, error: "Bonus work goes on a day after the one it came from." };
+    if (to.id === b.day_id) return { ok: false as const, error: "It is on that day already." };
+    placeBonus(sql, to.id, itemOf(b));
+    const back = sql.get<{ on_date: IsoDate }>("SELECT on_date FROM plan_days WHERE id = ?", [b.day_id])!.on_date;
+    return { ok: true as const, bonusId: b.id, from: back, to: p.to };
+  }),
+
+  /** Undo of a move: puts a bonus item back on the day it sat on (any day, a locked one too). */
+  "plan.unmoveBonus": write(["plan_bonus"], (sql, p: { bonusId: number; to: IsoDate }) => {
+    const plan = activePlan(sql);
+    const b = sql.get<BonusRef>("SELECT id, day_id, from_day_id, task_id, question_id FROM plan_bonus WHERE id = ?", [
+      p.bonusId,
+    ]);
+    const to = plan
+      ? sql.get<{ id: number }>("SELECT id FROM plan_days WHERE plan_id = ? AND on_date = ?", [plan.id, p.to])
+      : undefined;
+    if (!b || !to) return { ok: false as const, error: "That bonus item or its day is gone." };
+    placeBonus(sql, to.id, itemOf(b));
+    return { ok: true as const };
+  }),
+
+  /** Edit plan: removes one bonus item from the day it sits on (the item stays, unfinished, on its own day). Returns
+   *  the row, for Undo (`plan.restoreBonus`). */
+  "plan.removeBonus": write(["plan_bonus"], (sql, p: { bonusId: number }) => {
+    const b = sql.get<BonusRef & { position: number }>(
+      "SELECT id, day_id, position, from_day_id, task_id, question_id FROM plan_bonus WHERE id = ?",
+      [p.bonusId],
+    );
+    if (!b) return { ok: false as const, error: "That bonus item is gone already." };
+    sql.run("DELETE FROM plan_bonus WHERE id = ?", [b.id]);
+    return { ok: true as const, row: b };
+  }),
+
+  /** Undo of Remove: puts the bonus row back (a new id: SQLite may have reused the old one), unless its item or day
+   *  is gone or the item was placed again since. */
+  "plan.restoreBonus": write(["plan_bonus"], (sql, p: { row: BonusRef & { position: number } }) => {
+    const r = p.row;
+    const n = sql.run(
+      `INSERT INTO plan_bonus (day_id, position, from_day_id, task_id, question_id)
+       SELECT ?, ?, ?, ?, ?
+       WHERE EXISTS (SELECT 1 FROM plan_days WHERE id = ?)
+         AND (? IS NULL OR EXISTS (SELECT 1 FROM plan_tasks WHERE id = ?))
+         AND (? IS NULL OR EXISTS (SELECT 1 FROM plan_day_questions WHERE day_id = ? AND question_id = ?))
+         AND NOT EXISTS (SELECT 1 FROM plan_bonus WHERE task_id = ? OR (from_day_id = ? AND question_id = ?))`,
+      [
+        r.day_id,
+        r.position,
+        r.from_day_id,
+        r.task_id,
+        r.question_id,
+        r.day_id,
+        r.task_id,
+        r.task_id,
+        r.question_id,
+        r.from_day_id,
+        r.question_id,
+        r.task_id,
+        r.from_day_id,
+        r.question_id,
+      ],
+    );
+    return n
+      ? { ok: true as const }
+      : { ok: false as const, error: "It can't go back: it was moved or deleted since." };
+  }),
 
   /** Edit plan: practice questions to add to a day, found by id or text (`search`), or looked up by `ids`
    *  (pasted links). Only questions that can be linked: practice pool, not retired. */

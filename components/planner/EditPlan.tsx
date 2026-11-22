@@ -388,7 +388,7 @@ function DayRow({
       </span>
       <Pill tone={KIND_PILL[day.kind]}>{KIND_LABEL[day.kind]}</Pill>
       <Text as="span" variant="small">
-        {`${plural(day.tasks, "task")} · ${plural(day.questions, "question")}${locked ? " · 🔒 locked" : ""}`}
+        {`${plural(day.tasks, "task")} · ${plural(day.questions, "question")}${day.bonus ? ` · ${day.bonus} bonus` : ""}${locked ? " · 🔒 locked" : ""}`}
       </Text>
     </span>
   );
@@ -690,6 +690,8 @@ function DayEditor({
         </div>
       </fieldset>
 
+      {data.bonus.length > 0 && <BonusList date={date} items={data.bonus} clock={clock} />}
+
       {errors.length > 0 && (
         <Callout tone="caution" title="🔴 Fix this first">
           <ul className="m-0 grid gap-1 pl-5">
@@ -732,6 +734,120 @@ function DayEditor({
             </Button>
           </div>
         ))}
+    </div>
+  );
+}
+
+type Bonus = NonNullable<ResultOf<"plan.editDay">>["bonus"][number];
+
+/** A day's bonus work (docs/PLANS.md §5): unfinished items of earlier days placed on this one. Each can be moved to
+ *  another planned day that isn't locked, or removed (it stays, unfinished, on its own day). Bonus work never counts
+ *  toward the day it sits on, so this works on locked days too. Changes save at once, with Undo on the toast. */
+function BonusList({ date, items, clock }: { date: IsoDate; items: Bonus[]; clock: Clock }) {
+  const toast = useToast();
+  const move = useMutation("plan.moveBonus");
+  const unmove = useMutation("plan.unmoveBonus");
+  const remove = useMutation("plan.removeBonus");
+  const restore = useMutation("plan.restoreBonus");
+  const [moving, setMoving] = useState<number | null>(null);
+  const [to, setTo] = useState<IsoDate | null>(null);
+  const [error, setError] = useState("");
+  const name = (b: Bonus) => (b.kind === "task" ? (b.body ?? "") : `question ${b.id}`);
+
+  const doMove = async (b: Bonus) => {
+    if (!to) return setError("Pick a day first.");
+    const r = await move.run({ ...clock, bonusId: b.bonusId, to });
+    if (!r) return;
+    if (!r.ok) return setError(r.error);
+    setMoving(null);
+    setTo(null);
+    setError("");
+    toast(`Moved **${name(b)}** to **${formatDate(r.to)}**.`, "success", {
+      label: "Undo",
+      onClick: async () => {
+        const u = await unmove.run({ bonusId: r.bonusId, to: r.from });
+        if (u && !u.ok) toast(`Couldn't undo: ${u.error}`, "error");
+      },
+    });
+  };
+  const doRemove = async (b: Bonus) => {
+    const r = await remove.run({ bonusId: b.bonusId });
+    if (!r) return;
+    if (!r.ok) return toast(r.error, "error");
+    toast(`Removed **${name(b)}** from this day. It stays unfinished on ${formatDate(b.from)}.`, "neutral", {
+      label: "Undo",
+      onClick: async () => {
+        const u = await restore.run({ row: r.row });
+        if (u && !u.ok) toast(`Couldn't undo: ${u.error}`, "error");
+      },
+    });
+  };
+
+  return (
+    <div className="grid gap-2 rounded-[14px] border-[1.5px] border-dashed border-amber bg-amber/8 px-3.5 py-3">
+      <Text className="font-bold">{`Bonus carried over (${items.length})`}</Text>
+      <Text variant="small">
+        Unfinished work from earlier days. Doing it ticks it on its own day; it doesn&apos;t count toward this one.
+        **Move** it to a day you have time for, or remove it.
+      </Text>
+      {items.map((b) => (
+        <div key={b.bonusId} className="grid gap-2 rounded-md border border-line-2 bg-sheet px-3 py-2">
+          <div className="flex items-start gap-2.5">
+            <div className="grid min-w-0 flex-1 gap-0.5">
+              <span className="flex flex-wrap items-center gap-2">
+                <Pill tone="amber">{`from ${formatDate(b.from)}`}</Pill>
+                {b.done && <Pill tone="green">done</Pill>}
+                {b.kind === "question" && <Code>{b.id}</Code>}
+              </span>
+              {b.kind === "task" ? (
+                <Rich text={b.body ?? ""} />
+              ) : (
+                <Text as="span" variant="small">
+                  {b.stem
+                    ? `${b.topic ? `${b.topic}: ` : ""}${previewText(b.stem, 110)}`
+                    : "No longer in your question bank"}
+                </Text>
+              )}
+            </div>
+            <Button
+              variant="soft"
+              size="sm"
+              onClick={() => {
+                setMoving(moving === b.bonusId ? null : b.bonusId);
+                setTo(null);
+                setError("");
+              }}
+            >
+              Move
+            </Button>
+            <IconButton label={`Remove ${name(b)} from this day`} size="sm" onClick={() => doRemove(b)}>
+              <IconX />
+            </IconButton>
+          </div>
+          {moving === b.bonusId && (
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="min-w-[220px] flex-1">
+                <DatePicker
+                  label="Move to"
+                  value={to}
+                  onChange={(v) => {
+                    setTo(v);
+                    setError("");
+                  }}
+                  min={clock.today > b.from ? clock.today : b.from}
+                  error={error || undefined}
+                />
+              </div>
+              <Button variant="primary" size="sm" loading={move.pending} onClick={() => doMove(b)}>
+                {to ? `Move to ${formatDate(to)}` : "Move"}
+              </Button>
+            </div>
+          )}
+        </div>
+      ))}
+      {date < clock.today && (
+        <Text variant="small">This day is over: move anything still unfinished to a day ahead.</Text>
+      )}
     </div>
   );
 }

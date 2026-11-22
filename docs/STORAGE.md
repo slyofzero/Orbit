@@ -103,6 +103,7 @@ mocks/      mocks ─< mock_sections ─< mock_items >── questions        co
 
 plans/      plans ─< plan_days ─┬─< plan_tasks ── plan_task_ticks     content ── state
                                 ├─< plan_day_questions ── plan_question_ticks
+                                ├─< plan_bonus (carried-over work, PLANS.md §5)   content
                                 └── plan_day_progress                 state cache (triggers)
 ```
 
