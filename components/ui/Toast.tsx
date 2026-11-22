@@ -1,32 +1,61 @@
 "use client";
-import { createContext, useCallback, useContext, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { createPortal } from "react-dom";
 import { IconSparkle, IconX } from "@/components/icons";
 import { IconButton } from "@/components/ui/Button";
+import { copyText } from "@/components/ui/CopyButton";
 import { txt } from "@/components/utils/txt";
 import { cx } from "@/components/utils/cx";
 
 export type ToastTone = "neutral" | "success" | "error" | "special" | "warm"; // warm = special with the warm gradient
 /** An optional button on a toast, e.g. "Undo". Clicking it runs `onClick` and closes the toast. */
 export type ToastAction = { label: string; onClick: () => void };
-type Toast = { id: number; tone: ToastTone; text: ReactNode; action?: ToastAction; leaving: boolean };
+type Toast = {
+  id: number;
+  tone: ToastTone;
+  text: ReactNode;
+  action?: ToastAction;
+  leaving: boolean;
+  copied?: boolean;
+};
 
 const Ctx = createContext<(text: ReactNode, tone?: ToastTone, action?: ToastAction) => void>(() => {});
 
 const MAX_ON_SCREEN = 3;
 const LEAVE_MS = 240; // must match --animate-toast-out in styles/animations/toast.css
 const MOVE_MS = 260; // how long the others take to slide into the gap
+const SHOW_MS = 5000; // how long every toast stays (longer only while the pointer is over it)
 const reducedMotion = () => typeof matchMedia !== "undefined" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/** The open modal dialog shown last (the one on top), or null. */
+function topDialog(): HTMLDialogElement | null {
+  const open = [...document.querySelectorAll<HTMLDialogElement>("dialog[open]")].filter((d) => d.matches(":modal"));
+  return open[open.length - 1] ?? null;
+}
 
 /** Short feedback in the bottom-right corner that never moves the layout ("Copied", "Saved").
  *  Wrap the app once in <ToastProvider>, then call useToast()("Saved", "success").
  *  `special` = animated gradient with a sparkle, for celebrations. A third argument adds a button
- *  ({ label: "Undo", onClick }); such a toast stays a little longer (v1: 6.5 s).
+ *  ({ label: "Undo", onClick }). `error` toasts get a Copy button (copies the message). Every toast stays 5 s,
+ *  but never leaves while the pointer is over it.
+ *  Toasts are above everything, open dialogs included: the stack is a `popover` (the browser's top layer), moved
+ *  into the open modal dialog (else the dialog makes it unclickable); each move shows it again on top.
  *  A toast slides in, and on leaving slides out to the right; the toasts above it then glide down. */
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const list = useRef<Toast[]>([]);
   list.current = toasts;
   const next = useRef(1);
+  const hovered = useRef<number | null>(null);
 
   // Leaving = play the slide-out, then remove. Removal is on a timer (not animationend) so it
   // still happens when reduced motion switches the animation off.
@@ -34,6 +63,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setToasts((t) => t.map((x) => (x.id === id ? { ...x, leaving: true } : x)));
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), reducedMotion() ? 0 : LEAVE_MS);
   }, []);
+  /** Leaves after `ms`, or later if the pointer is over it then. */
+  const dismissLater = useCallback(
+    (id: number, ms: number) => {
+      setTimeout(() => (hovered.current === id ? dismissLater(id, 1500) : dismiss(id)), ms);
+    },
+    [dismiss],
+  );
 
   const show = useCallback(
     (text: ReactNode, tone: ToastTone = "neutral", action?: ToastAction) => {
@@ -41,10 +77,39 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       const live = list.current.filter((x) => !x.leaving);
       live.slice(0, Math.max(0, live.length - (MAX_ON_SCREEN - 1))).forEach((x) => dismiss(x.id)); // oldest leave
       setToasts((t) => [...t, { id, tone, text, action, leaving: false }]);
-      setTimeout(() => dismiss(id), action ? 6500 : tone === "error" ? 6000 : 3500);
+      dismissLater(id, SHOW_MS);
     },
-    [dismiss],
+    [dismiss, dismissLater],
   );
+
+  const copy = async (t: Toast, el: HTMLElement | null) => {
+    const text = typeof t.text === "string" ? t.text : (el?.textContent ?? "");
+    if (!(await copyText(text))) return;
+    setToasts((all) => all.map((x) => (x.id === t.id ? { ...x, copied: true } : x)));
+  };
+
+  // Where the stack lives: inside the top open modal dialog (or the body), re-checked whenever a dialog opens or
+  // closes. Each show puts it last in the top layer, so it is above that dialog.
+  const [host, setHost] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    const update = () => setHost(topDialog() ?? document.body);
+    update();
+    const watch = new MutationObserver(update);
+    watch.observe(document.body, { subtree: true, attributes: true, attributeFilter: ["open"] });
+    return () => watch.disconnect();
+  }, []);
+  // Shown once per host (a new host = a new element, last in the top layer). Never hidden and re-shown while
+  // toasts are on it: hiding restarts the animations inside, which cut the slide-outs short.
+  const stack = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const el = stack.current;
+    if (!el) return;
+    try {
+      if (!el.matches(":popover-open")) el.showPopover();
+    } catch {
+      // no Popover API: the z-index still puts it above the page
+    }
+  }, [host]);
 
   // FLIP: after every change, toasts whose position moved animate from where they were to where they are.
   const els = useRef(new Map<number, HTMLDivElement>());
@@ -65,51 +130,71 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     tops.current = now;
   }, [toasts]);
 
+  const region = (
+    <div
+      ref={stack}
+      popover="manual"
+      // the popover's own box styles (inset, margin, border, background, padding) are reset; it sits bottom right
+      className="fixed inset-auto right-5 bottom-[calc(20px+env(safe-area-inset-bottom,0px))] z-999 m-0 grid w-[min(380px,calc(100vw-40px))] gap-2 overflow-visible border-0 bg-transparent p-0 text-left max-[560px]:right-4 max-[560px]:left-4 max-[560px]:w-auto"
+      role="status"
+      aria-live="polite"
+    >
+      {toasts.map((t) => (
+        <div
+          key={t.id}
+          className={toastClass(t)}
+          ref={(el) => {
+            if (el) els.current.set(t.id, el);
+            else els.current.delete(t.id);
+          }}
+          onPointerEnter={() => (hovered.current = t.id)}
+          onPointerLeave={() => {
+            if (hovered.current === t.id) hovered.current = null;
+          }}
+        >
+          {(t.tone === "special" || t.tone === "warm") && (
+            <IconSparkle className="size-[18px] shrink-0 animate-twinkle" />
+          )}
+          <span className="min-w-0 flex-1 break-words">{txt(t.text)}</span>
+          {t.tone === "error" && (
+            <button
+              type="button"
+              className="-my-1 shrink-0 cursor-pointer rounded-full bg-white/20 px-3 py-[5px] text-[0.85rem] font-bold text-inherit transition-colors duration-150 hover:bg-white/30"
+              onClick={(e) => void copy(t, e.currentTarget.parentElement?.querySelector("span") ?? null)}
+            >
+              {t.copied ? "Copied" : "Copy"}
+            </button>
+          )}
+          {t.action && (
+            <button
+              type="button"
+              className="-my-1 shrink-0 cursor-pointer rounded-full bg-hi px-3.5 py-[5px] text-[0.9rem] font-bold text-hero transition-[filter] duration-150 hover:brightness-110"
+              onClick={() => {
+                t.action!.onClick();
+                dismiss(t.id);
+              }}
+            >
+              {txt(t.action.label)}
+            </button>
+          )}
+          <IconButton
+            label="Dismiss"
+            size="sm"
+            variant="ghost"
+            className="-my-1 -mr-1.5 text-inherit! opacity-85 enabled:hover:bg-current/16! enabled:hover:opacity-100"
+            onClick={() => dismiss(t.id)}
+          >
+            <IconX />
+          </IconButton>
+        </div>
+      ))}
+    </div>
+  );
+
   return (
     <Ctx.Provider value={show}>
       {children}
-      <div
-        className="fixed right-5 bottom-[calc(20px+env(safe-area-inset-bottom,0px))] z-100 grid w-[min(380px,calc(100vw-40px))] gap-2 max-[560px]:right-4 max-[560px]:left-4 max-[560px]:w-auto"
-        role="status"
-        aria-live="polite"
-      >
-        {toasts.map((t) => (
-          <div
-            key={t.id}
-            className={toastClass(t)}
-            ref={(el) => {
-              if (el) els.current.set(t.id, el);
-              else els.current.delete(t.id);
-            }}
-          >
-            {(t.tone === "special" || t.tone === "warm") && (
-              <IconSparkle className="size-[18px] shrink-0 animate-twinkle" />
-            )}
-            <span className="flex-1">{txt(t.text)}</span>
-            {t.action && (
-              <button
-                type="button"
-                className="-my-1 shrink-0 cursor-pointer rounded-full bg-hi px-3.5 py-[5px] text-[0.9rem] font-bold text-hero transition-[filter] duration-150 hover:brightness-110"
-                onClick={() => {
-                  t.action!.onClick();
-                  dismiss(t.id);
-                }}
-              >
-                {txt(t.action.label)}
-              </button>
-            )}
-            <IconButton
-              label="Dismiss"
-              size="sm"
-              variant="ghost"
-              className="-my-1 -mr-1.5 text-inherit! opacity-85 enabled:hover:bg-current/16! enabled:hover:opacity-100"
-              onClick={() => dismiss(t.id)}
-            >
-              <IconX />
-            </IconButton>
-          </div>
-        ))}
-      </div>
+      {host && createPortal(region, host)}
     </Ctx.Provider>
   );
 }

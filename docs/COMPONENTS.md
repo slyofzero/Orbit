@@ -171,7 +171,7 @@ All fields take `label`, `hint`, `error` and **`help`** (a "?" tip beside the la
 | `Tooltip` | `Tooltip.tsx` | A short label for a button or link | `content`, `placement` top/bottom/left/right, `className` (replaces the inline wrapper layout, e.g. a chart column). The bubble (also `HelpTip`'s) opens in the browser's top layer (`popover`), so no card, stacking context or open dialog covers it; it is kept 8px inside the window and follows scroll |
 | `HelpTip` | `Tooltip.tsx` | A "?" explaining the text beside it | hover, keyboard focus or tap; Esc or a tap elsewhere closes it |
 | `HelpDialog` | `Tooltip.tsx` | Help too long for a bubble (tables, examples) | same "?" (optionally with a `label`), opens a `Dialog`; e.g. the editor's Formatting help |
-| `ToastProvider` + `useToast()` | `Toast.tsx` | Short feedback ("Saved", "Copied") | `toast(text, tone, action?)` (`action` = `{ label, onClick }`, e.g. Undo; such toasts stay 6.5 s); tones neutral · success · error · special · warm; bottom-right, slides in and out, others glide into the gap, at most 3 |
+| `ToastProvider` + `useToast()` | `Toast.tsx` | Short feedback ("Saved", "Copied") | `toast(text, tone, action?)` (`action` = `{ label, onClick }`, e.g. Undo); tones neutral · success · error · special · warm; bottom-right, slides in and out, others glide into the gap, at most 3; every toast stays 5 s (longer only while hovered); `error` toasts have **Copy** (copies the message); above everything incl. open dialogs (the stack is a `popover` in the top layer, moved inside the open modal dialog so it stays clickable) |
 | `SparkleBadge`, `Warm` | `Special.tsx` | The special style's badge; switching special to warm | `Warm inline` for inline content |
 
 ### Helpers (not visual)

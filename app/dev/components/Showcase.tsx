@@ -1814,12 +1814,13 @@ function DialogDemo() {
 
 function ToastDemo() {
   const toast = useToast();
+  const [over, setOver] = useState(false);
   return (
     <Section
       id="toast"
       title="Toast"
       path="components/ui/Toast.tsx"
-      note="Short feedback in the bottom-right corner that never moves the layout. Each slides in, then slides out to the right; toasts above it glide down into the gap. At most $3$ on screen."
+      note="Short feedback in the bottom-right corner that never moves the layout. Each slides in, then slides out to the right; toasts above it glide down into the gap. At most $3$ on screen. Each stays $5$ s, longer only while the pointer is over it. Error toasts have **Copy**. Toasts are above everything, open dialogs included."
     >
       <Demo>
         <div className="flex flex-wrap items-center gap-3">
@@ -1862,8 +1863,25 @@ function ToastDemo() {
           <Button variant="special" onClick={() => toast("New personal best: $\\frac{46}{50} = 92\\%$!", "special")}>
             {"Special $\\star$"}
           </Button>
+          <Button variant="secondary" onClick={() => setOver(true)}>
+            Over a dialog
+          </Button>
         </div>
       </Demo>
+      <Dialog open={over} onClose={() => setOver(false)} title="Toasts above a dialog">
+        <Text>Toasts show above this dialog, and their buttons (Copy, Dismiss) still work.</Text>
+        <div className="flex flex-wrap gap-2.5">
+          <Button
+            variant="danger"
+            onClick={() => toast('Couldn\'t save: SQLITE_CONSTRAINT: UNIQUE failed on "topics.name"', "error")}
+          >
+            Error toast
+          </Button>
+          <Button variant="soft" onClick={() => toast("Saved $\\checkmark$", "success")}>
+            Success toast
+          </Button>
+        </div>
+      </Dialog>
     </Section>
   );
 }
