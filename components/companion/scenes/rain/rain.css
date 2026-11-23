@@ -52,7 +52,7 @@
     opacity: 0.8;
   }
   100% {
-    transform: translateY(360px);
+    transform: translateY(600px);
     opacity: 0;
   }
 }

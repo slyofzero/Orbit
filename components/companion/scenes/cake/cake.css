@@ -38,10 +38,10 @@
     opacity: 0.95;
   }
   50% {
-    transform: translateY(-150px) rotate(14deg) translateX(8px);
+    transform: translateY(-260px) rotate(14deg) translateX(8px);
   }
   100% {
-    transform: translateY(-330px) rotate(-10deg);
+    transform: translateY(-600px) rotate(-10deg);
     opacity: 0;
   }
 }

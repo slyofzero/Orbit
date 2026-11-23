@@ -6,11 +6,10 @@
 /* sidebar stage */
 .rail-stage {
   position: relative;
-  flex: 0 1 440px;
+  flex: 1 1 auto;
   width: 100%;
+  height: 100%;
   min-height: 0;
-  margin-top: auto;
-  padding-top: 8px;
   display: flex;
   align-items: flex-end;
   justify-content: center;

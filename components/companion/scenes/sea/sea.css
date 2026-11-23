@@ -39,7 +39,7 @@
     opacity: 0.9;
   }
   100% {
-    transform: translateY(-340px) translateX(10px);
+    transform: translateY(-600px) translateX(10px);
     opacity: 0;
   }
 }

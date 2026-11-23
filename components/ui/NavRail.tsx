@@ -67,11 +67,11 @@ export function NavRail({
           </NextLink>
         );
       })}
-      {stage && <div className="mt-auto w-full max-[760px]:hidden">{stage}</div>}
+      {stage && <div className="my-2 flex min-h-0 w-full flex-1 flex-col max-[760px]:hidden">{stage}</div>}
       {footer && (
         <div
           className={cx(
-            stage ? "mt-2" : "mt-auto",
+            stage ? "mt-0" : "mt-auto",
             "shrink-0 max-[760px]:fixed max-[760px]:top-2.5 max-[760px]:right-3 max-[760px]:z-50 max-[760px]:mt-0",
           )}
         >
