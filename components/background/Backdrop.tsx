@@ -4,12 +4,15 @@
 // A page picks what it shows with `useScene("welcome")`; pages that don't ask get "none" (empty).
 // A scene fades in; when the page leaves it fades out and is then removed (its animation stops).
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { useScene, type SceneName } from "@/lib/global";
 import { OrbitScene } from "@/components/background/OrbitScene";
 import type { PracticeTab } from "@/lib/practice";
 import { PracticeScene } from "@/components/background/PracticeScene";
 import { AmbientCanvas } from "@/components/background/ambient/AmbientCanvas";
 import { CosmicCanvas } from "@/components/background/cosmos/CosmicCanvas";
+
+export { useScene, type SceneName } from "@/lib/global";
 
 /** How long a scene takes to fade in or out (ms). */
 const FADE_MS = 1000;
@@ -40,22 +43,10 @@ const SCENES = {
   practiceMocks: <PracticeBackdrop kind="mocks" />,
 } satisfies Record<string, ReactNode>;
 
-export type SceneName = keyof typeof SCENES;
 const DEFAULT: SceneName = "none";
 
-const SceneContext = createContext<(name: SceneName) => void>(() => {});
-
-/** Show `name` on the backdrop while the calling page is on screen (back to "none" when it leaves). */
-export function useScene(name: SceneName) {
-  const set = useContext(SceneContext);
-  useEffect(() => {
-    set(name);
-    return () => set(DEFAULT);
-  }, [name, set]);
-}
-
 export function Backdrop({ children }: { children: ReactNode }) {
-  const [name, setName] = useState<SceneName>(DEFAULT);
+  const { scene: name } = useScene();
   const [shown, setShown] = useState<SceneName>(DEFAULT); // what is drawn (lags behind while fading out)
   const [visible, setVisible] = useState(false);
 
@@ -74,7 +65,7 @@ export function Backdrop({ children }: { children: ReactNode }) {
   }, [name, shown]);
 
   return (
-    <SceneContext.Provider value={setName}>
+    <>
       {/* 1. Bottom canvas: subtle ambient background (floating Greek alphabets & math characters) */}
       <AmbientCanvas />
       {/* 2. Top canvas: dedicated exclusively for Cosmic Events animations */}
@@ -82,13 +73,13 @@ export function Backdrop({ children }: { children: ReactNode }) {
       {/* 3. Page-specific backdrop scene overlay (welcome, practice onboarding, etc.) */}
       <div
         aria-hidden="true"
-        className="pointer-events-none fixed inset-0 -z-10 overflow-hidden transition-opacity ease-out"
+        className="pointer-events-none fixed inset-0 z-0 overflow-hidden transition-opacity ease-out"
         style={{ opacity: visible ? 1 : 0, transitionDuration: `${FADE_MS}ms` }}
       >
         {SCENES[shown]}
       </div>
       {/* 4. Page elements sit in front */}
-      {children}
-    </SceneContext.Provider>
+      <div className="relative z-10 min-h-screen">{children}</div>
+    </>
   );
 }

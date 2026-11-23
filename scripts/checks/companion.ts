@@ -1,7 +1,6 @@
-// check.ts section: companion and cosmic events. Run: bun run check
+// check.ts section: companion. Run: bun run check
 import { BUDDIES, getBuddyById } from "@/components/companion/buddies";
 import { clockMode, petMode, specialOf, partyActive, PARTY_MS } from "@/components/companion/lib/petMode";
-import { COSMIC_KINDS, COSMIC_EVENTS } from "@/components/background/cosmos";
 import { ok } from "@/scripts/checks/helpers";
 import type { Reaction, Outcome } from "@/components/companion/types";
 
@@ -113,10 +112,4 @@ console.log("companion and cosmos");
       !partyActive(null, "2026-11-20", t0),
     "no party for already complete day, yesterday, or null",
   );
-
-  // Cosmic events
-  ok(COSMIC_KINDS.length === 8, "exactly 8 cosmic event types");
-  for (const kind of COSMIC_KINDS) {
-    ok(typeof COSMIC_EVENTS[kind] === "function", `cosmic event ${kind} is a registered function`);
-  }
 }

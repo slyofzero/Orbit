@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useTheme } from "@/lib/global";
 import { cx } from "@/components/utils";
 
 interface AmbientStar {
@@ -11,17 +12,34 @@ interface AmbientStar {
   speed: number;
 }
 
+const darkStarCount = 400;
+
 /**
  * Bottom background canvas: for subtle ambient drift (floating Greek alphabets & math characters, and test stars).
  */
 export function AmbientCanvas({ className }: { className?: string }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const [visible, setVisible] = useState(false);
+  const { isDark } = useTheme();
+  const isDarkRef = useRef(isDark);
+  isDarkRef.current = isDark;
+
+  useEffect(() => {
+    // Fade in after initial load so main page content appears first
+    const timer = setTimeout(() => {
+      setVisible(true);
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+
+    const starCount = isDark ? 200 : 1000;
+    console.log(`Star count - ${starCount}`);
 
     const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let w = 0;
@@ -30,7 +48,7 @@ export function AmbientCanvas({ className }: { className?: string }) {
 
     let seed = 42;
     const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-    const stars: AmbientStar[] = Array.from({ length: 200 }, (_, i) => {
+    const stars: AmbientStar[] = Array.from({ length: starCount }, (_, i) => {
       const isRail = i < 22; // dedicated stars in the left sidebar lane
       const isLarge = rnd() > 0.8;
       return {
@@ -55,8 +73,7 @@ export function AmbientCanvas({ className }: { className?: string }) {
     const draw = (ms: number) => {
       const t = ms / 1000;
       ctx.clearRect(0, 0, w, h);
-      const ink = getComputedStyle(document.documentElement).getPropertyValue("--ink").trim() || "#fff";
-      ctx.fillStyle = ink;
+      ctx.fillStyle = isDarkRef.current ? "#e8eef5" : "#e59b0c";
 
       for (const s of stars) {
         const pulse = 0.5 + 0.5 * Math.sin(t * s.speed + s.phase);
@@ -91,28 +108,22 @@ export function AmbientCanvas({ className }: { className?: string }) {
       raf = requestAnimationFrame(loop);
     }
 
-    const repaint = () => {
-      if (still) draw(0);
-    };
-    const mo = new MutationObserver(repaint);
-    mo.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    mq.addEventListener("change", repaint);
-
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", resize);
-      mo.disconnect();
-      mq.removeEventListener("change", repaint);
     };
-  }, []);
+  }, [isDark]);
 
   return (
     <canvas
       ref={ref}
       data-layer="ambient"
       aria-hidden="true"
-      className={cx("pointer-events-none fixed inset-0 -z-20 size-full block", className)}
+      style={{
+        opacity: visible ? 1 : 0,
+        transition: "opacity 1200ms ease-out",
+      }}
+      className={cx("pointer-events-none fixed inset-0 z-0 size-full block", className)}
     />
   );
 }

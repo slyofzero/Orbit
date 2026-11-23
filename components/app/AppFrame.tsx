@@ -10,7 +10,6 @@ import { useEffect, type ReactNode } from "react";
 import { IconBars, IconHome, IconLines, IconStar } from "@/components/icons";
 import { NavRail, ThemeToggle } from "@/components/ui";
 import { Companion } from "@/components/companion";
-import { Cosmos, triggerCosmicEvent } from "@/components/background/cosmos";
 import { dbCall, useQuery } from "@/lib/db/client";
 import { todayIST } from "@/lib/dates";
 
@@ -80,10 +79,9 @@ export function AppFrame({ children }: { children: ReactNode }) {
         items={NAV}
         brand={{ title: "Orbit", subtitle: "study hub", href: "/dashboard" }}
         stage={<Companion />}
-        footer={<ThemeToggle compact onCosmic={() => triggerCosmicEvent()} />}
+        footer={<ThemeToggle compact />}
       />
       <main className="w-full max-w-[1760px]">{children}</main>
-      <Cosmos />
     </div>
   );
 }
