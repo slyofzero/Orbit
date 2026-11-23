@@ -22,7 +22,6 @@ import {
 } from "@/components/ui";
 import { RestoreBackup } from "@/components/dashboard/RestoreBackup";
 import { LAUNCH_MS } from "@/components/background/LaunchWarp";
-import { useScene } from "@/components/background/Backdrop";
 import { cx } from "@/components/utils";
 import { useMutation } from "@/lib/db/client";
 import { formatLong, todayIST, type IsoDate } from "@/lib/dates";
@@ -64,7 +63,6 @@ export function Step({
 
 /** `onLaunched` runs once a plan is imported (the page plays the launch sequence). `onBack` returns to the homepage hero. */
 export function PlanOnboarding({ onLaunched, onBack }: { onLaunched?: (name: string) => void; onBack?: () => void }) {
-  useScene("welcome");
   const toast = useToast();
   const [today, setToday] = useState<IsoDate | null>(null);
   useEffect(() => setToday(todayIST()), []);
