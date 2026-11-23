@@ -169,9 +169,24 @@ console.log("question queries (lib/db/queries/question.ts)");
     again.items.map((i) => i.question.id).join() === "q_0,q_1,q_2,q_nat" &&
       again.items[0].latest === "correct" &&
       again.items[1].latest === "incorrect" &&
-      again.items[2].latest === null,
-    "question.topic: order stays put after answering; latest counts answers, skips ignored",
+      again.items[2].latest === null &&
+      again.items[2].lastOutcome === "skipped" &&
+      typeof again.items[2].lastAt === "number",
+    "question.topic: order stays put after answering; latest counts answers, skips tracked in lastOutcome",
   );
+  ok(startIndex(again.items) === 2, "startIndex: resumes on the last touched question (q_2, which was skipped)");
+
+  const resetCount = QUERIES["question.resetPractice"].run(sql, {
+    questionIds: ["q_0", "q_1", "q_2"],
+  }) as number;
+  ok(resetCount === 3, "question.resetPractice: cleared 3 practice answers");
+  const postReset = QUERIES["question.topic"].run(sql, { topicId: "tp_1" }) as TopicQuestions;
+  ok(
+    postReset.items.every((i) => i.latest === null && i.lastOutcome === null),
+    "question.topic: all practice answers reset to null",
+  );
+  const postResetStats = d.query("SELECT count(*) as n FROM question_stats").get() as { n: number };
+  ok(postResetStats.n === 0, "question.resetPractice: question_stats cleared via triggers");
 }
 
 // ---------------------------------------------------------------------------

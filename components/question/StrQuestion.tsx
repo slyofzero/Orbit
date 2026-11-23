@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import type { QuestionRow, QuestionStrRow } from "@/types/tables";
+import type { AnswerOutcome, QuestionRow, QuestionStrRow } from "@/types/tables";
 import { gradeStr, type Verdict } from "@/lib/grade";
 import { Rich, TextField } from "@/components/ui";
 import { QuestionFrame, typedClass, type FrameResult } from "@/components/question/QuestionFrame";
@@ -15,6 +15,7 @@ export function StrQuestion({
   question,
   detail,
   number,
+  initialOutcome,
   onAnswer,
   onRetry,
   special,
@@ -22,12 +23,34 @@ export function StrQuestion({
   question: QuestionRow;
   detail: QuestionStrRow;
   number?: number;
+  initialOutcome?: AnswerOutcome | null;
   onAnswer?: (v: Verdict) => void;
   onRetry?: () => void; // Try again was pressed (a new attempt)
   special?: boolean;
 }) {
-  const [input, setInput] = useState("");
-  const [result, setResult] = useState<FrameResult | null>(null);
+  const [input, setInput] = useState(() => (initialOutcome === "correct" ? (detail.accepted[0] ?? "") : ""));
+  const [result, setResult] = useState<FrameResult | null>(() => {
+    if (initialOutcome === "correct" || initialOutcome === "incorrect") {
+      const list = detail.accepted.map((a, i) => (
+        <span key={i}>
+          {i > 0 && " · "}
+          <strong>
+            <Rich text={a} />
+          </strong>
+        </span>
+      ));
+      return {
+        verdict: initialOutcome,
+        detail: (
+          <>
+            {detail.accepted.length > 1 ? "Accepted answers: " : "Correct answer: "}
+            {list}
+          </>
+        ),
+      };
+    }
+    return null;
+  });
   const check = () => {
     const verdict = gradeStr(detail.match, detail.case_sensitive, detail.accepted, input);
     const list = detail.accepted.map((a, i) => (

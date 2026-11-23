@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import type { QuestionCodeRow, QuestionRow } from "@/types/tables";
+import type { AnswerOutcome, QuestionCodeRow, QuestionRow } from "@/types/tables";
 import type { Verdict } from "@/lib/grade";
 import { Button, CodeEditor } from "@/components/ui";
 import { IconCheck, IconX } from "@/components/icons";
@@ -12,6 +12,7 @@ export function CodeQuestion({
   question,
   detail,
   number,
+  initialOutcome,
   onAnswer,
   onRetry,
   onCodeChange,
@@ -22,6 +23,7 @@ export function CodeQuestion({
   question: QuestionRow;
   detail: QuestionCodeRow;
   number?: number;
+  initialOutcome?: AnswerOutcome | null;
   onAnswer?: (v: Verdict) => void;
   onRetry?: () => void; // Try again was pressed (a new attempt)
   onCodeChange?: (code: string) => void; // every edit, e.g. to keep a draft
@@ -30,7 +32,12 @@ export function CodeQuestion({
   rows?: number; // editor height in lines
 }) {
   const [code, setCode] = useState(detail.starter ?? "");
-  const [result, setResult] = useState<FrameResult | null>(null);
+  const [result, setResult] = useState<FrameResult | null>(() => {
+    if (initialOutcome === "correct" || initialOutcome === "incorrect") {
+      return { verdict: initialOutcome, selfMarked: true };
+    }
+    return null;
+  });
   const mark = (verdict: Verdict) => {
     setResult({ verdict, selfMarked: true });
     onAnswer?.(verdict);

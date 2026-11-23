@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { useQuery } from "@/lib/db/client";
-import { Button, Heading, Link, Text } from "@/components/ui";
+import { Button, Heading, Text } from "@/components/ui";
 import { IconArrowRight, IconStar } from "@/components/icons";
 
 export function HomePage() {
@@ -59,24 +59,16 @@ export function HomePage() {
           )}
         </div>
 
-        {/* In-Place Links present with the text */}
-        <nav className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-gray" aria-label="Quick links">
-          <Link href="/planner" variant="subtle" className="hover:text-ink transition-colors">
-            Planner
-          </Link>
+        {/* Feature Areas Text */}
+        <div className="mt-8 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray font-medium">
+          <span>Planner</span>
           <span className="text-line select-none">•</span>
-          <Link href="/practice" variant="subtle" className="hover:text-ink transition-colors">
-            Practice
-          </Link>
+          <span>Practice</span>
           <span className="text-line select-none">•</span>
-          <Link href="/practice?tab=mocks" variant="subtle" className="hover:text-ink transition-colors">
-            Mock tests
-          </Link>
+          <span>Mock tests</span>
           <span className="text-line select-none">•</span>
-          <Link href="/stats" variant="subtle" className="hover:text-ink transition-colors">
-            Stats
-          </Link>
-        </nav>
+          <span>Stats</span>
+        </div>
 
         {/* Local Storage Pill */}
         <div className="mt-12 flex items-center gap-4 pt-4 border-t border-line/60">

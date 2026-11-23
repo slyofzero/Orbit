@@ -29,7 +29,11 @@ function load(sql: Sql, where: string, params: string[], order: string): LoadedQ
   const rows = sql.all(
     `SELECT q.*,
             (SELECT outcome FROM question_answers WHERE question_id = q.id AND outcome <> 'skipped'
-             ORDER BY recorded_at DESC, id DESC LIMIT 1) AS latest
+             ORDER BY recorded_at DESC, id DESC LIMIT 1) AS latest,
+            (SELECT outcome FROM question_answers WHERE question_id = q.id
+             ORDER BY recorded_at DESC, id DESC LIMIT 1) AS last_outcome,
+            (SELECT recorded_at FROM question_answers WHERE question_id = q.id
+             ORDER BY recorded_at DESC, id DESC LIMIT 1) AS last_at
      FROM questions q WHERE ${where} ${order} LIMIT ${SITTING_MAX}`,
     params,
   );
@@ -38,10 +42,21 @@ function load(sql: Sql, where: string, params: string[], order: string): LoadedQ
   for (const type of types) for (const [id, d] of details(sql, type, where, params)) byId.set(id, d);
   const items: LoadedQuestion[] = [];
   for (const row of rows) {
-    const { latest, ...q } = row as Record<string, unknown> & { latest: LoadedQuestion["latest"] };
+    const { latest, last_outcome, last_at, ...q } = row as Record<string, unknown> & {
+      latest: LoadedQuestion["latest"];
+      last_outcome: LoadedQuestion["lastOutcome"];
+      last_at: number | null;
+    };
     const question = q as unknown as QuestionRow;
     const detail = byId.get(question.id);
-    if (detail) items.push({ question, detail, latest });
+    if (detail)
+      items.push({
+        question,
+        detail,
+        latest,
+        lastOutcome: (last_outcome as LoadedQuestion["lastOutcome"]) ?? null,
+        lastAt: last_at ?? null,
+      });
   }
   return items;
 }
@@ -204,4 +219,19 @@ export const questionQueries = {
       return n;
     },
   ),
+
+  /** "Reset practice progress": deletes practice answers (`attempt_id IS NULL`) for a list of question IDs.
+   *  Through schema cascades, planned questions that were ticked by answering them are unticked, and `question_stats`
+   *  recomputes automatically via triggers. Mock answers are left untouched. */
+  "question.resetPractice": write(["question_answers"], (sql, p: { questionIds: string[] }): number => {
+    if (!p.questionIds.length) return 0;
+    const ids = p.questionIds.slice(0, SITTING_MAX);
+    const placeholders = ids.map(() => "?").join(",");
+    const count = sql.get<{ n: number }>(
+      `SELECT count(*) AS n FROM question_answers WHERE attempt_id IS NULL AND question_id IN (${placeholders})`,
+      ids,
+    )!.n;
+    sql.run(`DELETE FROM question_answers WHERE attempt_id IS NULL AND question_id IN (${placeholders})`, ids);
+    return count;
+  }),
 };

@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import type { QuestionMsqRow, QuestionRow } from "@/types/tables";
+import type { AnswerOutcome, QuestionMsqRow, QuestionRow } from "@/types/tables";
 import { gradeMsq, type Verdict } from "@/lib/grade";
 import { QuestionFrame, type FrameResult } from "@/components/question/QuestionFrame";
 import { OptionList } from "@/components/question/OptionList";
@@ -9,6 +9,7 @@ export function MsqQuestion({
   question,
   detail,
   number,
+  initialOutcome,
   onAnswer,
   onRetry,
   special,
@@ -16,12 +17,18 @@ export function MsqQuestion({
   question: QuestionRow;
   detail: QuestionMsqRow;
   number?: number;
+  initialOutcome?: AnswerOutcome | null;
   onAnswer?: (v: Verdict) => void;
   onRetry?: () => void; // Try again was pressed (a new attempt)
   special?: boolean;
 }) {
-  const [picks, setPicks] = useState<number[]>([]);
-  const [result, setResult] = useState<FrameResult | null>(null);
+  const [picks, setPicks] = useState<number[]>(() => (initialOutcome === "correct" ? detail.correct : []));
+  const [result, setResult] = useState<FrameResult | null>(() => {
+    if (initialOutcome === "correct" || initialOutcome === "incorrect") {
+      return { verdict: initialOutcome };
+    }
+    return null;
+  });
   const toggle = (i: number) => setPicks((p) => (p.includes(i) ? p.filter((x) => x !== i) : [...p, i].sort()));
   const check = () => {
     const verdict = gradeMsq(detail.correct, picks);
