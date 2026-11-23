@@ -1,0 +1,15 @@
+/* =============================================================================
+   Orbit Study Buddy Scenes animations index.
+   Imports the base scene backdrop frame and dedicated scene backdrops.
+   ============================================================================= */
+
+@import "../../components/companion/scenes/base.css";
+@import "../../components/companion/scenes/sky/sky.css";
+@import "../../components/companion/scenes/lab/lab.css";
+@import "../../components/companion/scenes/rain/rain.css";
+@import "../../components/companion/scenes/space/space.css";
+@import "../../components/companion/scenes/sea/sea.css";
+@import "../../components/companion/scenes/london/london.css";
+@import "../../components/companion/scenes/paris/paris.css";
+@import "../../components/companion/scenes/cake/cake.css";
+@import "../../components/companion/scenes/confetti/confetti.css";

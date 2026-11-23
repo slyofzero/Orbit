@@ -8,4 +8,4 @@
 - **Checks first:** `bunx tsc --noEmit`, `bun run check` (prints ALL OK) and
   `bun run format:check` must pass before committing.
 - **Never commit:** `.env` files, `temp/`, or anything with secrets.
-- **Footer:** `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`
+- **Footer:** `Co-Authored-By: Antigravity <noreply@google.com>`

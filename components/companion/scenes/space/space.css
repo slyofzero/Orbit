@@ -1,0 +1,128 @@
+/* =============================================================================
+   Orbit Scene: Space (used by Nova the astronaut)
+   ============================================================================= */
+
+.scene-space {
+  background: linear-gradient(#e0e2ff, #f3e4ff);
+}
+
+[data-theme="dark"] .scene-space {
+  background: linear-gradient(#070816, #150f33);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .scene-space {
+    background: linear-gradient(#070816, #150f33);
+  }
+}
+
+.scene-space i,
+.scene-space u,
+.scene-space .planet {
+  display: block;
+}
+
+.scene-space i {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #7b7fd6;
+  animation:
+    space-twinkle 3s ease-in-out infinite,
+    space-drift linear infinite;
+}
+
+[data-theme="dark"] .scene-space i {
+  background: #fff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .scene-space i {
+    background: #fff;
+  }
+}
+
+@keyframes space-twinkle {
+  0%,
+  100% {
+    opacity: 0.15;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.5);
+  }
+}
+
+@keyframes space-drift {
+  from {
+    margin-top: 0;
+  }
+  to {
+    margin-top: 18px;
+  }
+}
+
+.scene-space .planet {
+  position: absolute;
+  left: 10px;
+  bottom: 28%;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ff9a6b, #c0392b);
+  animation: space-planet-bob 7s ease-in-out infinite;
+}
+
+.scene-space .planet::after {
+  content: "";
+  position: absolute;
+  left: -9px;
+  top: 10px;
+  width: 44px;
+  height: 8px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 220, 160, 0.9);
+  transform: rotate(-18deg);
+}
+
+@keyframes space-planet-bob {
+  50% {
+    transform: translateY(5px);
+  }
+}
+
+.scene-space u {
+  position: absolute;
+  left: -30%;
+  top: 22%;
+  width: 46px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #fff);
+  transform: rotate(35deg);
+  animation: space-shoot 10s ease-in infinite;
+}
+
+@keyframes space-shoot {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) rotate(35deg);
+  }
+  4% {
+    opacity: 1;
+  }
+  12%,
+  100% {
+    opacity: 0;
+    transform: translate(170px, 120px) rotate(35deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scene-space i,
+  .scene-space .planet,
+  .scene-space u {
+    animation: none !important;
+  }
+}

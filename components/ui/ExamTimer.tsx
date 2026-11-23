@@ -42,7 +42,7 @@ export function ExamTimer({
       aria-live="off"
       className={cx(
         "inline-flex items-center gap-2 rounded-full border-[1.5px] px-3.5 py-1.5 text-[0.9rem] font-bold",
-        tone === "normal" && "border-line bg-sheet text-ink",
+        tone === "normal" && "border-line bg-sheet/70 glass-blur text-ink",
         tone === "low" && "border-amber bg-amber-soft text-amber",
         tone === "critical" && "animate-timer-pulse border-red bg-red-soft text-red",
         className,

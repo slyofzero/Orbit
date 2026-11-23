@@ -1,0 +1,46 @@
+/* Bit the robot specific animations */
+.led {
+  animation: led 1.6s steps(2) infinite;
+}
+
+.led.l2 {
+  animation-delay: -0.5s;
+}
+
+.led.l3 {
+  animation-delay: -1s;
+}
+
+@keyframes led {
+  50% {
+    opacity: 0.2;
+  }
+}
+
+.beacon {
+  animation: led 1.1s steps(2) infinite;
+}
+
+/* Overclock: signature hour */
+.pet.sp-robot .owl {
+  animation: sp-vibe 0.16s linear infinite;
+  filter: drop-shadow(0 0 5px #ff8a3c);
+}
+
+@keyframes sp-vibe {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(0.8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .led,
+  .beacon,
+  .pet.sp-robot .owl {
+    animation: none !important;
+  }
+}

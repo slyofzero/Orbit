@@ -25,6 +25,7 @@ import "@/scripts/checks/exam";
 import "@/scripts/checks/manage";
 import "@/scripts/checks/stats";
 import "@/scripts/checks/milestones";
+import "@/scripts/checks/companion";
 
 if (results.failed) {
   console.log(`\n${results.failed} FAILED`);

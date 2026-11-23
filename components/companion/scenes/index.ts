@@ -1,0 +1,10 @@
+export { SceneArt } from "@/components/companion/scenes/SceneArt";
+export { Confetti } from "@/components/companion/scenes/confetti/confetti";
+export { SkyScene } from "@/components/companion/scenes/sky/sky";
+export { LabScene } from "@/components/companion/scenes/lab/lab";
+export { RainScene } from "@/components/companion/scenes/rain/rain";
+export { SpaceScene } from "@/components/companion/scenes/space/space";
+export { SeaScene } from "@/components/companion/scenes/sea/sea";
+export { LondonScene } from "@/components/companion/scenes/london/london";
+export { ParisScene } from "@/components/companion/scenes/paris/paris";
+export { CakeScene } from "@/components/companion/scenes/cake/cake";

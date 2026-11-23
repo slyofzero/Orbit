@@ -90,7 +90,7 @@ export function TopicsTab() {
   return (
     <div className="grid gap-5">
       {data.next && (
-        <section className="flex flex-wrap items-center gap-x-5 gap-y-3 rounded-lg border border-line bg-sheet px-[22px] py-4">
+        <section className="flex flex-wrap items-center gap-x-5 gap-y-3 rounded-lg border border-line glass-card px-[22px] py-4">
           <div className="grid min-w-[200px] flex-1 gap-0.5">
             <Text as="span" className="font-bold">
               {data.next.on_date === today ? "On today's plan" : `Next on your plan, ${formatShort(data.next.on_date)}`}

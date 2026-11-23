@@ -99,7 +99,7 @@ export function ProgrammingTab() {
           Clear the search or pick another filter.
         </EmptyState>
       ) : (
-        <div className="grid gap-1 rounded-lg border border-line bg-sheet p-2">
+        <div className="grid gap-1 rounded-lg border border-line glass-card p-2">
           {shown.map((q, i) => (
             // a short stagger, capped so a long list doesn't make the last rows wait
             <div

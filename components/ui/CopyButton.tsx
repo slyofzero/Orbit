@@ -95,12 +95,12 @@ export function CopyButton({
           ? "bg-green text-white"
           : "border-green bg-sheet text-green"
         : state === "failed"
-          ? "border-red bg-sheet text-red"
+          ? "border-red bg-sheet/70 text-red"
           : label
             ? BUTTON_VARIANT[variant]
             : variant === "ghost"
               ? "border-transparent bg-transparent text-ink enabled:hover:bg-sheet-2"
-              : "border-line bg-sheet text-ink enabled:hover:border-ink";
+              : "border-line bg-sheet/70 glass-blur text-ink enabled:hover:border-ink";
 
   return (
     <button

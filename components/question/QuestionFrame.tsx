@@ -87,7 +87,7 @@ export function QuestionFrame({
         "grid gap-4 rounded-[20px] px-[22px] py-5",
         special
           ? "special-border animate-flow-border border-2 shadow-[0_14px_34px_-22px_var(--special-c)]"
-          : "border border-line bg-sheet",
+          : "border border-line glass-card",
       )}
     >
       <div className="flex flex-wrap items-center gap-2">

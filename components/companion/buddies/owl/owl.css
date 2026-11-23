@@ -1,0 +1,49 @@
+/* Hoot the owl specific animations */
+.wing {
+  transform-box: fill-box;
+  transform-origin: 50% 15%;
+}
+
+.wing.wr {
+  animation: wave 7s ease-in-out infinite;
+}
+
+@keyframes wave {
+  0%,
+  82%,
+  100% {
+    transform: rotate(0);
+  }
+  86% {
+    transform: rotate(-38deg);
+  }
+  90% {
+    transform: rotate(-8deg);
+  }
+  94% {
+    transform: rotate(-38deg);
+  }
+}
+
+/* Midnight hunt: signature hour */
+.pet.sp-owl .owl {
+  animation: sp-glow 2.4s ease-in-out infinite;
+  --gl: #ffe08a;
+}
+
+@keyframes sp-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 2px var(--gl));
+  }
+  50% {
+    filter: drop-shadow(0 0 9px var(--gl));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wing,
+  .pet.sp-owl .owl {
+    animation: none !important;
+  }
+}

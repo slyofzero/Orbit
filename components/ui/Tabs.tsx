@@ -38,7 +38,7 @@ export function Tabs<V extends string>({
     <div
       className={cx(
         bar
-          ? "inline-flex gap-1 rounded-full border border-line bg-sheet-2 p-1"
+          ? "glass-tab inline-flex gap-1 rounded-full border border-line p-1"
           : line
             ? "flex flex-wrap gap-1.5 border-b-[1.5px] border-line"
             : "flex flex-wrap gap-1.5",
@@ -75,8 +75,8 @@ export function Tabs<V extends string>({
                   : sp
                     ? "special-border animate-flow-border text-ink"
                     : bar
-                      ? "text-ink-2 hover:text-ink"
-                      : "border-line bg-sheet text-ink hover:border-ink",
+                      ? "text-ink-2 hover:text-ink hover:bg-sheet-2/40"
+                      : "glass-tile border border-line text-ink hover:border-ink",
             )}
           >
             {txt(t.label)}

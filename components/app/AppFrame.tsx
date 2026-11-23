@@ -9,6 +9,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 import { IconBars, IconHome, IconLines, IconStar } from "@/components/icons";
 import { NavRail, ThemeToggle } from "@/components/ui";
+import { Companion } from "@/components/companion";
+import { Cosmos, triggerCosmicEvent } from "@/components/background/cosmos";
 import { dbCall, useQuery } from "@/lib/db/client";
 import { todayIST } from "@/lib/dates";
 
@@ -77,9 +79,11 @@ export function AppFrame({ children }: { children: ReactNode }) {
       <NavRail
         items={NAV}
         brand={{ title: "Orbit", subtitle: "study hub", href: "/dashboard" }}
-        footer={<ThemeToggle compact />}
+        stage={<Companion />}
+        footer={<ThemeToggle compact onCosmic={() => triggerCosmicEvent()} />}
       />
       <main className="w-full max-w-[1760px]">{children}</main>
+      <Cosmos />
     </div>
   );
 }

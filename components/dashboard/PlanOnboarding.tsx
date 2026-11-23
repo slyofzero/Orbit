@@ -46,7 +46,7 @@ export function Step({
     <li
       className={cx(
         "grid animate-card-in grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2",
-        !bare && "rounded-[22px] border border-line bg-sheet/80 p-5 backdrop-blur-sm",
+        !bare && "rounded-[22px] border border-line bg-sheet/80 p-5 glass-blur",
       )}
       style={{ animationDelay: `${delay}ms`, animationFillMode: "both" }}
     >

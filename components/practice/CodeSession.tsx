@@ -17,6 +17,7 @@ import { useMutation, useQuery } from "@/lib/db/client";
 import type { Verdict } from "@/lib/grade";
 import type { QuestionCodeRow } from "@/types/tables";
 import { outcomeOf } from "@/lib/session";
+import { announce } from "@/components/companion";
 
 const BACK = "/practice?tab=programming";
 const href = (id: string) => `/practice/code?id=${encodeURIComponent(id)}`;
@@ -73,7 +74,9 @@ function CodeSitting({ id }: { id: string }) {
     if (written.current) return; // one stored mark per attempt
     written.current = true;
     freeze(id); // the time stops once it is marked
-    void record.run({ answers: [{ questionId: id, outcome: outcomeOf(v), timeMs: timeOf(id) }] });
+    const oc = outcomeOf(v);
+    void record.run({ answers: [{ questionId: id, outcome: oc, timeMs: timeOf(id) }] });
+    announce(oc === "correct" ? "right" : "wrong");
   };
 
   if (!data) return null;

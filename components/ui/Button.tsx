@@ -26,7 +26,7 @@ export const BUTTON_SIZE: Record<ButtonSize, string> = {
 export const BUTTON_VARIANT: Record<ButtonVariant, string> = {
   primary: "bg-accent text-on-accent not-disabled:hover:-translate-y-px not-disabled:hover:brightness-108",
   secondary: "border-ink bg-transparent text-ink not-disabled:hover:bg-ink not-disabled:hover:text-sheet",
-  soft: "border-line bg-sheet text-ink not-disabled:hover:bg-sheet-2",
+  soft: "border-line bg-sheet/70 glass-blur text-ink not-disabled:hover:bg-sheet-2",
   ghost: "bg-transparent text-ink not-disabled:hover:bg-sheet-2",
   danger: "border-red bg-transparent text-red not-disabled:hover:bg-red not-disabled:hover:text-white",
   special:
@@ -86,7 +86,7 @@ export function iconButtonClass(
     colours &&
       (variant === "ghost"
         ? "border-transparent bg-transparent enabled:hover:bg-sheet-2 disabled:opacity-35"
-        : "border-line bg-sheet enabled:hover:border-ink disabled:opacity-45"),
+        : "border-line bg-sheet/70 glass-blur enabled:hover:border-ink disabled:opacity-45"),
   );
 }
 

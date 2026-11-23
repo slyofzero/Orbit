@@ -37,7 +37,7 @@ export function ThemeToggle({ compact = false, onCosmic }: { compact?: boolean; 
   if (compact)
     return (
       <span
-        className="inline-flex overflow-hidden rounded-full border-[1.5px] border-line bg-sheet"
+        className="inline-flex overflow-hidden rounded-full border-[1.5px] border-line bg-sheet/70 glass-blur"
         onPointerDownCapture={(e) => {
           pointer.current = { x: e.clientX, y: e.clientY, at: Date.now() };
         }}

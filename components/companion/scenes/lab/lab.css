@@ -1,0 +1,85 @@
+/* =============================================================================
+   Orbit Scene: Lab (used by Beep the robot)
+   ============================================================================= */
+
+.scene-lab {
+  background: linear-gradient(#e3f4f1, #cfe7ef);
+}
+
+[data-theme="dark"] .scene-lab {
+  background: linear-gradient(#06231f, #0d3a3a);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .scene-lab {
+    background: linear-gradient(#06231f, #0d3a3a);
+  }
+}
+
+.scene-lab i,
+.scene-lab s {
+  display: block;
+}
+
+.scene-lab i {
+  position: absolute;
+  top: -10%;
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  background: none;
+  font: 700 11px/1 var(--ff-mono, monospace);
+  color: #0f766e;
+  opacity: 0;
+  animation: lab-binfall 6s linear infinite;
+}
+
+[data-theme="dark"] .scene-lab i {
+  color: #5ef2e0;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .scene-lab i {
+    color: #5ef2e0;
+  }
+}
+
+.scene-lab s {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #14b8a6, transparent);
+  opacity: 0.5;
+  animation: lab-scan 3.2s linear infinite;
+}
+
+@keyframes lab-binfall {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(600px);
+    opacity: 0;
+  }
+}
+
+@keyframes lab-scan {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scene-lab i,
+  .scene-lab s {
+    animation: none !important;
+  }
+}

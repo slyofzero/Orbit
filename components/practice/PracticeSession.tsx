@@ -21,6 +21,7 @@ import { formatShort, isIsoDate, todayIST, type IsoDate } from "@/lib/dates";
 import type { Verdict } from "@/lib/grade";
 import type { TopicQuestions } from "@/lib/questions";
 import { AUTO_NEXT_MS, autoNext, outcomeOf, paletteState, pendingSkips, startIndex, summarize } from "@/lib/session";
+import { announce } from "@/components/companion";
 import type { AnswerOutcome } from "@/types/tables";
 
 type Back = { href: string; label: string };
@@ -90,7 +91,7 @@ function DaySitting({ date, onAgain }: { date: IsoDate; onAgain: () => void }) {
       bonus={data?.bonus}
       empty={
         data?.topic
-          ? "No questions are linked to this day, and none were carried over to it. Link some in Manage plan."
+          ? "No questions are linked to this day, and none were carried over to it. Link some with Link questions on the Planner."
           : "This date isn't a day of your plan."
       }
     />
@@ -170,6 +171,7 @@ function Sitting({
     const outcome = outcomeOf(verdict);
     setOutcomes((o) => ({ ...o, [id]: outcome }));
     void record.run({ answers: [{ questionId: id, outcome, timeMs: timeOf(id) }] });
+    announce(outcome === "correct" ? "right" : "wrong");
     const next = autoNext(outcome, i, items.length);
     if (next !== null)
       setTimeout(() => {
@@ -239,6 +241,7 @@ function Sitting({
   const last = index === total - 1;
   const finish = () => {
     flush();
+    announce("progress");
     setFinished(true);
   };
 

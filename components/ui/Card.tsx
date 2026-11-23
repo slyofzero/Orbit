@@ -50,12 +50,12 @@ export function Card({
           : undefined
       }
       className={cx(
-        "rounded-lg px-[22px] py-5",
+        "relative rounded-lg px-[22px] py-5",
         special
           ? cx("special-border animate-flow-border border-2", GLOW[glow])
           : hero
-            ? "border border-hero bg-hero text-on-hero"
-            : "border border-line bg-sheet",
+            ? "border border-hero bg-hero/80 text-on-hero glass-blur"
+            : "glass-card border border-line",
         onClick &&
           "cursor-pointer transition-[transform,border-color,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-accent hover:shadow-[0_8px_22px_rgba(0,0,0,0.12)] focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
         className,

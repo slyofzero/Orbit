@@ -78,7 +78,7 @@ export function Dialog({
               GLOW[glow],
             )
           : cx(
-              "border border-line bg-sheet [&[open][data-closing]]:animate-dialog-out",
+              "border border-line bg-sheet/85 glass-blur [&[open][data-closing]]:animate-dialog-out",
               shake
                 ? "[&[open]:not([data-closing])]:animate-dialog-shake"
                 : "[&[open]:not([data-closing])]:animate-dialog-in",

@@ -1,0 +1,14 @@
+/* =============================================================================
+   Orbit Study Buddies animations index.
+   Imports the base buddy stage/modes and dedicated character animations.
+   ============================================================================= */
+
+@import "../../components/companion/buddies/base.css";
+@import "../../components/companion/buddies/owl/owl.css";
+@import "../../components/companion/buddies/robot/robot.css";
+@import "../../components/companion/buddies/cat/cat.css";
+@import "../../components/companion/buddies/astronaut/astronaut.css";
+@import "../../components/companion/buddies/jelly/jelly.css";
+@import "../../components/companion/buddies/teacup/teacup.css";
+@import "../../components/companion/buddies/rex/rex.css";
+@import "../../components/companion/buddies/ghost/ghost.css";

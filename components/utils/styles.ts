@@ -4,7 +4,7 @@ import { cx } from "@/components/utils/cx";
 
 /** The frame of any field: border, background, hover, focus ring, disabled, and a red border when aria-invalid. */
 export const FIELD_FRAME =
-  "rounded-md border-[1.5px] border-line bg-sheet transition-[border-color,box-shadow] duration-150 hover:border-gray focus:border-accent focus:shadow-[0_0_0_3px_var(--accent-soft)] focus:outline-none disabled:cursor-not-allowed disabled:opacity-55 aria-invalid:border-red";
+  "rounded-md border-[1.5px] border-line bg-sheet/75 glass-blur transition-[border-color,box-shadow] duration-150 hover:border-gray focus:border-accent focus:shadow-[0_0_0_3px_var(--accent-soft)] focus:outline-none disabled:cursor-not-allowed disabled:opacity-55 aria-invalid:border-red";
 
 /** A text input or text area. */
 export const FIELD_BOX = cx(FIELD_FRAME, "w-full px-3.5 py-2.5 font-body text-base text-ink");
@@ -33,7 +33,7 @@ export const triggerIconClass = (flipped = false) =>
 
 /** A pop-up panel under its trigger (date picker, dropdown). */
 export const POPUP =
-  "absolute top-[calc(100%+6px)] left-0 z-30 animate-pop-in rounded-lg border border-line bg-sheet shadow-lg";
+  "absolute top-[calc(100%+6px)] left-0 z-30 animate-pop-in rounded-lg border border-line bg-sheet/90 glass-blur shadow-lg";
 
 /** Label, hint and error text around a field. */
 export const LABEL = "text-[0.92rem] font-bold";

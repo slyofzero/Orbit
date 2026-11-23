@@ -70,7 +70,7 @@ export function Disclosure({
 
   return (
     <details
-      className={cx("rounded-md border border-line bg-sheet", className)}
+      className={cx("rounded-md border border-line glass-card", className)}
       open={attr || undefined}
       // the browser can open it by itself (e.g. find in page): follow it
       onToggle={(e) => {

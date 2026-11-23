@@ -45,7 +45,7 @@ function FileCard({ file, onRemove }: { file: File; onRemove: () => void }) {
     [url],
   );
   return (
-    <li className="flex animate-card-in items-center gap-3 rounded-md border border-line bg-sheet p-2 shadow-card">
+    <li className="flex animate-card-in items-center gap-3 rounded-md border border-line bg-sheet/70 glass-blur p-2 shadow-card">
       <span
         aria-hidden="true"
         className={cx(
