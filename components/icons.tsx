@@ -165,6 +165,12 @@ export const IconCalendar = (p: P) => (
     <path d="M3 10h18M8 3v4M16 3v4" />
   </Svg>
 );
+export const IconClock = (p: P) => (
+  <Svg {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 7v5l3 3" />
+  </Svg>
+);
 export const IconChevronLeft = (p: P) => (
   <Svg {...p}>
     <path d="M15 6l-6 6 6 6" />
