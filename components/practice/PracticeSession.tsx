@@ -90,7 +90,7 @@ function DaySitting({ date, onAgain }: { date: IsoDate; onAgain: () => void }) {
       bonus={data?.bonus}
       empty={
         data?.topic
-          ? "No questions are linked to this day, and none were carried over to it. Link some in Manage plan."
+          ? "No questions are linked to this day, and none were carried over to it. Link some with Link questions on the Planner."
           : "This date isn't a day of your plan."
       }
     />

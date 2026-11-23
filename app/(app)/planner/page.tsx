@@ -2,15 +2,17 @@
 // /planner: v1's planner. Tabs: "Next 3 days" (day cards you can step through), "Full plan" (every day,
 // by month and week; v1 grouped by phase, which plans don't have yet) and "Missed" (past days left
 // unfinished). The open tab is in the address (?tab=next | full_plan | missed); each tab's content pops
-// in, piece by piece, when it opens. The plan's actions live on Manage plan (/planner/manage).
+// in, piece by piece, when it opens. Link questions sits beside Manage plan (/planner/manage), where the rest
+// of the plan's actions live.
 
 import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { useTab } from "@/components/utils/useTab";
 import { Page } from "@/components/app/Page";
 import { cx } from "@/components/utils/cx";
 import { KIND_LABEL, KIND_PILL } from "@/components/dashboard/kit";
-import { IconChevronLeft, IconChevronRight } from "@/components/icons";
+import { IconChevronLeft, IconChevronRight, IconSparkle } from "@/components/icons";
 import { DayCard } from "@/components/planner/DayCard";
+import { LinkQuestions } from "@/components/planner/PlanActions";
 import { RowBody } from "@/components/planner/DayBody";
 import {
   Button,
@@ -25,6 +27,7 @@ import {
   Pill,
   Tabs,
   Text,
+  Tooltip,
 } from "@/components/ui";
 import { useQuery } from "@/lib/db/client";
 import { WEEKDAYS_SHORT, formatShort, istHour, parseIso, todayIST, weekday, type IsoDate } from "@/lib/dates";
@@ -101,6 +104,7 @@ function Planner({
 } & Clock) {
   const [view, setView] = useTab(VIEWS, "next");
   const [offset, setOffset] = useState(0); // how many days the 3-day window is shifted from today
+  const [linking, setLinking] = useState(false);
   const missed = missedDays(days, today);
 
   return (
@@ -109,10 +113,21 @@ function Planner({
         <Heading level={1} className="mr-2">
           Planner
         </Heading>
-        <Button variant="soft" href="/planner/manage">
-          Manage plan
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Tooltip
+            placement="bottom"
+            content="Let an AI chat pair each open day with practice questions from your bank. You copy one prompt, paste its reply back, and every day gets **questions that match its topics**, so you open a day and just practise. Past days are never changed."
+          >
+            <Button variant="special" icon={<IconSparkle />} onClick={() => setLinking(true)}>
+              Link questions
+            </Button>
+          </Tooltip>
+          <Button variant="soft" href="/planner/manage">
+            Manage plan
+          </Button>
+        </div>
       </div>
+      <LinkQuestions open={linking} onClose={() => setLinking(false)} clock={{ today, hour }} />
       <Text variant="hint" className="mt-1 mb-4">
         {plan.name}
       </Text>

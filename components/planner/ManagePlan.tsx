@@ -1,6 +1,6 @@
 "use client";
 // Manage plan (/planner/manage): the plan's counterpart of Manage pack. The title row holds the plan's actions
-// (Link questions, Unlink questions, Export plan, Upload plan: components/planner/PlanActions.tsx; Edit plan opens
+// (Unlink questions, Export plan, Upload plan: components/planner/PlanActions.tsx; Edit plan opens
 // /planner/edit) and Back to planner. Below, every task of the plan in a table: From today · Past · All, a DateFilter (a day, week,
 // month or weekday, typed or picked; it overrides the tabs) and the day's kind. A page is DAY_PAGE (5) plan days, each day's
 // tasks together with a heavier line between days; a done task's row is green, one missed on a past day red. From
@@ -8,15 +8,8 @@
 
 import { useEffect, useState } from "react";
 import { KIND_LABEL, KIND_PILL } from "@/components/dashboard/kit";
-import { IconChevronLeft, IconChevronRight, IconPencil, IconSparkle, IconUnlink, IconUpload } from "@/components/icons";
-import {
-  LinkQuestions,
-  UnlinkQuestions,
-  UploadPlan,
-  pageNav,
-  useExportPlan,
-  type Clock,
-} from "@/components/planner/PlanActions";
+import { IconChevronLeft, IconChevronRight, IconPencil, IconUnlink, IconUpload } from "@/components/icons";
+import { UnlinkQuestions, UploadPlan, pageNav, useExportPlan, type Clock } from "@/components/planner/PlanActions";
 import {
   Button,
   DateFilter,
@@ -51,7 +44,7 @@ export function ManagePlan() {
 function Tasks({ clock }: { clock: Clock }) {
   const { today } = clock;
   const exportPlan = useExportPlan();
-  const [dialog, setDialog] = useState<"link" | "unlink" | "upload" | null>(null);
+  const [dialog, setDialog] = useState<"unlink" | "upload" | null>(null);
   const shut = () => setDialog(null);
   // back from Edit plan: the page slides in from the left (styles/animations/page-slide.css)
   const [back] = useState(() => pageNav.leftEdit);
@@ -118,9 +111,6 @@ function Tasks({ clock }: { clock: Clock }) {
         <div className="ml-auto flex flex-wrap gap-2">
           {data && (
             <>
-              <Button variant="special" icon={<IconSparkle />} onClick={() => setDialog("link")}>
-                Link questions
-              </Button>
               {data.linked && (
                 <Button variant="soft" icon={<IconUnlink />} onClick={() => setDialog("unlink")}>
                   Unlink questions
@@ -142,7 +132,6 @@ function Tasks({ clock }: { clock: Clock }) {
           </Button>
         </div>
       </div>
-      <LinkQuestions open={dialog === "link"} onClose={shut} clock={clock} />
       <UnlinkQuestions open={dialog === "unlink"} onClose={shut} clock={clock} />
       <UploadPlan open={dialog === "upload"} onClose={shut} clock={clock} current={data?.plan.name ?? null} />
 

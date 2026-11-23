@@ -623,7 +623,7 @@ function DayEditor({
           </div>
           {form.questions.length === 0 && (
             <Text variant="muted">
-              No questions linked to this day yet. Find some below, use **Link questions** on Manage plan, or paste
+              No questions linked to this day yet. Find some below, use **Link questions** on the Planner, or paste
               links copied from another day.
             </Text>
           )}
