@@ -18,13 +18,13 @@ export type CalendarTone = "blue" | "green" | "amber" | "accent" | "red" | "hi" 
 export type CalendarDay = { tone?: CalendarTone; done?: boolean; tag?: string; label?: string };
 
 const TINT: Record<CalendarTone, string> = {
-  blue: "bg-blue-soft",
-  green: "bg-green-soft",
-  amber: "bg-amber-soft",
-  accent: "bg-accent-soft",
-  red: "bg-red-soft",
-  hi: "bg-hi-soft",
-  neutral: "bg-sheet-2",
+  blue: "bg-blue-soft/75",
+  green: "bg-green-soft/75",
+  amber: "bg-amber-soft/75",
+  accent: "bg-accent-soft/75",
+  red: "bg-red-soft/75",
+  hi: "bg-hi-soft/75",
+  neutral: "bg-sheet-2/65",
 };
 const DOT: Record<CalendarTone, string> = {
   blue: "bg-blue",
@@ -115,10 +115,10 @@ export function Calendar({
                 !inMonth
                   ? "bg-transparent text-gray opacity-55"
                   : isSelected
-                    ? "bg-sheet"
+                    ? "bg-sheet/85"
                     : d?.tone
                       ? TINT[d.tone]
-                      : "bg-sheet",
+                      : "bg-sheet/45",
                 isSelected
                   ? "shadow-[0_0_0_2.5px_var(--accent),0_10px_20px_-10px_var(--accent)]"
                   : d?.tag

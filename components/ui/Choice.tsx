@@ -15,7 +15,7 @@ type CheckboxProps = {
 
 const ROW = "flex items-start gap-2.5";
 const BOX =
-  "mt-0.5 grid size-5 shrink-0 cursor-[inherit] appearance-none place-items-center border-2 border-gray bg-sheet transition-[background-color,border-color] duration-[120ms] enabled:hover:border-ink checked:after:content-['']";
+  "mt-0.5 grid size-5 shrink-0 cursor-[inherit] appearance-none place-items-center border-2 border-gray bg-sheet/70 transition-[background-color,border-color] duration-[120ms] enabled:hover:border-ink checked:after:content-['']";
 const CHECK = cx(
   BOX,
   "rounded-[6px] checked:border-accent checked:bg-accent checked:after:h-2.5 checked:after:w-[5px] checked:after:-translate-y-px checked:after:rotate-45 checked:after:border-r-[2.5px] checked:after:border-b-[2.5px] checked:after:border-on-accent",
@@ -38,7 +38,7 @@ function ChoiceText({ label, description }: { label: ReactNode; description?: Re
 const TASK_ROW =
   "flex items-start gap-3 border-b border-dashed border-line py-2 transition-transform duration-200 hover:translate-x-[3px]";
 const TASK_BOX =
-  "peer mt-[3px] grid size-[22px] shrink-0 cursor-[inherit] appearance-none place-items-center rounded-full border-2 border-accent bg-sheet transition-[transform,background-color,border-color] duration-[250ms] ease-[cubic-bezier(0.3,1.8,0.5,1)] checked:scale-[1.12] checked:border-green checked:bg-green checked:after:text-[0.85rem] checked:after:leading-none checked:after:font-extrabold checked:after:text-white checked:after:content-['✓']";
+  "peer mt-[3px] grid size-[22px] shrink-0 cursor-[inherit] appearance-none place-items-center rounded-full border-2 border-accent bg-sheet/70 transition-[transform,background-color,border-color] duration-[250ms] ease-[cubic-bezier(0.3,1.8,0.5,1)] checked:scale-[1.12] checked:border-green checked:bg-green checked:after:text-[0.85rem] checked:after:leading-none checked:after:font-extrabold checked:after:text-white checked:after:content-['✓']";
 const TASK_TEXT = "transition-colors duration-200 peer-checked:text-gray/70 peer-checked:line-through";
 
 export function Checkbox({

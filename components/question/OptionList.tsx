@@ -6,9 +6,9 @@ import { letter } from "@/components/question/format";
 
 type Tone = "picked" | "right" | "wrong";
 const BOX: Record<Tone, string> = {
-  picked: "border-blue bg-blue-soft",
-  right: "border-green bg-green-soft",
-  wrong: "border-red bg-red-soft",
+  picked: "border-blue bg-blue-soft/50",
+  right: "border-green bg-green-soft/50",
+  wrong: "border-red bg-red-soft/50",
 };
 const LETTER: Record<Tone, string> = {
   picked: "border-blue bg-blue text-white",
@@ -49,7 +49,7 @@ export function OptionList({
             className={cx(
               "relative flex items-start gap-3 rounded-md border-[1.5px] px-3.5 py-[11px] transition-[border-color,background-color] duration-[120ms] focus-within:outline-3 focus-within:outline-offset-2 focus-within:outline-accent",
               locked ? "cursor-default" : "cursor-pointer",
-              tone ? BOX[tone] : "border-line bg-sheet hover:border-ink",
+              tone ? BOX[tone] : "glass-tile border border-line hover:border-ink hover:bg-sheet-2/50",
             )}
           >
             <input
@@ -65,7 +65,7 @@ export function OptionList({
               className={cx(
                 "grid size-7 shrink-0 place-items-center border-[1.5px] font-display text-[0.85rem] font-bold",
                 mode === "single" ? "rounded-full" : "rounded-[7px]",
-                tone ? LETTER[tone] : "border-line bg-sheet text-gray",
+                tone ? LETTER[tone] : "glass-tile border border-line text-gray",
               )}
             >
               {letter(i)}

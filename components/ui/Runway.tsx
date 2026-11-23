@@ -46,7 +46,7 @@ export function Runway({
   return (
     <section
       aria-label={label}
-      className="relative mb-[18px] overflow-hidden rounded-[22px] border border-line bg-hero/84 px-[26px] pt-[18px] pb-3.5 text-on-hero max-[760px]:mb-[26px] max-[760px]:rounded-[28px] max-[760px]:p-[clamp(22px,3vw,36px)]"
+      className="relative mb-[18px] overflow-hidden rounded-[22px] border border-line bg-hero/75 glass-blur px-[26px] pt-[18px] pb-3.5 text-on-hero max-[760px]:mb-[26px] max-[760px]:rounded-[28px] max-[760px]:p-[clamp(22px,3vw,36px)]"
     >
       <div className="flex flex-wrap items-center justify-between gap-4 max-[760px]:gap-7 max-[560px]:gap-4">
         <div>

@@ -30,8 +30,8 @@ export function NavRail({
     <nav
       aria-label="Main"
       className={cx(
-        "sticky top-0 z-30 flex h-screen flex-col items-center gap-1 border-r border-line bg-sheet px-2.5 pt-4 pb-3.5 shadow-card",
-        "max-[760px]:fixed max-[760px]:inset-x-0 max-[760px]:top-auto max-[760px]:bottom-0 max-[760px]:z-40 max-[760px]:h-auto max-[760px]:flex-row max-[760px]:justify-around max-[760px]:border-t max-[760px]:border-r-0 max-[760px]:px-2 max-[760px]:pt-1.5 max-[760px]:pb-[calc(6px+env(safe-area-inset-bottom))]",
+        "glass-rail sticky top-0 z-30 flex h-screen flex-col items-center gap-1 border-r border-line px-2.5 pt-4 pb-3.5 shadow-card",
+        "max-[760px]:fixed max-[760px]:inset-x-0 max-[760px]:top-auto max-[760px]:bottom-0 max-[760px]:z-40 max-[760px]:h-auto max-[760px]:flex-row max-[760px]:justify-around max-[760px]:border-t max-[760px]:border-r-0 max-[760px]:bg-sheet/70 max-[760px]:px-2 max-[760px]:pt-1.5 max-[760px]:pb-[calc(6px+env(safe-area-inset-bottom))]",
         className,
       )}
     >
@@ -59,7 +59,9 @@ export function NavRail({
               "group flex w-full shrink-0 flex-col items-center gap-[3px] rounded-[14px] px-1 py-[7px] text-[0.78rem] font-semibold no-underline transition-[background-color,color,transform] duration-200 hover:-translate-y-0.5",
               "max-[760px]:w-auto max-[760px]:flex-1 max-[760px]:px-0.5 max-[760px]:py-1.5",
               "[&_svg]:size-[22px] [&_svg]:transition-transform [&_svg]:duration-[250ms] [&_svg]:ease-[cubic-bezier(0.3,1.6,0.5,1)] hover:[&_svg]:scale-[1.12] hover:[&_svg]:-rotate-4",
-              active ? "bg-accent-soft text-accent [&_svg]:stroke-[2.1]" : "text-gray hover:bg-sheet-2 hover:text-ink",
+              active
+                ? "bg-accent-soft/75 text-accent [&_svg]:stroke-[2.1]"
+                : "text-gray hover:bg-sheet-2/60 hover:text-ink",
             )}
           >
             {it.icon}

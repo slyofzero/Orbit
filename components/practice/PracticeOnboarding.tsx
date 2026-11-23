@@ -314,7 +314,7 @@ export function PracticeOnboarding({
         ))}
 
         {good.length > 0 && (
-          <div className="special-border animate-flow-border grid animate-card-in gap-4 rounded-[22px] border-2 bg-sheet/80 p-5 backdrop-blur-sm">
+          <div className="special-border animate-flow-border grid animate-card-in gap-4 rounded-[22px] border-2 bg-sheet/80 p-5 glass-blur">
             <div className="flex flex-wrap items-center gap-3">
               <span className="text-3xl motion-safe:animate-bob" aria-hidden="true">
                 {c.icon}

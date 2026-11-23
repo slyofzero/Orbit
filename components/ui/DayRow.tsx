@@ -45,7 +45,7 @@ export function DayRow({
         today ? "border-accent" : "border-transparent",
         tone === "won"
           ? "bg-[color-mix(in_srgb,var(--green)_7%,var(--sheet-2))] shadow-[inset_3px_0_0_var(--green)]"
-          : "bg-sheet-2",
+          : "glass-tile",
         tone === "missed" && "shadow-[inset_3px_0_0_var(--red)]",
         faded && "opacity-50 hover:opacity-100",
       )}

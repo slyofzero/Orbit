@@ -11,7 +11,7 @@ export default function DevLayout({ children }: { children: React.ReactNode }) {
   return (
     <ToastProvider>
       <div className="min-h-screen">
-        <header className="sticky top-0 z-20 flex flex-wrap items-center gap-4 border-b border-line bg-pad/88 px-[clamp(16px,3vw,32px)] py-3 backdrop-blur-sm">
+        <header className="sticky top-0 z-20 flex flex-wrap items-center gap-4 border-b border-line bg-pad/88 px-[clamp(16px,3vw,32px)] py-3 glass-blur">
           <Link href="/dev" variant="subtle" className="font-display text-[1.15rem] font-extrabold text-ink!">
             Orbit
           </Link>

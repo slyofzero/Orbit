@@ -30,13 +30,17 @@ export function AmbientCanvas({ className }: { className?: string }) {
 
     let seed = 42;
     const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-    const stars: AmbientStar[] = Array.from({ length: 140 }, () => ({
-      x: rnd(),
-      y: rnd(),
-      r: 0.5 + rnd() * 1.3,
-      phase: rnd() * Math.PI * 2,
-      speed: 0.6 + rnd() * 1.5,
-    }));
+    const stars: AmbientStar[] = Array.from({ length: 200 }, (_, i) => {
+      const isRail = i < 22; // dedicated stars in the left sidebar lane
+      const isLarge = rnd() > 0.8;
+      return {
+        x: isRail ? rnd() * 0.055 : rnd(),
+        y: rnd(),
+        r: isLarge ? 1.8 + rnd() * 1.2 : 0.8 + rnd() * 1.0,
+        phase: rnd() * Math.PI * 2,
+        speed: 0.6 + rnd() * 1.6,
+      };
+    });
 
     const resize = () => {
       const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -55,9 +59,21 @@ export function AmbientCanvas({ className }: { className?: string }) {
       ctx.fillStyle = ink;
 
       for (const s of stars) {
-        ctx.globalAlpha = 0.15 + 0.45 * (0.5 + 0.5 * Math.sin(t * s.speed + s.phase));
+        const pulse = 0.5 + 0.5 * Math.sin(t * s.speed + s.phase);
+        const alpha = 0.35 + 0.65 * pulse;
+        const sx = s.x * w;
+        const sy = s.y * h;
+
+        if (s.r > 1.8) {
+          ctx.globalAlpha = alpha * 0.28;
+          ctx.beginPath();
+          ctx.arc(sx, sy, s.r * 2.2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        ctx.globalAlpha = alpha;
         ctx.beginPath();
-        ctx.arc(s.x * w, s.y * h, s.r, 0, Math.PI * 2);
+        ctx.arc(sx, sy, s.r, 0, Math.PI * 2);
         ctx.fill();
       }
       ctx.globalAlpha = 1;

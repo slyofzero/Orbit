@@ -28,7 +28,7 @@ export function SearchField({
         placeholder={placeholder ?? label}
         aria-label={label}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-full border-[1.5px] border-line bg-sheet py-[9px] pr-10 pl-10 font-body text-[0.95rem] text-ink transition-[border-color,box-shadow] duration-150 hover:border-gray focus:border-accent focus:shadow-[0_0_0_3px_var(--accent-soft)] focus:outline-none [&::-webkit-search-cancel-button]:hidden"
+        className="w-full rounded-full border-[1.5px] border-line bg-sheet/70 py-[9px] pr-10 pl-10 font-body text-[0.95rem] text-ink transition-[border-color,box-shadow] duration-150 hover:border-gray focus:border-accent focus:shadow-[0_0_0_3px_var(--accent-soft)] focus:outline-none [&::-webkit-search-cancel-button]:hidden"
       />
       {value && (
         <IconButton

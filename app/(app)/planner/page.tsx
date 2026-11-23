@@ -220,14 +220,21 @@ function NextDays({
             >
               <Pop i={Math.abs(pos)}>
                 <div className="relative rounded-[24px] p-[2px] transition-transform duration-200 hover:-translate-y-0.5">
-                  {/* the centre card's ring: a flowing gradient that fades over to the next card when you step */}
+                  {/* the centre card's ring: a flowing gradient border that fades over to the next card when you step */}
                   <div
                     aria-hidden="true"
                     className={cx(
-                      "special-fill animate-flow absolute inset-0 rounded-[24px] transition-opacity duration-500",
+                      "special-fill animate-flow pointer-events-none absolute inset-0 rounded-[24px] transition-opacity duration-500",
                       GLOW.low, // today's card: the lowest glow
                       center ? "opacity-100" : "opacity-0",
                     )}
+                    style={{
+                      WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
+                      mask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
+                      WebkitMaskComposite: "xor",
+                      maskComposite: "exclude",
+                      padding: "2px",
+                    }}
                   />
                   <div className="relative">
                     <DayCard date={date} today={today} hour={hour} center={center} plan={plan} />

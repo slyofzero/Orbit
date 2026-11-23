@@ -98,7 +98,7 @@ export function RestoreBackup({ bare = false, onDone }: { bare?: boolean; onDone
   if (bare) return <div className="grid gap-3">{body}</div>;
   return (
     <section
-      className="grid animate-card-in gap-3 rounded-[22px] border border-dashed border-line bg-sheet/70 p-5 backdrop-blur-sm"
+      className="grid animate-card-in gap-3 rounded-[22px] border border-dashed border-line bg-sheet/70 p-5 glass-blur"
       style={{ animationDelay: "480ms", animationFillMode: "both" }}
     >
       <div className="flex flex-wrap items-center gap-2.5">

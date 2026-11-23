@@ -61,13 +61,13 @@ export function Table<T>({
     cx(
       "border-b border-line-2 px-3.5 py-[11px] align-top",
       c.align === "right" ? "text-right tabular-nums" : c.align === "center" ? "text-center" : "text-left",
-      head && "sticky top-0 bg-sheet text-[0.82rem] font-bold whitespace-nowrap text-gray",
+      head && "sticky top-0 bg-sheet/85 glass-blur text-[0.82rem] font-bold whitespace-nowrap text-gray",
       head && c.special && "shadow-[inset_0_-2px_0_var(--special-b)]",
       !head && c.special && "bg-linear-to-b from-special-a/9 to-special-c/9 font-bold",
     );
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-line bg-sheet">
+    <div className="overflow-x-auto rounded-lg border border-line glass-card">
       <table className="w-full border-collapse text-[0.95rem]">
         {caption && <caption className="sr-only">{caption}</caption>}
         <thead>

@@ -7,10 +7,10 @@ import { txt } from "@/components/utils/txt";
 export type StatTileTone = "accent" | "green" | "amber" | "neutral";
 
 const TONE: Record<StatTileTone, { box: string; value: string }> = {
-  accent: { box: "bg-accent-soft", value: "text-accent" },
-  green: { box: "bg-green-soft", value: "text-green" },
-  amber: { box: "bg-amber-soft", value: "text-amber" },
-  neutral: { box: "bg-sheet-2", value: "text-ink" },
+  accent: { box: "bg-accent-soft/45", value: "text-accent" },
+  green: { box: "bg-green-soft/45", value: "text-green" },
+  amber: { box: "bg-amber-soft/45", value: "text-amber" },
+  neutral: { box: "glass-tile", value: "text-ink" },
 };
 
 export function StatTile({

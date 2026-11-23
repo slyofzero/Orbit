@@ -7,18 +7,27 @@
   inset: 0;
   border-radius: 20px;
   overflow: hidden;
-  background: linear-gradient(#d8ecff, #fdf1d6);
+  background: linear-gradient(
+    color-mix(in srgb, #d8ecff 75%, transparent),
+    color-mix(in srgb, #fdf1d6 75%, transparent)
+  );
   transition: background 0.4s;
   animation: scene-in 0.7s ease both;
 }
 
 [data-theme="dark"] .sky {
-  background: linear-gradient(#0b1530, #17284a);
+  background: linear-gradient(
+    color-mix(in srgb, #0b1530 65%, transparent),
+    color-mix(in srgb, #17284a 65%, transparent)
+  );
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .sky {
-    background: linear-gradient(#0b1530, #17284a);
+    background: linear-gradient(
+      color-mix(in srgb, #0b1530 65%, transparent),
+      color-mix(in srgb, #17284a 65%, transparent)
+    );
   }
 }
 

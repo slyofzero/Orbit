@@ -33,7 +33,7 @@ export function Segmented<V extends string>({
   return (
     <div
       className={cx(
-        "inline-flex gap-0.5 rounded-full border-[1.5px] border-line bg-sheet",
+        "inline-flex gap-0.5 rounded-full border-[1.5px] border-line glass-tab",
         size === "sm" ? "p-0.5" : "p-[3px]",
       )}
       role="radiogroup"

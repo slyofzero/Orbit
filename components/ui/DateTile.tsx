@@ -27,7 +27,7 @@ export function DateTile({
       className={cx(
         "inline-flex shrink-0 flex-col items-center rounded-[14px] leading-none",
         size === "sm" ? "min-w-[42px] px-1 py-[5px]" : "min-w-[52px] px-1.5 py-2",
-        highlight ? "bg-hi text-black" : "bg-sheet-2 text-ink",
+        highlight ? "bg-hi text-black" : "bg-sheet-2/70 text-ink",
         className,
       )}
     >

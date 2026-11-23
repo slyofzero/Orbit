@@ -36,7 +36,7 @@ function Chip({
       title={on ? "Remove" : undefined}
       className={cx(
         CHIP,
-        on ? "border-accent bg-accent-soft text-accent" : "border-line bg-sheet text-ink hover:border-ink",
+        on ? "border-accent bg-accent-soft text-accent" : "border-line bg-sheet/70 text-ink hover:border-ink",
       )}
     >
       {txt(choice.label)}
