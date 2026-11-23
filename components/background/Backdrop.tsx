@@ -8,6 +8,8 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { OrbitScene } from "@/components/background/OrbitScene";
 import type { PracticeTab } from "@/lib/practice";
 import { PracticeScene } from "@/components/background/PracticeScene";
+import { AmbientCanvas } from "@/components/background/ambient/AmbientCanvas";
+import { CosmicCanvas } from "@/components/background/cosmos/CosmicCanvas";
 
 /** How long a scene takes to fade in or out (ms). */
 const FADE_MS = 1000;
@@ -73,6 +75,11 @@ export function Backdrop({ children }: { children: ReactNode }) {
 
   return (
     <SceneContext.Provider value={setName}>
+      {/* 1. Bottom canvas: subtle ambient background (floating Greek alphabets & math characters) */}
+      <AmbientCanvas />
+      {/* 2. Top canvas: dedicated exclusively for Cosmic Events animations */}
+      <CosmicCanvas />
+      {/* 3. Page-specific backdrop scene overlay (welcome, practice onboarding, etc.) */}
       <div
         aria-hidden="true"
         className="pointer-events-none fixed inset-0 -z-10 overflow-hidden transition-opacity ease-out"
@@ -80,6 +87,7 @@ export function Backdrop({ children }: { children: ReactNode }) {
       >
         {SCENES[shown]}
       </div>
+      {/* 4. Page elements sit in front */}
       {children}
     </SceneContext.Provider>
   );
