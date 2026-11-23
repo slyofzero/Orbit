@@ -10,6 +10,8 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import type { QuestionRow } from "@/types/tables";
+import { Companion, BUDDIES } from "@/components/companion";
+import { COSMIC_KINDS, triggerCosmicEvent } from "@/components/background/cosmos";
 import {
   Button,
   Callout,
@@ -310,6 +312,7 @@ export function Showcase() {
           <WarmDemo />
           <RichDemo />
           <Questions />
+          <CompanionDemo />
         </div>
       </div>
     </ImageProvider>
@@ -2286,6 +2289,58 @@ function Questions() {
       />
       <PaletteDemo />
       <ExamDemo />
+    </Section>
+  );
+}
+
+function CompanionDemo() {
+  const [buddy, setBuddy] = useState("owl");
+  const [mode, setMode] = useState<string | undefined>(undefined);
+  return (
+    <Section
+      id="companion"
+      title="Study Buddy & Cosmos"
+      path="components/companion/*, components/background/cosmos/*"
+      note="Eight study buddies in the sidebar with live mood, eyes following cursor, speech chatter, custom backdrops, and cosmic background animations."
+    >
+      <div className="grid gap-6">
+        <div className="flex flex-wrap gap-2">
+          {BUDDIES.map((b) => (
+            <Button key={b.id} variant={buddy === b.id ? "primary" : "soft"} size="sm" onClick={() => setBuddy(b.id)}>
+              {b.name}
+            </Button>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-2 items-center">
+          <Text variant="caption">Mode:</Text>
+          {["auto", "active", "night", "sleep", "party"].map((m) => (
+            <Button
+              key={m}
+              variant={(m === "auto" ? mode === undefined : mode === m) ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setMode(m === "auto" ? undefined : m)}
+            >
+              {m}
+            </Button>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-2 items-center">
+          <Text variant="caption">Trigger Cosmic Event:</Text>
+          {COSMIC_KINDS.map((k) => (
+            <Button key={k} variant="soft" size="sm" onClick={() => triggerCosmicEvent(k)}>
+              {k}
+            </Button>
+          ))}
+          <Button variant="special" size="sm" onClick={() => triggerCosmicEvent()}>
+            Random
+          </Button>
+        </div>
+        <div className="flex justify-start">
+          <div className="w-[120px] rounded-2xl border border-line p-3 bg-sheet">
+            <Companion forcedBuddyId={buddy} forcedMode={mode} />
+          </div>
+        </div>
+      </div>
     </Section>
   );
 }

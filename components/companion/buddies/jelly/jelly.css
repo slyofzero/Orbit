@@ -1,0 +1,62 @@
+/* Blob the jellyfish specific animations */
+.tent {
+  transform-box: fill-box;
+  transform-origin: 50% 0;
+  animation: tent 2.4s ease-in-out infinite;
+}
+
+@keyframes tent {
+  50% {
+    transform: skewX(10deg) scaleY(1.06);
+  }
+}
+
+.bub {
+  animation: bub 5s ease-in infinite;
+}
+
+.bub.b2 {
+  animation-delay: -2s;
+}
+
+.bub.b3 {
+  animation-delay: -3.5s;
+}
+
+@keyframes bub {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-50px);
+    opacity: 0;
+  }
+}
+
+/* Glow hour: signature hour */
+.pet.sp-jelly .owl {
+  animation: sp-glow-jelly 2.2s ease-in-out infinite;
+  --gl: #7fe9ff;
+}
+
+@keyframes sp-glow-jelly {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 2px var(--gl));
+  }
+  50% {
+    filter: drop-shadow(0 0 9px var(--gl));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tent,
+  .bub,
+  .pet.sp-jelly .owl {
+    animation: none !important;
+  }
+}

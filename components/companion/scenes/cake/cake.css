@@ -1,0 +1,53 @@
+/* =============================================================================
+   Orbit Scene: Cake (used by Boo the ghost)
+   ============================================================================= */
+
+.scene-cake {
+  background: linear-gradient(#ffe3f1, #ecd6ff);
+}
+
+[data-theme="dark"] .scene-cake {
+  background: linear-gradient(#1a1030, #35184f);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .scene-cake {
+    background: linear-gradient(#1a1030, #35184f);
+  }
+}
+
+.scene-cake i {
+  display: block;
+  position: absolute;
+  top: 100%;
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  background: none;
+  opacity: 0;
+  line-height: 1;
+  animation: cake-up linear infinite;
+}
+
+@keyframes cake-up {
+  0% {
+    transform: translateY(0) rotate(-12deg);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.95;
+  }
+  50% {
+    transform: translateY(-150px) rotate(14deg) translateX(8px);
+  }
+  100% {
+    transform: translateY(-330px) rotate(-10deg);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scene-cake i {
+    animation: none !important;
+  }
+}

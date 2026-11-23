@@ -1,0 +1,157 @@
+/* =============================================================================
+   Orbit Scene: London (used by Earl the teacup)
+   ============================================================================= */
+
+.scene-london {
+  background: linear-gradient(#e8dcc2, #cfc2ac 60%, #b8ad9c);
+}
+
+[data-theme="dark"] .scene-london {
+  background: linear-gradient(#171425, #2d2536 60%, #3a2f3a);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .scene-london {
+    background: linear-gradient(#171425, #2d2536 60%, #3a2f3a);
+  }
+}
+
+.scene-london i,
+.scene-london s,
+.scene-london .gas {
+  display: block;
+}
+
+.scene-london i {
+  position: absolute;
+  top: 0;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: #fff;
+  opacity: 0;
+  animation: london-twinkle 3.6s ease-in-out infinite;
+}
+
+html:not([data-theme="dark"]) .scene-london i {
+  display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .scene-london i {
+    display: block;
+  }
+}
+
+@keyframes london-twinkle {
+  0%,
+  100% {
+    opacity: 0.15;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.5);
+  }
+}
+
+.scene-london .ben {
+  position: absolute;
+  right: 6px;
+  bottom: 18%;
+  height: 64%;
+  fill: #6a5f78;
+  opacity: 0.9;
+}
+
+[data-theme="dark"] .scene-london .ben {
+  fill: #08070d;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .scene-london .ben {
+    fill: #08070d;
+  }
+}
+
+.scene-london .ben .face {
+  fill: #ffe9a8;
+  stroke: none;
+  animation: london-lamp 3.6s ease-in-out infinite;
+}
+
+[data-theme="dark"] .scene-london .ben .face {
+  filter: drop-shadow(0 0 4px #ffc933);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .scene-london .ben .face {
+    filter: drop-shadow(0 0 4px #ffc933);
+  }
+}
+
+.scene-london .gas {
+  position: absolute;
+  left: 14px;
+  top: 32%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #ffd470;
+  box-shadow:
+    0 0 0 6px rgba(255, 212, 112, 0.22),
+    0 0 26px 8px rgba(255, 190, 80, 0.6);
+  animation: london-lamp 3s ease-in-out infinite;
+}
+
+.scene-london .gas::after {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 14px;
+  width: 2px;
+  height: 90px;
+  background: rgba(40, 30, 40, 0.55);
+}
+
+@keyframes london-lamp {
+  50% {
+    opacity: 0.78;
+  }
+}
+
+.scene-london s {
+  position: absolute;
+  left: -60%;
+  width: 220%;
+  height: 46px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(255, 255, 255, 0.55), transparent 70%);
+  filter: blur(5px);
+  animation: london-fog 16s ease-in-out infinite alternate;
+}
+
+[data-theme="dark"] .scene-london s {
+  background: radial-gradient(ellipse, rgba(190, 180, 210, 0.3), transparent 70%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .scene-london s {
+    background: radial-gradient(ellipse, rgba(190, 180, 210, 0.3), transparent 70%);
+  }
+}
+
+@keyframes london-fog {
+  to {
+    transform: translateX(28%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scene-london i,
+  .scene-london .ben .face,
+  .scene-london .gas,
+  .scene-london s {
+    animation: none !important;
+  }
+}

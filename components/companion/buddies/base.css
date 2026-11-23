@@ -1,0 +1,325 @@
+/* =============================================================================
+   Orbit Study Buddy (Companion) base stage, characters, and mode animations.
+   Holds the sidebar stage, character bobbing, eyes, party, night-study and speech bubble.
+   ============================================================================= */
+
+/* sidebar stage */
+.rail-stage {
+  position: relative;
+  flex: 0 1 440px;
+  width: 100%;
+  min-height: 0;
+  margin-top: auto;
+  padding-top: 8px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  cursor: pointer;
+}
+
+@media (max-width: 760px), (max-height: 620px) {
+  .rail-stage {
+    display: none;
+  }
+}
+
+.pet {
+  position: relative;
+  width: 76px;
+  margin-bottom: 6px;
+  z-index: 2;
+  cursor: default;
+  animation: pet-in 0.6s cubic-bezier(0.3, 1.5, 0.5, 1) both;
+}
+
+.pet-btn {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.owl {
+  width: 100%;
+  overflow: visible;
+  --px: 0px;
+  --py: 0px;
+  clip-path: inset(-400px 0 -6px 0 round 0 0 20px 20px);
+}
+
+.pupils {
+  transform: translate(var(--px), var(--py));
+  transition: transform 0.12s ease-out;
+}
+
+.body {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: owl-bob 3.6s ease-in-out infinite;
+}
+
+.lid {
+  transform-box: fill-box;
+  transform-origin: top;
+  transform: scaleY(0);
+  animation: blink 5.5s infinite;
+}
+
+.hat,
+.zzz,
+.spark {
+  display: none;
+}
+
+.pet.party .hat,
+.pet.party .spark {
+  display: block;
+}
+
+.pet.sleep .zzz {
+  display: block;
+}
+
+.pet.party .body {
+  animation: party-hop 0.7s ease-in-out infinite;
+}
+
+.pet.party .spark {
+  animation: spin-spark 2.4s linear infinite;
+  transform-origin: 40px 30px;
+}
+
+.pet.sleep .lid {
+  animation: none;
+  transform: scaleY(1);
+}
+
+.pet.sleep .body {
+  animation-duration: 5.5s;
+}
+
+.pet.sleep .zzz text {
+  animation: zz 2.8s ease-in-out infinite;
+}
+
+.pet.sleep .zzz text + text {
+  animation-delay: 0.9s;
+}
+
+.pet-btn:active .body {
+  animation: party-hop 0.35s ease-out 1;
+}
+
+.pet.dizzy .owl {
+  animation: dizzy 0.6s linear 4;
+  transform-origin: 50% 60%;
+}
+
+/* speech bubble */
+.pet-say {
+  position: absolute;
+  left: calc(100% + 12px);
+  bottom: 56px;
+  width: 220px;
+  padding: 10px 14px;
+  border-radius: 16px 16px 16px 4px;
+  background: var(--sheet);
+  color: var(--ink);
+  border: 1.5px solid color-mix(in srgb, var(--ink) 25%, var(--sheet));
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--sheet) 55%, transparent),
+    var(--shadow);
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.35;
+  z-index: 50;
+  pointer-events: none;
+  animation: say-in 0.4s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+}
+
+@keyframes say-in {
+  from {
+    opacity: 0;
+    transform: translateX(-10px) scale(0.85);
+  }
+}
+
+@keyframes pet-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.8);
+  }
+}
+
+@keyframes owl-bob {
+  50% {
+    transform: translateY(-3px) scale(1.02, 0.98);
+  }
+}
+
+@keyframes party-hop {
+  50% {
+    transform: translateY(-9px);
+  }
+}
+
+@keyframes blink {
+  0%,
+  93%,
+  100% {
+    transform: scaleY(0);
+  }
+  96% {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes zz {
+  0%,
+  100% {
+    opacity: 0;
+    transform: translate(0, 4px);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(2px, -3px);
+  }
+}
+
+@keyframes spin-spark {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes dizzy {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- study buddy modes ---------- */
+.pet.active .body {
+  animation-duration: 2.4s;
+}
+
+.pet.active .body:not(.float) {
+  animation:
+    owl-bob 2.4s ease-in-out infinite,
+    act-hop 6s ease-in-out infinite;
+}
+
+@keyframes act-hop {
+  0%,
+  84%,
+  100% {
+    translate: 0 0;
+  }
+  88% {
+    translate: 0 -8px;
+  }
+  92% {
+    translate: 0 0;
+  }
+  95% {
+    translate: 0 -3px;
+  }
+}
+
+/* night study */
+.pet.night .body {
+  animation: ns-nod 5s ease-in-out infinite;
+  transform-origin: 50% 100%;
+}
+
+.pet.night .pupils {
+  transform: translate(var(--px), calc(var(--py) + 1.8px));
+}
+
+.ns-glow {
+  animation: ns-flicker 3.2s ease-in-out infinite;
+}
+
+.ns-page {
+  transform-box: fill-box;
+  transform-origin: 0% 50%;
+  animation: ns-turn 7s ease-in-out infinite;
+}
+
+@keyframes ns-nod {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  35% {
+    transform: rotate(1.6deg) translateY(1px);
+  }
+  70% {
+    transform: rotate(-1deg);
+  }
+}
+
+@keyframes ns-flicker {
+  0%,
+  100% {
+    opacity: 0.85;
+  }
+  50% {
+    opacity: 1;
+  }
+  72% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes ns-turn {
+  0%,
+  76%,
+  100% {
+    transform: scaleX(1);
+  }
+  88% {
+    transform: scaleX(-1);
+  }
+  89% {
+    transform: scaleX(1);
+    opacity: 0;
+  }
+  95% {
+    opacity: 1;
+  }
+}
+
+/* asleep */
+.pet.sleep .owl {
+  filter: saturate(0.8) brightness(0.9);
+}
+
+.pet.sleep .body {
+  animation: sleep-breathe 5.5s ease-in-out infinite;
+}
+
+@keyframes sleep-breathe {
+  0%,
+  100% {
+    transform: scale(1, 1);
+  }
+  50% {
+    transform: scale(1.015, 0.985);
+  }
+}
+
+/* reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .body,
+  .lid,
+  .pet.active .body,
+  .pet.night .body,
+  .pet.sleep .body,
+  .ns-glow,
+  .ns-page {
+    animation: none !important;
+  }
+}

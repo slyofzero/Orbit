@@ -1,0 +1,81 @@
+/* Boo the ghost specific animations */
+.shiver {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: shiver 0.28s linear infinite;
+}
+
+@keyframes shiver {
+  25% {
+    transform: translateX(-0.8px) rotate(-1deg);
+  }
+  75% {
+    transform: translateX(0.8px) rotate(1deg);
+  }
+}
+
+.sweat {
+  animation: sweat 2.2s ease-in infinite;
+}
+
+@keyframes sweat {
+  0% {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+.gmouth {
+  transform-box: fill-box;
+  transform-origin: 50% 0;
+  animation: gmouth 1.4s ease-in-out infinite;
+}
+
+@keyframes gmouth {
+  50% {
+    transform: scale(1.15, 0.8);
+  }
+}
+
+.pet.sleep .shiver,
+.pet.sleep .gmouth,
+.pet.sleep .sweat {
+  animation: none;
+}
+
+/* Witching hour: signature hour */
+.pet.sp-ghost .body {
+  animation: sp-flicker 1.9s ease-in-out infinite !important;
+}
+
+@keyframes sp-flicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  40% {
+    opacity: 0.45;
+  }
+  55% {
+    opacity: 0.9;
+  }
+  70% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shiver,
+  .sweat,
+  .gmouth,
+  .pet.sp-ghost .body {
+    animation: none !important;
+  }
+}

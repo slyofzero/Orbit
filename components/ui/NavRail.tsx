@@ -15,11 +15,13 @@ export type NavItem = { href: string; label: string; icon: ReactNode };
 export function NavRail({
   items,
   brand,
+  stage,
   footer,
   className,
 }: {
   items: NavItem[];
   brand?: { title: string; subtitle?: string; href: string };
+  stage?: ReactNode; // e.g. <Companion />
   footer?: ReactNode; // e.g. <ThemeToggle compact />
   className?: string;
 }) {
@@ -65,8 +67,14 @@ export function NavRail({
           </NextLink>
         );
       })}
+      {stage && <div className="mt-auto w-full max-[760px]:hidden">{stage}</div>}
       {footer && (
-        <div className="mt-auto shrink-0 max-[760px]:fixed max-[760px]:top-2.5 max-[760px]:right-3 max-[760px]:z-50 max-[760px]:mt-0">
+        <div
+          className={cx(
+            stage ? "mt-2" : "mt-auto",
+            "shrink-0 max-[760px]:fixed max-[760px]:top-2.5 max-[760px]:right-3 max-[760px]:z-50 max-[760px]:mt-0",
+          )}
+        >
           {footer}
         </div>
       )}

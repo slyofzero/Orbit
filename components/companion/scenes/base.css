@@ -1,0 +1,60 @@
+/* =============================================================================
+   Orbit Study Buddy Scenes base backdrop frame and ambient atmospheric overlays.
+   ============================================================================= */
+
+.sky {
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  overflow: hidden;
+  background: linear-gradient(#d8ecff, #fdf1d6);
+  transition: background 0.4s;
+  animation: scene-in 0.7s ease both;
+}
+
+[data-theme="dark"] .sky {
+  background: linear-gradient(#0b1530, #17284a);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .sky {
+    background: linear-gradient(#0b1530, #17284a);
+  }
+}
+
+@keyframes scene-in {
+  from {
+    opacity: 0;
+    filter: blur(6px);
+  }
+}
+
+/* party stage celebration ambiance */
+.rail-stage.mode-party .sky {
+  box-shadow: inset 0 0 22px rgba(255, 201, 51, 0.35);
+}
+
+/* night study atmospheric ambient overlay */
+.rail-stage.mode-night .sky::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 80% 92%, rgba(255, 200, 90, 0.3), transparent 58%), rgba(10, 14, 44, 0.36);
+}
+
+/* asleep ambient dimming */
+.rail-stage.mode-sleep .sky::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: rgba(4, 6, 22, 0.5);
+}
+
+/* reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .sky {
+    animation: none !important;
+  }
+}

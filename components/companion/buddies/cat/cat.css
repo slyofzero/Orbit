@@ -1,0 +1,34 @@
+/* Miso the cat specific animations */
+.tail {
+  transform-box: fill-box;
+  transform-origin: 0% 100%;
+  animation: tail 2.8s ease-in-out infinite;
+}
+
+@keyframes tail {
+  50% {
+    transform: rotate(14deg);
+  }
+}
+
+/* Zoomies: signature hour */
+.pet.sp-cat .body {
+  animation: sp-zoom 1.8s ease-in-out infinite !important;
+}
+
+@keyframes sp-zoom {
+  0%,
+  100% {
+    transform: translateX(-6px);
+  }
+  50% {
+    transform: translateX(6px) rotate(3deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tail,
+  .pet.sp-cat .body {
+    animation: none !important;
+  }
+}

@@ -1,0 +1,38 @@
+/* Rexy the T-rex specific animations */
+.pet.sp-rex .body {
+  animation: sp-stomp 0.55s ease-in-out infinite !important;
+}
+
+@keyframes sp-stomp {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.rail-stage:has(.pet.sp-rex) .sky {
+  animation: sp-shake 0.55s linear infinite;
+}
+
+@keyframes sp-shake {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(1px, 1px);
+  }
+  75% {
+    transform: translate(-1px, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pet.sp-rex .body,
+  .rail-stage:has(.pet.sp-rex) .sky {
+    animation: none !important;
+  }
+}

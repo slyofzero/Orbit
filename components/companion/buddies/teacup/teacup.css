@@ -1,0 +1,50 @@
+/* Lord Earl Grey teacup specific animations */
+.steam {
+  animation: steam 3.6s ease-in-out infinite;
+}
+
+.steam.s2 {
+  animation-delay: -1.8s;
+}
+
+@keyframes steam {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  40% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+/* Tea time: signature hour */
+.pet.sp-tea .steam {
+  animation-duration: 1.4s;
+  stroke-width: 3.4;
+}
+
+.pet.sp-tea .body {
+  animation: sp-sip 3s ease-in-out infinite !important;
+  transform-origin: 50% 100%;
+}
+
+@keyframes sp-sip {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  50% {
+    transform: rotate(-5deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .steam,
+  .pet.sp-tea .body {
+    animation: none !important;
+  }
+}

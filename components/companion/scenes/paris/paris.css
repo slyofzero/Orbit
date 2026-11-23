@@ -1,0 +1,157 @@
+/* =============================================================================
+   Orbit Scene: Paris (used by Barnaby Rex the T-Rex)
+   ============================================================================= */
+
+.scene-paris {
+  background: linear-gradient(#ffc7a3, #ffa6c0 55%, #d9b6ff);
+}
+
+[data-theme="dark"] .scene-paris {
+  background: linear-gradient(#1b0f3d, #5a1b6e 55%, #ff6a55);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .scene-paris {
+    background: linear-gradient(#1b0f3d, #5a1b6e 55%, #ff6a55);
+  }
+}
+
+.scene-paris i,
+.scene-paris .sun {
+  display: block;
+}
+
+.scene-paris .sun {
+  position: absolute;
+  left: 50%;
+  bottom: 26%;
+  width: 58px;
+  height: 58px;
+  margin-left: -29px;
+  border-radius: 50%;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 4px, rgba(255, 180, 120, 0.9) 4px 6px),
+    linear-gradient(#fff0a8, #ff8a5c);
+  opacity: 0.95;
+  animation: paris-sun-bob 8s ease-in-out infinite;
+}
+
+[data-theme="dark"] .scene-paris .sun {
+  background: repeating-linear-gradient(0deg, transparent 0 4px, #5a1b6e 4px 6px), linear-gradient(#ffe27a, #ff4f7a);
+  box-shadow: 0 0 36px rgba(255, 90, 120, 0.7);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .scene-paris .sun {
+    background: repeating-linear-gradient(0deg, transparent 0 4px, #5a1b6e 4px 6px), linear-gradient(#ffe27a, #ff4f7a);
+    box-shadow: 0 0 36px rgba(255, 90, 120, 0.7);
+  }
+}
+
+@keyframes paris-sun-bob {
+  50% {
+    transform: translateY(5px);
+  }
+}
+
+.scene-paris .eif {
+  position: absolute;
+  left: 50%;
+  bottom: 14%;
+  height: 60%;
+  transform: translateX(-50%);
+  overflow: visible;
+  fill: #6b4c86;
+}
+
+[data-theme="dark"] .scene-paris .eif {
+  fill: #0b0618;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .scene-paris .eif {
+    fill: #0b0618;
+  }
+}
+
+.scene-paris .eif .beam {
+  transform-box: view-box;
+  transform-origin: 30px 2px;
+  animation: paris-beam 5s linear infinite;
+}
+
+html:not([data-theme="dark"]) .scene-paris .eif .beam {
+  display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .scene-paris .eif .beam {
+    display: block;
+  }
+}
+
+@keyframes paris-beam {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.scene-paris i {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: #fff;
+  opacity: 0;
+  animation: paris-twinkle 3.4s ease-in-out infinite;
+}
+
+html:not([data-theme="dark"]) .scene-paris i {
+  display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .scene-paris i {
+    display: block;
+  }
+}
+
+@keyframes paris-twinkle {
+  0%,
+  100% {
+    opacity: 0.15;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.5);
+  }
+}
+
+.scene-paris::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 15%;
+  background: linear-gradient(#a8658f, #6b3d6b);
+}
+
+[data-theme="dark"] .scene-paris::after {
+  background: linear-gradient(#2a0f3a, #120720);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .scene-paris::after {
+    background: linear-gradient(#2a0f3a, #120720);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scene-paris .sun,
+  .scene-paris .eif .beam,
+  .scene-paris i {
+    animation: none !important;
+  }
+}

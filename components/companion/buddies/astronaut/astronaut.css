@@ -1,0 +1,26 @@
+/* Nova the astronaut specific animations */
+.float {
+  animation: owl-bob 3.6s ease-in-out infinite;
+}
+
+/* Spacewalk: signature hour */
+.pet.sp-astro .body {
+  animation: sp-drift 6s ease-in-out infinite !important;
+}
+
+@keyframes sp-drift {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(-4deg);
+  }
+  50% {
+    transform: translate(2px, -8px) rotate(5deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .float,
+  .pet.sp-astro .body {
+    animation: none !important;
+  }
+}
