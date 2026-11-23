@@ -20,7 +20,7 @@ import { useMutation, useQuery } from "@/lib/db/client";
 import { formatShort, isIsoDate, todayIST, type IsoDate } from "@/lib/dates";
 import type { Verdict } from "@/lib/grade";
 import type { TopicQuestions } from "@/lib/questions";
-import { AUTO_NEXT_MS, autoNext, outcomeOf, paletteState, pendingSkips, startIndex, summarize } from "@/lib/session";
+import { outcomeOf, paletteState, pendingSkips, startIndex, summarize } from "@/lib/session";
 import { announce } from "@/components/companion";
 import type { AnswerOutcome } from "@/types/tables";
 
@@ -114,10 +114,12 @@ function Sitting({
   bonus?: Record<string, IsoDate>;
 }) {
   const record = useMutation("question.record");
+  const resetPractice = useMutation("question.resetPractice");
   const [at, setAt] = useState<number | null>(null); // null = not moved yet: open on the first untried question
   const [visited, setVisited] = useState<string[]>([]); // opened this sitting, in order (palette + kept mounted)
   const [outcomes, setOutcomes] = useState<Record<string, AnswerOutcome>>({});
   const [finished, setFinished] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
 
   const items = data?.items ?? [];
   const index = Math.min(at ?? startIndex(items), Math.max(0, items.length - 1));
@@ -133,6 +135,28 @@ function Sitting({
   timeRef.current = timeOf;
   const runRef = useRef(record.run);
   runRef.current = record.run;
+
+  // Preload outcomes and visited from existing stored answers
+  const preloaded = useRef(false);
+  useEffect(() => {
+    if (preloaded.current || !data?.items.length) return;
+    preloaded.current = true;
+    const restoredOutcomes: Record<string, AnswerOutcome> = {};
+    const restoredVisited: string[] = [];
+    for (const item of data.items) {
+      const outcome = item.lastOutcome ?? item.latest;
+      if (outcome) {
+        restoredOutcomes[item.question.id] = outcome;
+        restoredVisited.push(item.question.id);
+        written.current.add(item.question.id);
+      }
+    }
+    if (restoredVisited.length > 0) {
+      setOutcomes((prev) => ({ ...restoredOutcomes, ...prev }));
+      setVisited((prev) => Array.from(new Set([...restoredVisited, ...prev])));
+      opened.current = Array.from(new Set([...opened.current, ...restoredVisited]));
+    }
+  }, [data]);
 
   useEffect(() => {
     if (!currentId || opened.current.includes(currentId)) return;
@@ -164,7 +188,7 @@ function Sitting({
     };
   }, [flush]);
 
-  const answer = (id: string, i: number) => (verdict: Verdict) => {
+  const answer = (id: string, _i: number) => (verdict: Verdict) => {
     if (written.current.has(id)) return; // one stored answer per attempt
     written.current.add(id);
     freeze(id); // the time stops once it is answered
@@ -172,11 +196,6 @@ function Sitting({
     setOutcomes((o) => ({ ...o, [id]: outcome }));
     void record.run({ answers: [{ questionId: id, outcome, timeMs: timeOf(id) }] });
     announce(outcome === "correct" ? "right" : "wrong");
-    const next = autoNext(outcome, i, items.length);
-    if (next !== null)
-      setTimeout(() => {
-        if (alive.current && indexRef.current === i) setAt(next); // only if you are still on it
-      }, AUTO_NEXT_MS);
   };
 
   /** Try again: a new attempt, stored again when answered (or as skipped when left), with a fresh clock. */
@@ -184,6 +203,20 @@ function Sitting({
     written.current.delete(id);
     restart(id);
     setOutcomes(({ [id]: _, ...rest }) => rest);
+  };
+
+  const resetAllProgress = async () => {
+    if (!items.length) return;
+    const questionIds = items.map((x) => x.question.id);
+    await resetPractice.run({ questionIds });
+    written.current.clear();
+    opened.current = [];
+    setOutcomes({});
+    setVisited([]);
+    setAt(0);
+    setConfirmReset(false);
+    announce("progress");
+    onAgain();
   };
 
   if (!data) return null;
@@ -201,7 +234,7 @@ function Sitting({
     );
 
   const total = items.length;
-  const done = Object.keys(outcomes).length;
+  const done = Object.values(outcomes).filter((o) => o === "correct" || o === "incorrect").length;
 
   if (finished) {
     const s = summarize(outcomes, total);
@@ -255,9 +288,28 @@ function Sitting({
           <Heading level={1}>{data.topic.name}</Heading>
           <Pill tone="neutral">{data.topic.subject_name}</Pill>
           {split < total && <Pill tone="amber">{`+ ${total - split} bonus`}</Pill>}
-          <Button variant="secondary" className="ml-auto" onClick={finish}>
-            Finish
-          </Button>
+          <div className="ml-auto flex items-center gap-2">
+            {confirmReset ? (
+              <div className="flex items-center gap-2 rounded-lg border border-red/40 bg-sheet-2 px-2.5 py-1">
+                <Text variant="small" className="text-red">
+                  Reset progress?
+                </Text>
+                <Button variant="danger" size="sm" onClick={resetAllProgress}>
+                  Reset
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setConfirmReset(false)}>
+                  Cancel
+                </Button>
+              </div>
+            ) : (
+              <Button variant="ghost" size="sm" icon={<IconRefresh />} onClick={() => setConfirmReset(true)}>
+                Reset progress
+              </Button>
+            )}
+            <Button variant="secondary" onClick={finish}>
+              Finish
+            </Button>
+          </div>
         </div>
 
         <div className="grid items-start gap-5 min-[980px]:grid-cols-[minmax(0,1fr)_280px]">
@@ -300,6 +352,7 @@ function Sitting({
                     question={x.question}
                     detail={x.detail}
                     number={i + 1}
+                    initialOutcome={outcomes[x.question.id] ?? x.lastOutcome ?? x.latest}
                     onAnswer={answer(x.question.id, i)}
                     onRetry={retry(x.question.id)}
                   />

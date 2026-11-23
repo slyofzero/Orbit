@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import type { QuestionNatRow, QuestionRow } from "@/types/tables";
+import type { AnswerOutcome, QuestionNatRow, QuestionRow } from "@/types/tables";
 import { gradeNat, parseNumber, type Verdict } from "@/lib/grade";
 import { TextField } from "@/components/ui";
 import { QuestionFrame, typedClass, type FrameResult } from "@/components/question/QuestionFrame";
@@ -9,6 +9,7 @@ export function NatQuestion({
   question,
   detail,
   number,
+  initialOutcome,
   onAnswer,
   onRetry,
   special,
@@ -16,12 +17,31 @@ export function NatQuestion({
   question: QuestionRow;
   detail: QuestionNatRow;
   number?: number;
+  initialOutcome?: AnswerOutcome | null;
   onAnswer?: (v: Verdict) => void;
   onRetry?: () => void; // Try again was pressed (a new attempt)
   special?: boolean;
 }) {
-  const [input, setInput] = useState("");
-  const [result, setResult] = useState<FrameResult | null>(null);
+  const [input, setInput] = useState(() => (initialOutcome === "correct" ? String(detail.value) : ""));
+  const [result, setResult] = useState<FrameResult | null>(() => {
+    if (initialOutcome === "correct" || initialOutcome === "incorrect") {
+      const { value, tolerance } = detail;
+      const range =
+        tolerance > 0
+          ? ` (anything from ${+(value - tolerance).toFixed(6)} to ${+(value + tolerance).toFixed(6)} counts)`
+          : "";
+      return {
+        verdict: initialOutcome,
+        detail: (
+          <>
+            Correct answer: <strong>{value}</strong>
+            {range}
+          </>
+        ),
+      };
+    }
+    return null;
+  });
   const notNumber = input.trim() !== "" && parseNumber(input) === null;
   const { value, tolerance } = detail;
   const range =

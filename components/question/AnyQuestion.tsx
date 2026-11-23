@@ -2,6 +2,7 @@
 // Shows a question with the component of its type, so a screen can hold a list of mixed questions.
 
 import type {
+  AnswerOutcome,
   QuestionCodeRow,
   QuestionMcqRow,
   QuestionMsqRow,
@@ -21,6 +22,7 @@ export function AnyQuestion({
   question,
   detail,
   number,
+  initialOutcome,
   onAnswer,
   onRetry,
   special,
@@ -28,11 +30,12 @@ export function AnyQuestion({
   question: QuestionRow;
   detail: QuestionDetail; // the row of the type table that matches question.type
   number?: number;
+  initialOutcome?: AnswerOutcome | null;
   onAnswer?: (v: Verdict) => void;
   onRetry?: () => void; // Try again was pressed
   special?: boolean;
 }) {
-  const common = { question, number, onAnswer, onRetry, special };
+  const common = { question, number, initialOutcome, onAnswer, onRetry, special };
   switch (question.type) {
     case "mcq":
       return <McqQuestion {...common} detail={detail as QuestionMcqRow} />;

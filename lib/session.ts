@@ -7,8 +7,25 @@ import type { AnswerOutcome } from "@/types/tables";
 /** The colour of one number in the question palette (components/question/QuestionPalette.tsx). */
 export type PaletteState = "new" | "seen" | "right" | "wrong";
 
-/** Where a sitting opens: the first question you have never tried, else the first one. */
-export function startIndex(items: { latest: "correct" | "incorrect" | null }[]): number {
+/** Where a sitting opens: the question with the most recent attempt timestamp (if resuming),
+ *  else the first question you have never tried, else the first one. */
+export function startIndex(
+  items: {
+    latest: "correct" | "incorrect" | null;
+    lastOutcome?: "correct" | "incorrect" | "skipped" | null;
+    lastAt?: number | null;
+  }[],
+): number {
+  let maxAt = -1;
+  let lastIdx = -1;
+  for (let i = 0; i < items.length; i++) {
+    const at = items[i].lastAt;
+    if (at !== undefined && at !== null && at >= maxAt && at > 0) {
+      maxAt = at;
+      lastIdx = i;
+    }
+  }
+  if (lastIdx >= 0) return lastIdx;
   const i = items.findIndex((x) => x.latest === null);
   return i < 0 ? 0 : i;
 }
@@ -16,11 +33,11 @@ export function startIndex(items: { latest: "correct" | "incorrect" | null }[]):
 /** A checked answer as the outcome to store. Nothing answered counts as skipped. */
 export const outcomeOf = (v: Verdict): AnswerOutcome => v ?? "skipped";
 
-/** What the palette shows for a question this sitting: its result once answered, "seen" once opened. */
+/** What the palette shows for a question this sitting: its result once answered, "seen" once opened or skipped. */
 export function paletteState(outcome: AnswerOutcome | undefined, visited: boolean): PaletteState {
   if (outcome === "correct") return "right";
   if (outcome === "incorrect") return "wrong";
-  return visited ? "seen" : "new";
+  return visited || outcome === "skipped" ? "seen" : "new";
 }
 
 /** Questions shown but never answered (and not written yet): each is stored as `skipped` when the sitting ends,

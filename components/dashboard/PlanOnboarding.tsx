@@ -5,6 +5,7 @@
 // A tab switches the steps for "Import progress": someone coming back restores a backup instead (RestoreBackup).
 
 import { useEffect, useState, type ReactNode } from "react";
+import { IconChevronLeft } from "@/components/icons";
 import {
   Button,
   Callout,
@@ -21,7 +22,6 @@ import {
 } from "@/components/ui";
 import { RestoreBackup } from "@/components/dashboard/RestoreBackup";
 import { LAUNCH_MS } from "@/components/background/LaunchWarp";
-import { useScene } from "@/components/background/Backdrop";
 import { cx } from "@/components/utils";
 import { useMutation } from "@/lib/db/client";
 import { formatLong, todayIST, type IsoDate } from "@/lib/dates";
@@ -61,9 +61,8 @@ export function Step({
   );
 }
 
-/** `onLaunched` runs once a plan is imported (the page plays the launch sequence). */
-export function PlanOnboarding({ onLaunched }: { onLaunched?: (name: string) => void }) {
-  useScene("welcome");
+/** `onLaunched` runs once a plan is imported (the page plays the launch sequence). `onBack` returns to the homepage hero. */
+export function PlanOnboarding({ onLaunched, onBack }: { onLaunched?: (name: string) => void; onBack?: () => void }) {
   const toast = useToast();
   const [today, setToday] = useState<IsoDate | null>(null);
   useEffect(() => setToday(todayIST()), []);
@@ -110,7 +109,15 @@ export function PlanOnboarding({ onLaunched }: { onLaunched?: (name: string) => 
     <section className="min-h-screen max-[760px]:min-h-0">
       <div className="grid max-w-[820px] gap-7 p-[clamp(22px,4vw,56px)]">
         <div className="grid animate-card-in justify-items-start gap-4">
-          <Pill tone="accent">🪐 Welcome to Orbit</Pill>
+          <div className="flex flex-wrap items-center gap-3">
+            <Pill tone="accent">🪐 Welcome to Orbit</Pill>
+
+            {onBack && (
+              <Button variant="ghost" size="sm" icon={<IconChevronLeft className="h-4 w-4" />} onClick={onBack}>
+                Back to overview
+              </Button>
+            )}
+          </div>
           <Heading level={1} className="text-[clamp(2.2rem,5vw,3.6rem)] leading-[1.02] tracking-[-0.03em]">
             Every orbit starts with a <span className="special-text animate-flow">plan</span>.
           </Heading>

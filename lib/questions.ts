@@ -17,6 +17,8 @@ export interface LoadedQuestion {
   question: QuestionRow;
   detail: QuestionDetail;
   latest: "correct" | "incorrect" | null; // latest counted answer (skips ignored); null = never tried
+  lastOutcome?: "correct" | "incorrect" | "skipped" | null; // latest attempt outcome including skipped
+  lastAt?: number | null; // recorded_at timestamp of the latest attempt
 }
 
 /** `question.code`: one code question for the Programming screen, with its place in the Programming list. */
