@@ -11,6 +11,8 @@ interface Planet {
   colorDark: string;
   colorLight: string;
   phase: number;
+  tilt: number; // Unique 3D orbital inclination angle
+  flattening: number; // Elliptical eccentricity ratio (ry / rx)
   moon?: boolean;
   trailLength: number;
 }
@@ -20,16 +22,6 @@ interface Star {
   y: number;
   r: number;
   phase: number;
-  speed: number;
-  alpha: number;
-}
-
-interface Comet {
-  active: boolean;
-  x: number;
-  y: number;
-  length: number;
-  angle: number;
   speed: number;
   alpha: number;
 }
@@ -46,11 +38,11 @@ export interface CosmicCanvasProps {
 
 /**
  * Top full-screen background canvas:
- * - Sits above the ambient canvas, dedicated exclusively for Cosmic & Celestial animations.
- * - Renders continuous elliptical orbits spanning the entire screen with ZERO boundary cutoff.
- * - Orbits curve across the full viewport, passing seamlessly behind foreground text.
- * - Orbiting planets with stardust particle trails and orbiting moon.
- * - Twinkling ambient starry cosmos and occasional shooting stars/comets across the universe.
+ * - Dedicated exclusively for Cosmic & Celestial animations.
+ * - Multi-planar tilted orbits: each planet travels along its own unique 3D inclination angle and eccentricity.
+ * - Orbits span the entire screen with ZERO boundary cutoff, looping seamlessly behind foreground UI.
+ * - Orbiting planets with stardust bead trails and orbiting moon.
+ * - Ambient starry cosmos across the full viewport.
  * - Full light/dark theme adaptation and prefers-reduced-motion support.
  */
 export function CosmicCanvas({ className, sunX, sunY, showOrbits = true }: CosmicCanvasProps) {
@@ -71,44 +63,63 @@ export function CosmicCanvas({ className, sunX, sunY, showOrbits = true }: Cosmi
     let height = 0;
     let animId = 0;
 
-    // Fixed planets with smooth continuous speeds and proportional orbit radii
+    // Multi-tilt planetary orbits: each with its own inclination angle, eccentricity, speed and bead trail
     const planets: Planet[] = [
       {
         orbitRatio: 0.22,
-        speed: 0.42,
+        speed: 0.44,
         size: 5.5,
         colorDark: "#38bdf8", // Sky blue
         colorLight: "#0284c7",
-        phase: 0.8,
+        phase: 0.6,
+        tilt: -0.22, // -12.6 deg tilt
+        flattening: 0.44,
         trailLength: 10,
       },
       {
         orbitRatio: 0.36,
-        speed: 0.26,
+        speed: 0.28,
         size: 8.5,
         colorDark: "#fbbf24", // Warm amber
         colorLight: "#d97706",
-        phase: 2.4,
+        phase: 2.2,
+        tilt: -0.36, // -20.6 deg tilt
+        flattening: 0.38,
         moon: true,
         trailLength: 14,
       },
       {
         orbitRatio: 0.52,
-        speed: 0.16,
+        speed: 0.17,
         size: 6.5,
         colorDark: "#2dd4bf", // Teal
         colorLight: "#0f766e",
         phase: 4.1,
+        tilt: -0.16, // -9.2 deg tilt (crossing plane)
+        flattening: 0.46,
         trailLength: 12,
       },
       {
         orbitRatio: 0.68,
-        speed: 0.1,
+        speed: 0.11,
         size: 7.5,
         colorDark: "#a78bfa", // Lavender
         colorLight: "#7c3aed",
-        phase: 5.5,
+        phase: 5.4,
+        tilt: -0.42, // -24.1 deg tilt (steeper inclination)
+        flattening: 0.34,
         trailLength: 14,
+      },
+      {
+        orbitRatio: 0.84,
+        speed: 0.07,
+        size: 6.0,
+        colorDark: "#f472b6", // Rose
+        colorLight: "#db2777",
+        phase: 1.5,
+        tilt: -0.28, // -16.0 deg tilt
+        flattening: 0.4,
+        trailLength: 12,
       },
     ];
 
@@ -123,10 +134,6 @@ export function CosmicCanvas({ className, sunX, sunY, showOrbits = true }: Cosmi
       speed: 0.6 + rnd() * 1.4,
       alpha: 0.2 + rnd() * 0.6,
     }));
-
-    // Occasional cosmic comet
-    let comet: Comet = { active: false, x: 0, y: 0, length: 0, angle: 0, speed: 0, alpha: 0 };
-    let lastCometTime = 0;
 
     const resize = () => {
       const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -193,42 +200,41 @@ export function CosmicCanvas({ className, sunX, sunY, showOrbits = true }: Cosmi
       ctx.arc(cx, cy, glowR, 0, Math.PI * 2);
       ctx.fill();
 
-      // 3. Tilted Elliptical Orbits and Orbiting Planets spanning the full screen
+      // 3. Multi-Planar Tilted Orbits and Planets spanning the full screen
       if (showOrbits) {
-        const tilt = -0.32; // Fixed smooth aesthetic tilt
-
         for (const p of planets) {
           const rx = scale * p.orbitRatio;
-          const ry = rx * 0.42;
+          const ry = rx * p.flattening;
 
           ctx.save();
           ctx.translate(cx, cy);
-          ctx.rotate(tilt);
+          ctx.rotate(p.tilt); // Each orbit rotates at its own distinct 3D inclination angle
 
-          // Full dashed orbital track spanning across the entire screen
-          ctx.strokeStyle = dark ? "rgba(232, 238, 245, 0.14)" : "rgba(18, 38, 58, 0.10)";
+          // Dashed orbital track
+          ctx.strokeStyle = dark ? "rgba(232, 238, 245, 0.13)" : "rgba(18, 38, 58, 0.09)";
           ctx.setLineDash([4, 8]);
-          ctx.lineWidth = 1.2;
+          ctx.lineWidth = 1.1;
           ctx.beginPath();
           ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
           ctx.stroke();
           ctx.setLineDash([]);
 
-          // Current planet angle along ellipse
+          // Current planet angle along its unique ellipse
           const angle = p.phase + t * p.speed;
           const planetX = rx * Math.cos(angle);
           const planetY = ry * Math.sin(angle);
           const planetColor = dark ? p.colorDark : p.colorLight;
 
-          // Fading stardust trail
+          // Stardust bead trail behind the planet
           for (let k = p.trailLength; k > 0; k--) {
-            const trailAngle = angle - k * 0.045;
+            const trailAngle = angle - k * 0.048;
             const tx = rx * Math.cos(trailAngle);
             const ty = ry * Math.sin(trailAngle);
-            ctx.globalAlpha = 0.04 * (p.trailLength - k + 1);
+            const ratio = (p.trailLength - k + 1) / p.trailLength;
+            ctx.globalAlpha = 0.08 * ratio;
             ctx.fillStyle = planetColor;
             ctx.beginPath();
-            ctx.arc(tx, ty, p.size * (1 - k * 0.06), 0, Math.PI * 2);
+            ctx.arc(tx, ty, p.size * (1 - k * 0.05), 0, Math.PI * 2);
             ctx.fill();
           }
 
@@ -242,7 +248,7 @@ export function CosmicCanvas({ className, sunX, sunY, showOrbits = true }: Cosmi
           ctx.fill();
           ctx.shadowBlur = 0;
 
-          // Subtle specular highlight
+          // Specular highlight
           ctx.fillStyle = "#ffffff";
           ctx.globalAlpha = 0.85;
           ctx.beginPath();
@@ -264,50 +270,6 @@ export function CosmicCanvas({ className, sunX, sunY, showOrbits = true }: Cosmi
           }
 
           ctx.restore();
-        }
-      }
-
-      // 4. Occasional Shooting Star / Cosmic Comet
-      if (!reducedMotion) {
-        if (!comet.active && ms - lastCometTime > 7000 && Math.random() < 0.03) {
-          comet = {
-            active: true,
-            x: width * (0.1 + Math.random() * 0.4),
-            y: height * (0.05 + Math.random() * 0.2),
-            length: 120 + Math.random() * 80,
-            angle: Math.PI / 4 + (Math.random() - 0.5) * 0.2,
-            speed: 550 + Math.random() * 250,
-            alpha: 1,
-          };
-          lastCometTime = ms;
-        }
-
-        if (comet.active) {
-          const dx = Math.cos(comet.angle);
-          const dy = Math.sin(comet.angle);
-          comet.x += dx * (comet.speed / 60);
-          comet.y += dy * (comet.speed / 60);
-          comet.alpha -= 0.016;
-
-          if (comet.alpha > 0) {
-            const grad = ctx.createLinearGradient(
-              comet.x,
-              comet.y,
-              comet.x - dx * comet.length,
-              comet.y - dy * comet.length,
-            );
-            grad.addColorStop(0, dark ? "rgba(255, 255, 255, 0.9)" : "rgba(249, 115, 22, 0.9)");
-            grad.addColorStop(1, "rgba(255, 255, 255, 0)");
-
-            ctx.strokeStyle = grad;
-            ctx.lineWidth = 1.8;
-            ctx.beginPath();
-            ctx.moveTo(comet.x, comet.y);
-            ctx.lineTo(comet.x - dx * comet.length, comet.y - dy * comet.length);
-            ctx.stroke();
-          } else {
-            comet.active = false;
-          }
         }
       }
     };
