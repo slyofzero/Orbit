@@ -12,8 +12,6 @@ interface AmbientStar {
   speed: number;
 }
 
-const darkStarCount = 400;
-
 /**
  * Bottom background canvas: for subtle ambient drift (floating Greek alphabets & math characters, and test stars).
  */
@@ -38,7 +36,7 @@ export function AmbientCanvas({ className }: { className?: string }) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const starCount = isDark ? 200 : 1000;
+    const starCount = isDark ? 200 : 600;
     console.log(`Star count - ${starCount}`);
 
     const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
