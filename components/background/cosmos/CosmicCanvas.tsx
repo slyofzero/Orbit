@@ -31,7 +31,7 @@ export function CosmicCanvas({ className }: { className?: string }) {
       ref={ref}
       data-layer="cosmos"
       aria-hidden="true"
-      className={cx("pointer-events-none fixed inset-0 -z-10 size-full block", className)}
+      className={cx("pointer-events-none fixed inset-0 z-0 size-full block", className)}
     />
   );
 }

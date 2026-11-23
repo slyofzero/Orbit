@@ -78,6 +78,7 @@
   --blue-soft: #e2ecff; /* picked, info */
   --amber: #b86a05;
   --amber-soft: #ffeccb; /* warning */
+  --ambient-star: #ffcf3f; /* firefly in light mode */
   --hero: #10283b;
   --on-hero: #eef3f8; /* the one dark panel */
   --code-bg: #12263a;
@@ -107,7 +108,7 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --pad: #0b1017;
+    --pad: #04070a;
     --sheet: #121a24;
     --sheet-2: #1a2431;
     --ink: #e8eef5;
@@ -128,6 +129,7 @@
     --blue-soft: #1a2a52;
     --amber: #ffb04a;
     --amber-soft: #3b2a10;
+    --ambient-star: #e8eef5; /* starlight in dark mode */
     --hero: #16212f;
     --on-hero: #eef3f8;
     --code-bg: #0a0e1d;
@@ -146,7 +148,7 @@
 /* ---------- tokens: dark (user picked dark) ---------- */
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --pad: #0b1017;
+  --pad: #04070a;
   --sheet: #121a24;
   --sheet-2: #1a2431;
   --ink: #e8eef5;
@@ -167,6 +169,7 @@
   --blue-soft: #1a2a52;
   --amber: #ffb04a;
   --amber-soft: #3b2a10;
+  --ambient-star: #e8eef5; /* starlight in dark mode */
   --hero: #16212f;
   --on-hero: #eef3f8;
   --code-bg: #0a0e1d;
@@ -209,6 +212,7 @@
   --color-blue-soft: var(--blue-soft);
   --color-amber: var(--amber);
   --color-amber-soft: var(--amber-soft);
+  --color-ambient-star: var(--ambient-star);
   --color-hero: var(--hero);
   --color-on-hero: var(--on-hero);
   --color-code-bg: var(--code-bg);
@@ -365,6 +369,7 @@
 
 /* ---------- base ---------- */
 @layer base {
+  html,
   body {
     background: var(--pad);
     color: var(--ink);

@@ -64,7 +64,7 @@ open http://localhost:3000/dev/components
 - Don't add component CSS to `site.css`. Use utilities; if a pattern repeats, add an `@utility`. A new animation goes in `styles/animations/<component>.css` (inside `@theme inline`), imported from `site.css`.
 - **Formatting:** `bun run format` runs Prettier on every `.tsx` file (`.prettierrc.json`); `bun run format:check` must pass.
 
-- **Theme:** light by default, dark when the system says so, unless the user picks one with `ThemeToggle` (Light / System / Dark). The choice is saved as `localStorage["orbit.theme"]` and applied before the first paint (`lib/theme.ts`), so there is no flash. Switching reveals the new theme as a circle growing from where you clicked.
+- **Theme:** light by default, dark when the system says so, unless the user picks one with `ThemeToggle` (Light / System / Dark). The choice is saved as `localStorage["orbit.theme"]` and applied before the first paint (`lib/theme.ts`), so there is no flash. Reactive theme state is managed via Jotai in `@/lib/global` (`useTheme()`). Switching reveals the new theme as a circle growing from where you clicked.
 - **Special:** many components take `special` (or `variant`/`tone="special"`). Filled parts get a slowly flowing gradient; bordered parts a flowing gradient border; headings gradient text. Larger components also show a sparkle badge. Special panels (`Card`, `Dialog`) glow underneath; `glow` sets how much: `low` · `medium` (default) · `high` (utilities `special-glow-*`, classes in `GLOW`, `Special.tsx`; they follow warm). Motion stops for users with "reduce motion" on.
 - **Cool vs warm:** the default special gradient is **cool** (teal, blue, violet). Wrap anything in `<Warm>` and every special style inside it becomes **warm** (rose-red, red-orange, orange, a touch of amber, the v1 quote-banner colours). Toasts, which render outside your layout, use `toast("…", "warm")` instead.
 
@@ -124,7 +124,7 @@ All fields take `label`, `hint`, `error` and **`help`** (a "?" tip beside the la
 | `Radio` | `Choice.tsx` | One round radio on its own, in a row you lay out yourself (the question editor's "this option is right") | `name` (radios sharing it form a group), `checked`, `onChange`, `label` (read aloud only), `disabled` |
 | `Switch` | `Switch.tsx` | A setting that applies at once | `label` |
 | `Segmented` | `Segmented.tsx` | 2–4 mutually exclusive options side by side | `segments` (`label`, `icon`); arrow keys; `special`: `true` (all) or a list of values (just those) |
-| `ThemeToggle` | `ThemeToggle.tsx` | Light / System / Dark | `compact` = v1's rail pill (cosmic-event button via `onCosmic`, then one theme button showing the current choice; System → Light → Dark); switching plays v1's ripple (the new theme spreads in a circle from the click; `applyThemeWithRipple` in `lib/theme.ts`, skipped with reduce motion or without View Transitions) |
+| `ThemeToggle` | `ThemeToggle.tsx` | Light / System / Dark | `compact` = rail pill: cosmic-event button on the left (dud for now) and theme button on the right (toggles strictly between light and dark mode on each click; switching plays ripple) |
 
 ### Showing information
 | Component | File | Use it for | Main options |
