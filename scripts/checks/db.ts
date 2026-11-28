@@ -115,7 +115,7 @@ console.log("db: named queries");
     ok(!unknownTable, `${name}: lists only real tables`);
   }
   ok(
-    JSON.stringify(runQ("setup.status").data) === '{"hasPlan":false,"hasQuestions":false}',
+    JSON.stringify(runQ("setup.status").data) === '{"hasPlan":false,"hasQuestions":false,"skipped":false}',
     "setup.status: nothing loaded",
   );
   const first = runQ("dev.addSampleQuestion").data as string;
@@ -148,9 +148,13 @@ console.log("db: named queries");
   }
   ok(rolledBack, "a write that throws is rolled back completely");
   ok(
-    JSON.stringify(runQ("setup.status").data) === '{"hasPlan":false,"hasQuestions":true}',
+    JSON.stringify(runQ("setup.status").data) === '{"hasPlan":false,"hasQuestions":true,"skipped":false}',
     "setup.status: questions, no plan",
   );
+  runQ("settings.set", { key: "setup_skipped", value: "1" });
+  ok((runQ("setup.status").data as { skipped: boolean }).skipped, "setup.status: Skip for now is remembered");
+  runQ("settings.set", { key: "setup_skipped", value: "" });
+  ok(!(runQ("setup.status").data as { skipped: boolean }).skipped, "setup.status: …and cleared");
   const heroToday = "2026-11-20";
   runQ("dev.samplePlan", { today: heroToday });
   runQ("dev.samplePlan", { today: heroToday }); // loading it twice replaces it

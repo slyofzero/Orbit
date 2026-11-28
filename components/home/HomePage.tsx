@@ -8,7 +8,7 @@ import { IconArrowRight, IconStar } from "@/components/icons";
 
 export function HomePage() {
   const { data } = useQuery("setup.status");
-  const hasPlan = data?.hasPlan === true;
+  const hasPlan = data?.hasPlan === true || data?.skipped === true; // the app opens: a plan, or set up skipped
   const heroRef = useRef<HTMLDivElement>(null);
 
   // Entrance animation on mount

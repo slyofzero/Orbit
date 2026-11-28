@@ -1,5 +1,6 @@
 "use client";
-// /dashboard: v1's home screen. With no plan the app frame sends the user to /onboarding; right after a
+// /dashboard: v1's home screen. With no plan the app frame sends the user to /onboarding (or, if they skipped
+// the setup, this page shows the setup guide and the cards that don't need a plan); right after a
 // launch, LaunchWarp (components/app/Launch.tsx) plays over the dashboard and its sections rise in as the
 // overlay dissolves.
 import { useEffect, useState, type ReactNode } from "react";
@@ -90,12 +91,31 @@ function Body({ landed, today, hour }: { landed: boolean; today: IsoDate; hour: 
   );
 }
 
+/** Set up skipped and no plan yet: the setup guide, and (once questions are loaded) the cards that don't need a
+ *  plan. The plan's cards (countdown, calendar, agenda, last 7 days, milestones) appear once one is loaded. */
+function NoPlanDashboard({ hasQuestions }: { hasQuestions: boolean }) {
+  return (
+    <div className="px-[clamp(18px,3.5vw,44px)] pt-[34px] pb-20 max-[760px]:pb-[100px]">
+      <TopRow />
+      <SetupCard />
+      {hasQuestions && (
+        <div className="mb-[22px] grid items-start gap-[22px] min-[980px]:grid-cols-2">
+          <MockScoresCard />
+          <WeakestCard />
+        </div>
+      )}
+      <SettingsBackup />
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const { data } = useQuery("setup.status");
   const { landed } = useLaunch(); // right after a launch the sections rise in (once, as they mount)
-  // No plan: AppFrame sends the user to /onboarding. The launch overlay lives in LaunchProvider, so it keeps
-  // playing across that route change.
-  if (!data?.hasPlan) return null;
+  // No plan and setup not skipped: AppFrame sends the user to /onboarding. The launch overlay lives in
+  // LaunchProvider, so it keeps playing across that route change.
+  if (!data) return null;
+  if (!data.hasPlan) return <NoPlanDashboard hasQuestions={data.hasQuestions} />;
 
   // v1's page padding (the app frame has none, so the welcome can run edge to edge)
   return (

@@ -40,6 +40,8 @@ console.log("milestones and settings (lib/milestones.ts, lib/settings.ts)");
   ok(checkSetting("name", "  Asha   K ").value === "Asha K", "checkSetting: a name is tidied");
   ok(checkSetting("name", "x".repeat(NAME_MAX + 1)).value === null, "checkSetting: a name has a length limit");
   ok(checkSetting("colour", "red").value === null, "checkSetting: unknown keys are refused");
+  ok(checkSetting("setup_skipped", "1").value === "1", 'checkSetting: setup_skipped takes "1"');
+  ok(checkSetting("setup_skipped", "yes").value === null, "checkSetting: setup_skipped refuses anything else");
   ok(
     readSettings([{ key: "junk", value: "1" }]).name === "" && readSettings([{ key: "name", value: "A" }]).name === "A",
     "readSettings: defaults fill in, unknown keys are ignored",

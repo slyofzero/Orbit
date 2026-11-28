@@ -81,7 +81,7 @@ function PlannerLoader() {
         <EmptyState
           title="No plan yet"
           action={
-            <Button variant="primary" href="/dashboard">
+            <Button variant="primary" href="/onboarding">
               Load a plan
             </Button>
           }
