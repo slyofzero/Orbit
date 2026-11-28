@@ -7,6 +7,8 @@ export const NAME_MAX = 40;
 export const SETTING_DEFAULTS = {
   /** what the dashboard greeting calls you ("Good morning, Asha"); "" = no name */
   name: "",
+  /** "1" = the user pressed "Skip for now" on /onboarding: the app opens without a plan; "" = not skipped */
+  setup_skipped: "",
 } as const;
 export type SettingKey = keyof typeof SETTING_DEFAULTS;
 export type Settings = { [K in SettingKey]: string };
@@ -20,6 +22,10 @@ export function checkSetting(key: string, raw: string): { value: string | null; 
     const v = raw.replace(/\s+/g, " ").trim();
     if (v.length > NAME_MAX) return { value: null, error: `Your name can be at most ${NAME_MAX} characters.` };
     return { value: v, error: null };
+  }
+  if (key === "setup_skipped") {
+    if (raw !== "1" && raw !== "") return { value: null, error: `"setup_skipped" is "1" or empty.` };
+    return { value: raw, error: null };
   }
   return { value: raw, error: null };
 }

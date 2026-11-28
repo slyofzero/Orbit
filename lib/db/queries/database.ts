@@ -11,12 +11,14 @@ export const databaseQueries = {
     TABLES.map((table) => ({ table, rows: sql.get<{ n: number }>(`SELECT count(*) AS n FROM ${table}`)!.n })),
   ),
 
-  /** What is loaded yet: an active plan, and any (not retired) questions. Drives "Set up your study space". */
-  "setup.status": read(["plans", "questions"], (sql) => {
-    const r = sql.get<{ plan: number; questions: number }>(
+  /** What is loaded yet: an active plan, and any (not retired) questions, and whether the user skipped the setup
+   *  (settings `setup_skipped`: then the app opens without a plan). Drives the route guard and the setup guide. */
+  "setup.status": read(["plans", "questions", "settings"], (sql) => {
+    const r = sql.get<{ plan: number; questions: number; skipped: number }>(
       `SELECT EXISTS (SELECT 1 FROM plans WHERE is_active = 1) AS plan,
-              EXISTS (SELECT 1 FROM questions WHERE retired_at IS NULL) AS questions`,
+              EXISTS (SELECT 1 FROM questions WHERE retired_at IS NULL) AS questions,
+              EXISTS (SELECT 1 FROM settings WHERE key = 'setup_skipped' AND value = '1') AS skipped`,
     )!;
-    return { hasPlan: r.plan === 1, hasQuestions: r.questions === 1 };
+    return { hasPlan: r.plan === 1, hasQuestions: r.questions === 1, skipped: r.skipped === 1 };
   }),
 };

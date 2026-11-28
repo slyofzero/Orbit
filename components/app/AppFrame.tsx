@@ -1,7 +1,8 @@
 "use client";
 // The frame around every app page (v1's shell): the rail on the left (a bottom bar on phones) and the page.
-// It also guards the routes: until a plan is loaded every page redirects to /onboarding (the only thing to
-// do is load one), and /onboarding redirects to /dashboard once there is one. On /onboarding the rail is
+// It also guards the routes: until a plan is loaded, or the user pressed "Skip for now" on /onboarding
+// (setup.status `skipped`), every page redirects to /onboarding, and /onboarding redirects to /dashboard once
+// there is a plan. Without a plan the dashboard shows the setup guide instead. On /onboarding the rail is
 // left out and the theme switch floats in the top-right corner instead. Nothing is shown until we know
 // whether a plan exists, so neither the rail nor a page flashes while the database opens.
 
@@ -28,8 +29,9 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const router = useRouter();
   const path = usePathname();
   const hasPlan = data?.hasPlan === true;
+  const ready = hasPlan || data?.skipped === true; // the app opens: with a plan, or set up skipped
   const onboarding = path === ONBOARDING;
-  const goTo = data && (hasPlan ? (onboarding ? "/dashboard" : null) : onboarding ? null : ONBOARDING);
+  const goTo = data && (hasPlan && onboarding ? "/dashboard" : !ready && !onboarding ? ONBOARDING : null);
 
   useEffect(() => {
     if (goTo) router.replace(goTo);
@@ -61,9 +63,9 @@ export function AppFrame({ children }: { children: ReactNode }) {
   if (!data || goTo) return null;
 
   // A mock test fills the screen: no rail, no theme switch (components/exam/).
-  if (hasPlan && (path === EXAM || path.startsWith(`${EXAM}/`))) return <main className="w-full">{children}</main>;
+  if (ready && (path === EXAM || path.startsWith(`${EXAM}/`))) return <main className="w-full">{children}</main>;
 
-  if (!hasPlan)
+  if (!ready)
     return (
       <>
         <main className="w-full">{children}</main>

@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import gsap from "gsap";
-import { useQuery } from "@/lib/db/client";
+import { useMutation, useQuery } from "@/lib/db/client";
 import { useLaunch } from "@/components/app/Launch";
 import { PlanOnboarding } from "@/components/dashboard/PlanOnboarding";
 
@@ -38,13 +38,21 @@ export default function OnboardingPage() {
     router.push("/dashboard");
   };
 
+  // "Skip for now": a plan is optional. Remember it (settings `setup_skipped`), so the app opens without one and
+  // the dashboard shows the setup guide instead of sending the user back here.
+  const setSetting = useMutation("settings.set");
+  const handleSkip = async () => {
+    const r = await setSetting.run({ key: "setup_skipped", value: "1" });
+    if (r?.ok) router.push("/dashboard");
+  };
+
   const handleBack = () => {
     router.push("/");
   };
 
   return (
     <div ref={contentRef} className="w-full min-h-screen max-w-[840px] px-2 sm:px-6 lg:px-12 py-8 sm:py-12">
-      <PlanOnboarding onLaunched={handleLaunched} onBack={handleBack} />
+      <PlanOnboarding onLaunched={handleLaunched} onBack={handleBack} onSkip={handleSkip} />
     </div>
   );
 }

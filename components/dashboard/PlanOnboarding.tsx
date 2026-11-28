@@ -5,7 +5,7 @@
 // A tab switches the steps for "Import progress": someone coming back restores a backup instead (RestoreBackup).
 
 import { useEffect, useState, type ReactNode } from "react";
-import { IconChevronLeft } from "@/components/icons";
+import { IconArrowRight, IconChevronLeft } from "@/components/icons";
 import {
   Button,
   Callout,
@@ -61,8 +61,17 @@ export function Step({
   );
 }
 
-/** `onLaunched` runs once a plan is imported (the page plays the launch sequence). `onBack` returns to the homepage hero. */
-export function PlanOnboarding({ onLaunched, onBack }: { onLaunched?: (name: string) => void; onBack?: () => void }) {
+/** `onLaunched` runs once a plan is imported (the page plays the launch sequence). `onBack` returns to the homepage
+ *  hero. `onSkip` opens the app without a plan (a plan is optional: someone may only want to practise questions). */
+export function PlanOnboarding({
+  onLaunched,
+  onBack,
+  onSkip,
+}: {
+  onLaunched?: (name: string) => void;
+  onBack?: () => void;
+  onSkip?: () => void;
+}) {
   const toast = useToast();
   const [today, setToday] = useState<IsoDate | null>(null);
   useEffect(() => setToday(todayIST()), []);
@@ -125,6 +134,16 @@ export function PlanOnboarding({ onLaunched, onBack }: { onLaunched?: (name: str
             Orbit turns your plan into a day-by-day countdown: tasks to tick, questions to practise and a streak to keep
             alive. You don&apos;t have one yet, so let&apos;s launch it. It takes about five minutes.
           </Text>
+          {onSkip && (
+            <div className="flex flex-wrap items-center gap-3">
+              <Text variant="small" className="text-ink-2">
+                Only want to practise questions? A plan is optional; you can add one later from the dashboard.
+              </Text>
+              <Button variant="soft" size="sm" icon={<IconArrowRight className="h-4 w-4" />} onClick={onSkip}>
+                Skip for now
+              </Button>
+            </div>
+          )}
         </div>
 
         <Tabs
